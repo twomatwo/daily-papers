@@ -32,14 +32,13 @@ undercomplete linear autoencoder 已经学到 PCA projection 后，仍存在无�
 
 linear autoencoder 的最优函数是 PCA projection，但参数化不是唯一的。
 
-如果 encoder 与 decoder 写成 (W_e, W_d)，那么在合适条件下：
+如果 encoder 与 decoder 写成 $W_e, W_d$，那么在合适条件下：
 
-[
-W_e ightarrow a W_e,qquad
-W_d ightarrow a^{-1} W_d
-]
+$
+W_e \to a W_e, \qquad W_d \to a^{-1} W_d
+$
 
-可以保持组合函数 (W_dW_e) 不变。
+可以保持组合函数 $W_dW_e$ 不变。
 
 于是 global minima 不是单独一个点，而是一条带有 scale symmetry 的 **solution manifold**。
 
@@ -89,11 +88,11 @@ W_d ightarrow a^{-1} W_d
 
 decoder scale 增大时，Hessian 的最大特征值也上升。finite-step gradient descent 的稳定性条件最终接近：
 
-[
-eta,mu_{max}sim 2,
-]
+$
+\eta\,\mu_{\mathrm{max}} \sim 2
+$
 
-其中 (eta) 是 learning rate，(mu_{max}) 是最大 Hessian eigenvalue。
+其中 $\eta$ 是 learning rate，$\mu_{\mathrm{max}}$ 是最大 Hessian eigenvalue。
 
 于是 scale drift 被 **edge of stability** 截断。
 
@@ -158,7 +157,7 @@ eta,mu_{max}sim 2,
 - [ ] 找到 scale symmetry 与 conserved quantity
 - [ ] 理解 minibatch noise 为什么不是简单无偏 random walk
 - [ ] 看 fast / slow reduction
-- [ ] 理解 (etamu_{max}sim2) 的 edge-of-stability 条件
+- [ ] 理解 $\eta\mu_{\mathrm{max}}\sim2$ 的 edge-of-stability 条件
 - [ ] 读 Kunin 2021，建立 symmetry-based learning dynamics 语言
 
 ## Sources and attribution
