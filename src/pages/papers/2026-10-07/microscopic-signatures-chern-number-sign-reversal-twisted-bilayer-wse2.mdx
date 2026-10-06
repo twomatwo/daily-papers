@@ -15,7 +15,7 @@ import ReadingPath from '../../../components/ReadingPath.astro';
 import Timeline from '../../../components/Timeline.astro';
 
 <Callout title="30-second takeaway">
-在 twisted bilayer WSe₂ 中，topmost K-valley moiré band 的波函数会随 twist angle 从 **XM-localized** 变成 **MX-localized**。作者用 STM/STS 追踪这一 real-space layer-pseudospin texture，在约 **1.42°** 看到 localization contrast 反转，并结合 pseudospin winding 与 continuum theory 将其对应到 **Chern number sign reversal**。最重要的阅读纪律是：STM 直接测到的是 LDOS / layer-pseudospin marker；Chern sign 则来自该 marker 与拓扑模型之间的映射，而不是这项实验自身的 quantized Hall measurement。
+在 twisted bilayer WSe₂ 中，topmost K-valley moiré band 的波函数会随 twist angle 从 **XM-localized** 变成 **MX-localized**。作者用 STM/STS 追踪这一 real-space layer-pseudospin texture，在约 **1.42°** 看到 localization contrast 反转，并结合 pseudospin winding 与 continuum theory 将其对应到 **Chern number sign reversal**。最重要的阅读纪律是：STM 直接测到的是 LDOS / layer-pseudospin marker；Chern sign 来自该 marker 与拓扑模型之间的映射，而不是这项实验自身的 quantized Hall measurement。
 </Callout>
 
 <ReadingPath
@@ -26,54 +26,39 @@ import Timeline from '../../../components/Timeline.astro';
 
 ## Big picture
 
-twisted TMD homobilayer 里，moiré potential 不只是把能带压平；它还把 **layer degree of freedom** 编织成 real-space pseudospin texture。若 pseudospin 在一个 moiré cell 内形成 skyrmion-like winding，这个 winding 会通过 geometric phase 进入 band topology。
+twisted TMD homobilayer 里，moiré potential 不只是把能带压平；它还把 **layer degree of freedom** 编织成 real-space pseudospin texture。若 pseudospin 在一个 moiré cell 内形成 skyrmion-like winding，这种 texture 可以与 band topology 对应。
 
-这篇论文追问：**同一种 tWSe₂，只改 twist angle，能不能在 real space 里看到拓扑符号真的翻转？**
+这篇论文追问：**同一种 tWSe₂，只改 twist angle，能不能在 real space 里看到拓扑符号翻转的显微迹象？**
 
-作者不是先从 transport 反推 Chern number，而是盯住一个 microscopic 变量：**top-layer LDOS 在 XM 与 MX stacking region 之间如何重新分配**。
+作者盯住一个 microscopic 变量：**top-layer LDOS 在 XM 与 MX stacking region 之间如何重新分配**。
 
-### AI-generated explanatory diagram — conceptual, not a paper figure
+### AI-generated explanatory diagram
 
-```text
-smaller twist angle          critical region             larger twist angle
-(~1.19°–1.25°)               (~1.42°)                    (~1.48°)
+**较小 twist：XM > MX → 临界区：XM ≈ MX → 较大 twist：MX > XM → layer-pseudospin winding 翻转 → 理论映射到 Chern sign reversal**
 
-K-state LDOS:
-XM > MX            →         XM ≈ MX          →          MX > XM
-   │                            │                           │
-   ▼                            ▼                           ▼
-pseudospin winding A       balanced texture          pseudospin winding B
-   └──────────── theory / topology mapping ────────────────┘
-                                │
-                                ▼
-                       Chern sign reversal
-```
+这是概念示意，不是原论文 Figure，也没有重绘定量数据。
 
-**注意：**上图只解释逻辑关系，没有重绘论文的定量数据或曲线。
+## Fig. 1 — topology dictionary
 
-## Key figures
-
-### Fig. 1 — topology dictionary
-
-原论文 Fig. 1 给出全篇的“字典”：moiré cell 中有 MM、MX、XM high-symmetry regions；当 flat-band wavefunction 在 top layer 更偏 XM 时 layer pseudospin 有一种 winding；临界角附近 MX/XM localization 近似对称；再跨过临界角，top-layer localization 交换到 MX，对应 winding 方向翻转。
+原论文 Fig. 1 给出全篇的“字典”：moiré cell 中有 MM、MX、XM high-symmetry regions；当 frontier-band wavefunction 在 top layer 更偏 XM 时 layer pseudospin 有一种 winding；临界角附近 MX/XM localization 近似对称；跨过临界角后，top-layer localization 交换到 MX，对应 winding 方向翻转。
 
 **读图重点：**Chern information 不是单点 LDOS 大小本身，而是 wavefunction localization 如何编码整套 layer-pseudospin texture。
 
-原文：<https://arxiv.org/pdf/2512.07217>
+[原文 preprint](https://arxiv.org/pdf/2512.07217)
 
-### Fig. 2 — K states are the sensitive channel
+## Fig. 2 — K states are the sensitive channel
 
-作者报告 Γ states 的 moiré modulation 很强，但 MX/XM intensity 不出现同样的 angle-driven inversion；K-state LDOS 在 1.25° 时 XM 明显强于 MX，到 1.48° 时顺序翻转。inversion 在 uppermost K-derived STS feature 最明显。
+作者报告 Γ-derived states 的 moiré modulation 很强，但 MX/XM intensity 不出现同样的 angle-driven inversion；K-state LDOS 在 1.25° 时 XM 明显强于 MX，到 1.48° 时顺序翻转。inversion 在 uppermost K-derived STS feature 最明显。
 
-这排除了一个简单解释：**“只是所有 moiré LDOS 随角度整体换了对比度。”**
+这排除了一个简单解释：**只是所有 moiré LDOS 随角度整体换了对比度。**
 
-### Fig. 3 + Extended Fig. 2 — crossing the critical angle
+## Fig. 3 + Extended Fig. 2 — crossing the critical angle
 
-关键证据链是：
+关键证据链：
 
 - **1.19°：** XM > MX；
 - **1.25°：** 仍是 XM > MX；
-- **~1.42°：** MX 与 XM contrast 接近消失；
+- **约 1.42°：** MX 与 XM contrast 接近消失；
 - **1.48°：** MX > XM；
 - Γ-state maps 没有对应 inversion。
 
@@ -83,34 +68,22 @@ pseudospin winding A       balanced texture          pseudospin winding B
 
 论文采用的物理图像是 **intrinsic piezoelectric polarization** 与 **out-of-plane ferroelectric polarization** 的竞争，其相对作用会被 moiré relaxation 改变。
 
-较大 twist angle 时，intrinsic piezoelectric contribution 占优，top-layer K-state 更偏 MX；随着 twist 减小，lattice relaxation 越来越强，竞争关系反转，localization 更偏 XM。临界角就是两者近似平衡、MX/XM contrast 消失的区域。
+较大 twist angle 时，intrinsic piezoelectric contribution 占优，top-layer K-state 更偏 MX；随着 twist 减小，lattice relaxation 增强，竞争关系反转，localization 更偏 XM。临界角对应两者近似平衡、MX/XM contrast 消失的区域。
 
-```text
-twist angle
-   ↓
-strength of moiré relaxation
-   ↓
-piezoelectric vs ferroelectric polarization balance
-   ↓
-layer-dependent K-valley localization
-   ↓
-layer-pseudospin texture / winding
-   ↓
-Chern-band sign
-```
+**twist angle → moiré relaxation → polarization balance → K-valley layer localization → layer-pseudospin texture → Chern-band sign**
 
 ## Core topology picture
 
-把 layer degree of freedom 写成 normalized pseudospin field `n(r)`，一个常见的 real-space skyrmion number 形式是
+把 layer degree of freedom 写成 normalized pseudospin field \(\mathbf n(\mathbf r)\)，一个常见的 real-space skyrmion number 是
 
-[
-N_{mathrm{sk}}=rac{1}{4pi}int_{mathrm{moire cell}}
-mathbf ncdotleft(partial_xmathbf n	imespartial_ymathbf night),d^2r.
-]
+$$
+N_{\mathrm{sk}}=\frac{1}{4\pi}\int_{\mathrm{moire\ cell}}
+\mathbf n\cdot\left(\partial_x\mathbf n\times\partial_y\mathbf n\right)\,d^2r.
+$$
 
-这篇实验工作的关键不是重新从头证明所有 topology mapping，而是借助此前 continuum-model / polarization theory 建立的对应关系，用 STM 可见的 layer-polarization texture 来判别 winding 的翻转。
+这篇实验工作的关键不是重新证明所有 topology mapping，而是借助此前 continuum-model / polarization theory 建立的对应关系，用 STM 可见的 layer-polarization texture 来判别 winding 的翻转。
 
-因此阅读时最好保留三层逻辑：
+阅读时最好保留三层逻辑：
 
 **measured LDOS localization → inferred layer-pseudospin texture → theory-mapped Chern sign**。
 
@@ -118,46 +91,26 @@ mathbf ncdotleft(partial_xmathbf n	imespartial_ymathbf night),d^2r.
 
 ### Authors report
 
-作者报告在 tWSe₂ 中首次以 STM/STS 对同一材料体系展示 twist-angle-dependent K-state localization reversal，并把临界角定在约 1.42°。他们把这一变化解释为 layer-pseudospin polarization 的翻转，并据既有理论关系归因于 frontier-band Chern number sign reversal。
+作者报告在 tWSe₂ 中用 STM/STS 展示 twist-angle-dependent K-state localization reversal，并把临界角定在约 1.42°。他们把这一变化解释为 layer-pseudospin polarization 的翻转，并据既有理论关系归因于 frontier-band Chern number sign reversal。
 
 ### AI interpretation
 
-这篇工作的价值在于，它给了 moiré topology 一个**显微、局域、结构可追踪的诊断量**。对 FQAH / correlated Chern bands 来说，这很重要：不同器件中的 twist、strain、relaxation 往往并不完全均匀，若能把局部 layer-pseudospin texture 与拓扑 band character 联系起来，就有机会把“器件几何”与“多体拓扑”之间的中间层补上。
+这篇工作的价值在于，它给 moiré topology 一个**显微、局域、结构可追踪的诊断量**。对 FQAH / correlated Chern bands 来说，不同器件中的 twist、strain、relaxation 往往并不均匀；如果能把局部 layer-pseudospin texture 与 band topology 联系起来，就有机会补上“器件几何”与“多体拓扑”之间的中间层。
 
 ### Caveats
 
 - 本研究自身**没有通过 quantized Hall plateau 直接测量 Chern number**；Chern sign 的判断依赖 LDOS/pseudospin 与理论 topology 的映射。
 - critical angle 不会只由 nominal twist 决定；local strain、relaxation、dielectric environment 等都可能移动 crossover。
 - STM 主要给 single-particle / local spectral information；它不能单独证明某个 filling 下会出现 FCI/FQAH many-body ground state。
-- 本 guide **没有复制原论文 Figure**，只链接原文并给出独立的概念示意。
+- 本 guide 没有复制原论文 Figure，只链接原文并给出独立概念示意。
 
 ## Historical Reading Chain
 
 <Timeline items={[
-  {
-    year: '2019',
-    title: 'Wu et al. — Topological insulators in twisted transition metal dichalcogenide homobilayers',
-    why: '建立 twisted TMD homobilayer 的拓扑 moiré-band 基础语言。',
-    url: 'https://doi.org/10.1103/PhysRevLett.122.086402'
-  },
-  {
-    year: '2024',
-    title: 'Zhang et al. — Polarization-driven band topology evolution in twisted MoTe₂ and WSe₂',
-    why: '最值得先读：直接给出 polarization competition、twist angle 与 Chern-sign evolution 的理论机制。',
-    url: 'https://doi.org/10.1038/s41467-024-48511-x'
-  },
-  {
-    year: '2024',
-    title: 'Foutty et al. — Mapping twist-tuned multiband topology in bilayer WSe₂',
-    why: '从实验侧建立 WSe₂ 中 topology 随 twist 改变的整体背景。',
-    url: 'https://www.science.org/doi/10.1126/science.adi4728'
-  },
-  {
-    year: '2025',
-    title: 'Zhang et al. — Experimental signature of layer skyrmions and implications for band topology in twisted WSe₂ bilayers',
-    why: '与本工作最接近的显微前作。',
-    url: 'https://www.nature.com/articles/s41567-025-02872-4'
-  }
+  { year: '2019', title: 'Wu et al. — Topological insulators in twisted transition metal dichalcogenide homobilayers', why: '建立 twisted TMD homobilayer 的拓扑 moiré-band 基础语言。', url: 'https://doi.org/10.1103/PhysRevLett.122.086402' },
+  { year: '2024', title: 'Zhang et al. — Polarization-driven band topology evolution in twisted MoTe₂ and WSe₂', why: '最值得先读：直接给出 polarization competition、twist angle 与 Chern-sign evolution 的理论机制。', url: 'https://doi.org/10.1038/s41467-024-48511-x' },
+  { year: '2024', title: 'Foutty et al. — Mapping twist-tuned multiband topology in bilayer WSe₂', why: '从实验侧建立 WSe₂ 中 topology 随 twist 改变的整体背景。', url: 'https://doi.org/10.1126/science.adi4728' },
+  { year: '2025', title: 'Zhang et al. — Experimental signature of layer skyrmions and implications for band topology in twisted WSe₂ bilayers', why: '最接近本工作的显微前作。', url: 'https://doi.org/10.1038/s41567-025-02876-y' }
 ]} />
 
 ## Reading checklist
@@ -175,4 +128,4 @@ mathbf ncdotleft(partial_xmathbf n	imespartial_ymathbf night),d^2r.
 - Version of Record: Physical Review Letters, DOI 10.1103/1jks-ld4b.
 - Preprint: arXiv:2512.07217.
 - 正文核查范围：摘要、主要实验逻辑、Fig. 1–3 对应正文、critical-angle 讨论、Methods 概览与参考文献链。
-- 本页**没有复制任何原论文 Figure**。概念流程图为 AI-generated explanatory diagram，只表达已核查的因果/概念关系，不重绘定量数据。
+- 本页没有复制任何原论文 Figure。概念流程为 AI-generated explanatory diagram，只表达已核查的因果/概念关系，不重绘定量数据。

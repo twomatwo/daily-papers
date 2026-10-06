@@ -15,219 +15,123 @@ import ReadingPath from '../../../components/ReadingPath.astro';
 import Timeline from '../../../components/Timeline.astro';
 
 <Callout title="30-second takeaway">
-这篇工作的关键不是“用 AI 算到一百万原子”这一句，而是一个完整的 **multiscale validation chain**：用 1,105 个 DFT-labelled TMD moiré structures 把 orb-v3 fine-tune 成 MoiréMLIP；再把 teacher distill 成 2.3M 参数的 MoiréMLIP-mini；不仅比较 force RMSE，还直接检查 reconstruction profile；最后把模型推到 439,473-atom alternate-twist MoTe₂ trilayer，看到 moiré-of-moiré domain walls 上累积出的长尺度 strain / polarization texture。
+这篇工作的关键不是“用 AI 算到一百万原子”，而是一条完整的 **multiscale validation chain**：用 1,105 个 DFT-labelled TMD moiré structures 把 orb-v3 fine-tune 成 MoiréMLIP；再把 teacher distill 成 2.3M 参数的 MoiréMLIP-mini；不仅比较 force RMSE，还直接检查 reconstruction profile；最后把模型推到 439,473-atom alternate-twist MoTe₂ trilayer，看到 moiré-of-moiré domain walls 上累积出的长尺度 strain / polarization texture。
 </Callout>
 
 <ReadingPath
-  quick={['Fig. 1：dataset → fine-tune → distill 的完整 pipeline', 'Fig. 3：为什么 force RMSE 不能代替 reconstruction validation', 'Fig. 5–6：百万原子尺度究竟产生了什么新物理']}
+  quick={['Fig. 1：dataset → fine-tune → distill', 'Fig. 3：为什么 force RMSE 不能代替 reconstruction validation', 'Fig. 5–6：百万原子尺度究竟产生了什么新物理']}
   standard={['Fig. 2 learning curve', 'Table 1 accuracy', 'Fig. 3 reconstruction', 'Fig. 4 scaling', 'Fig. 5–6 trilayer application']}
   deep={['dataset construction + DFT/vdW split', 'distillation architecture / direct-force design', 'polarization calculation', 'historical reconstruction literature']}
 />
 
 ## Big picture
 
-moiré materials 的结构问题有一个典型的 scale mismatch：
+moiré materials 的结构问题有一个典型 scale mismatch：局域 stacking energetics 需要接近 DFT 的精度，但 reconstruction 会把体系推到几千、几万甚至百万原子；moiré-of-moiré 又把长度尺度推到几十纳米以上。
 
-- **原子键合 / stacking energetics** 需要接近 DFT 的局域精度；
-- **moiré reconstruction** 会积累到几千、几万甚至百万原子的 supercell；
-- **moiré-of-moiré** 又把长度尺度推到几十纳米以上。
+论文的策略是：**universal model 的化学先验 → 少量高价值 moiré DFT data 定向 fine-tune → task-specific knowledge distillation → observable-level validation → 超大尺度应用。**
 
-DFT 太贵，continuum model 又会丢掉部分 atomic detail；generic universal MLIP 虽然广，但训练数据主要来自普通 bulk crystal，未必学过 interlayer sliding、long-period strain 和 moiré-specific stacking landscape。
+### AI-generated explanatory diagram
 
-论文的解法是：**不要从零训练一个巨大专用模型；先拿 universal model 的化学先验，再以少量高价值 moiré DFT data 定向 fine-tune，最后为特定 relaxation task 蒸馏压缩。**
+**orb-v3 → MoiréMLIP teacher → MoiréMLIP-mini → reconstruction validation → 10^6 atoms → moiré-of-moiré polarization texture**
 
-### AI-generated explanatory diagram — conceptual, not a paper figure
+这是概念示意，不是原论文 Figure，也没有重绘定量数据。
 
-```text
-general uMLIP (orb-v3)
-        │
-        │ fine-tune on 710 DFT-labeled moiré configs
-        ▼
-   MoiréMLIP teacher
-   ~DFT-level reconstruction
-        │
-        │ distill forces using
-        │ 710 DFT + 21,833 teacher-labeled snapshots
-        ▼
-   MoiréMLIP-mini
-   2.3M parameters
-        │
-        ├── validate local forces
-        ├── validate reconstruction profiles
-        └── scale to ~10^6 atoms
-                │
-                ▼
-alternate-twist MoTe₂ trilayer
-439,473 atoms / 77-nm superstructure
-                │
-                ▼
-domain-wall-localized large-scale distortion
-+ hierarchical polarization texture
-```
+## Dataset and fine-tuning
 
-## Dataset: what does the model actually see?
+Moiré Kaleidoscope V1.0 包含 **1,105 个 labelled configurations**：710 train + 395 test，覆盖 MoS₂、MoSe₂、MoTe₂、WS₂、WSe₂ 的 mono-/bilayers、R/H stackings 与多个 twist angles；3.48° structures 整体 hold out 作为 OOD test。
 
-Moiré Kaleidoscope V1.0 contains **1,105 labelled configurations**：
-
-- five TMD monolayers: MoS₂, MoSe₂, MoTe₂, WS₂, WSe₂；
-- homo- and heterobilayers；
-- R-type twists at 7.34°, 5.09°, 3.48°；
-- H-type homobilayers at 5.09°；
-- untwisted high-symmetry stackings。
-
-split 是 **710 training / 395 test**，其中 3.48° structures 整体 hold out 作为 OOD test。
-
-DFT labels 学的是 **PBE part**，vdW-D2 long-range dispersion 被单独处理。这样 fine-tuned MLIP 不必把特定 dispersion correction 混进 learned PES。
+一个值得注意的设计是：learned target 主要对应 PBE contribution，而 long-range vdW-D2 correction 单独处理，避免把特定 dispersion correction 硬塞进 learned PES。
 
 ## Fig. 2 — few-shot adaptation and scaling
 
-作者只用 7.34° structures 做逐步增加数据量的 fine-tuning，然后在 7.34°、5.09°、3.48° 上测试。
+作者从 zero-shot orb-v3 出发，逐步增加 7.34° moiré training data，并同时测试 7.34°、5.09° 与 held-out 3.48°。
 
-核心结果：
+从 N=0 到 **N=8**，force RMSE 已约减半；随后近似服从
 
-- 从 `N=0` 到 **N=8**，force RMSE 就约降低一半；
-- `N=8–210` 间近似服从
-[
-arepsilon_F propto N^{-alpha},qquad alphaapprox0.29;
-]
-- held-out 5.09° / 3.48° curves 跟随同一趋势，说明改善并非只记住一个 twist angle。
+$$
+\varepsilon_F \propto N^{-\alpha},\qquad \alpha\approx 0.29.
+$$
 
-完整训练后：
+完整 fine-tuning 后，作者报告 overall force RMSE **40.8 → 7.5 meV/Å**，energy RMSE **5.11 → 0.73 meV/atom**，且各 test subsets 的 force RMSE 约在 8 meV/Å 以下。
 
-- overall force RMSE：**40.8 → 7.5 meV/Å**；
-- energy RMSE：**5.11 → 0.73 meV/atom**；
-- 测试的所有 twist / stacking subsets 上 force RMSE 都在约 8 meV/Å 以下。
-
-原文 Fig. 2：<https://arxiv.org/html/2610.04115v1#S3.F2>
+[原文 Fig. 2](https://arxiv.org/html/2610.04115v1#S3.F2)
 
 ## Fig. 3 — the most important validation lesson
 
-这可能是全篇最值得学的方法论部分。
-
 作者明确指出：**小的 global force RMSE 不保证 moiré reconstruction 正确。**
 
-长周期结构会把局部 stacking-energy 误差积累成明显的 displacement / interlayer-distance error。因此他们对 **4.41° H-type MoTe₂ 与 MoS₂** 直接做 relaxed geometry comparison。
+对 4.41° H-type MoTe₂ 与 MoS₂，他们直接比较 relaxed geometry，沿 XX–MM–MX–XX line cut 检查 in-plane displacement 与 interlayer distance。部分 zero-shot uMLIPs 即使 global RMSE 不算离谱，仍会把 peak position、stacking contrast，甚至 MoS₂ 的 MM–MX interlayer-distance difference 定性预测错。
 
-Fig. 3 沿 XX–MM–MX–XX line cut 比较：
+这给 AI for Science 一个很通用的原则：**surrogate benchmark 必须下沉到最终 scientific observable。**
 
-- in-plane metal displacement `|u_xy|`；
-- interlayer distance `d`；
-- DFT vs MoiréMLIP / mini vs zero-shot uMLIPs。
-
-zero-shot models 即使 global RMSE 看起来不灾难，仍会把 peak position、stacking contrast 甚至 MoS₂ 的 MM–MX interlayer-distance difference **定性预测错**。
-
-**AI interpretation：**这给 AI for Science 一个非常通用的 checklist——benchmark metric 必须下沉到最终 scientific observable；不能默认 surrogate loss 就是 scientific validity。
-
-原文 Fig. 3：<https://arxiv.org/html/2610.04115v1#S3.F3>
+[原文 Fig. 3](https://arxiv.org/html/2610.04115v1#S3.F3)
 
 ## Fig. 4 — what distillation buys
 
-teacher MoiréMLIP 精度很好，但 architecture 仍然大，memory ceiling 卡住长周期结构。
+MoiréMLIP-mini 只有 **2.3M parameters**，约 teacher 的 9%，采用 direct-force、deep-narrow message-passing design；训练还加入 **21,833 个 teacher-labelled** MD / relaxation snapshots。
 
-MoiréMLIP-mini 采用 task-specific compression：
+作者报告 mini 的 force RMSE 约比 teacher 高 20%，但 reconstruction pattern 基本保持；单张 NVIDIA H200 上，system-size ceiling 约扩大 **28×**，在约 10^4 atoms 附近推理约快 **7×**，并可把单次 inference 推到约 **10^6 atoms**。
 
-- **2.3M parameters**，约 teacher 的 9%；
-- direct-force formulation；
-- deep-narrow message-passing design；
-- 训练使用 710 DFT-labelled configs + **21,833 teacher-labelled** MD / relaxation snapshots。
-
-作者报告 mini 的 force RMSE 约比 teacher 高 20%，但 reconstruction pattern 基本保持；单张 NVIDIA H200 上可以做到：
-
-- system-size ceiling 约扩大 **28×**；
-- 在 `10^4` atoms 附近 inference 约快 **7×**；
-- **one million atoms** 单次 inference step 少于 10 s。
-
-这里的 trade-off 很清楚：mini 不再追求整个 periodic table 的 universal chemistry，而是把 capacity 集中在 **TMD moiré reconstruction** 这一个任务族。
-
-原文 Fig. 4：<https://arxiv.org/html/2610.04115v1#S4.F4>
+[原文 Fig. 4](https://arxiv.org/html/2610.04115v1#S4.F4)
 
 ## Fig. 5–6 — why million atoms matter physically
 
-最大的应用不是 benchmark，而是 alternate-twist MoTe₂ trilayer：
+最大的应用是 alternate-twist MoTe₂ trilayer：
 
-[
-	heta_{12}=-4.15^circ,qquad 	heta_{23}=+3.89^circ.
-]
+$$
+\theta_{12}=-4.15^\circ,\qquad \theta_{23}=+3.89^\circ.
+$$
 
-两个接近但不相同的 moiré periodicities 产生约 **77 nm** 的 moiré-of-moiré superstructure，共 **439,473 atoms**。
+两个接近但不同的 moiré periodicities 形成约 **77 nm** 的 moiré-of-moiré superstructure，共 **439,473 atoms**。relaxation 后，两套 interface moiré lattices 无法处处同时 commensurate，mismatch 被集中到大尺度 domain walls；许多 moiré cells 上微小的 local displacement coherently accumulate，形成长尺度 strain / distortion，并组织出 hierarchical polarization network。
 
-relaxation 后：
+真正的 scientific payoff 因此不是“同一结果算得更大”，而是**只有长尺度 interference + relaxation 才能出现的结构层级**。
 
-- 两个 interface 的 MM sites 尝试局部对齐；
-- 因两套 moiré lattice 数目不匹配，无法处处同时 commensurate；
-- mismatch 被集中到 moiré-of-moiré domain walls；
-- 小的 local atomic displacements 跨许多 moiré cells coherent accumulation，变成很大的长尺度 strain / distortion；
-- ferroelectric + piezoelectric response 随后组织出 hierarchical polarization network。
-
-这就是“大体系”真正的 scientific payoff：不是把同一个小体系结果算得更大，而是出现了**只有长尺度 interference + relaxation 才能组织出的结构层级**。
-
-原文 Fig. 5–6：<https://arxiv.org/html/2610.04115v1#S5.F5>
+[原文 Fig. 5–6](https://arxiv.org/html/2610.04115v1#S5.F5)
 
 ## Authors report vs AI interpretation
 
 ### Authors report
 
-作者认为 fine-tuning 解决了 generic uMLIP 在 moiré reconstruction 上的 accuracy / domain-shift 问题，knowledge distillation 则解决 inference scale；MoiréMLIP-mini 在保持 reconstruction accuracy 的同时，把 fully atomistic simulation 推到一百万原子，并揭示 alternate-twist MoTe₂ trilayer 的 moiré-of-moiré polarization texture。
+作者认为 fine-tuning 解决 generic uMLIP 在 moiré reconstruction 上的 domain-shift / accuracy 问题，knowledge distillation 解决 inference scale；MoiréMLIP-mini 在保持 reconstruction accuracy 的同时把 fully atomistic simulation 推向百万原子，并用于 alternate-twist MoTe₂ trilayer 的 moiré-of-moiré reconstruction。
 
 ### AI interpretation
 
-这篇论文最值得迁移到其他 scientific ML 项目的不是某个 architecture，而是四层验证：
+最值得迁移到其他 scientific-ML 项目的不是某个 architecture，而是四层验证：
 
 **domain-specific data → OOD test → observable-level validation → new-scale scientific application**。
 
-如果以后做 AI for discovery，这是一个比单纯 leaderboard 更有用的模板：模型必须在**最终科学结论依赖的量**上被验证，而且扩展尺度后最好真的打开以前看不到的 physics。
+这比只看 leaderboard 更接近真实科研闭环。
 
 ### Caveats
 
-- chemistry 主要覆盖少数 TMDs；不能把结果外推成“任意二维材料都 DFT-accurate”。
-- DFT target 是特定 electronic-structure setup（PBE + 分离处理的 dispersion）；reference method 本身的系统误差仍然存在。
-- mini 是 direct-force model，重点服务 relaxation；它不是为严格 energy-conserving long-time MD 设计的通用 replacement。
-- one-million-atom inference 是**可处理规模**，不是 arbitrary configurations 上都有同等精度的保证。
-- arXiv 页面标注的是 **perpetual non-exclusive license**；本 guide 不托管原 Figure，只链接原文。
+- chemistry 主要覆盖少数 TMDs，不能外推成“任意二维材料都 DFT-accurate”。
+- reference DFT setup 本身仍有系统误差。
+- mini 是为 reconstruction / force inference 特化的 direct-force model，不等同于所有 long-time MD 都严格 energy-conserving。
+- “可处理百万原子”不等于 arbitrary chemistry/configurations 都有同等精度。
+- 本 guide 没有复制原论文 Figure，只链接原文。
 
 ## Historical Reading Chain
 
 <Timeline items={[
-  {
-    year: '2018',
-    title: 'Carr et al. — Relaxation and domain formation in incommensurate two-dimensional heterostructures',
-    why: 'continuum / mechanical relaxation 的基础，理解为什么 moiré 会形成 domains 与 walls。',
-    url: 'https://doi.org/10.1103/PhysRevB.98.224102'
-  },
-  {
-    year: '2020',
-    title: 'Weston et al. — Atomic reconstruction in twisted bilayers of transition metal dichalcogenides',
-    why: '最值得先读：先建立 TMD moiré 中 atomic reconstruction 的真实实验尺度与重要性。',
-    url: 'https://doi.org/10.1038/s41565-020-0682-9'
-  },
-  {
-    year: '2024',
-    title: 'Wang et al. — Fractional Chern insulator in twisted bilayer MoTe₂',
-    why: '把 reconstruction accuracy 与 correlated / topological end goal 接起来。',
-    url: 'https://doi.org/10.1103/PhysRevLett.132.036501'
-  },
-  {
-    year: '2025',
-    title: 'Pre-training, fine-tuning, and distillation for machine-learned interatomic potentials',
-    why: '直接补 universal potential → fine-tune → compact task-specific model 的方法路线。',
-    url: 'https://doi.org/10.1103/sbz6-btz8'
-  }
+  { year: '2018', title: 'Carr et al. — Relaxation and domain formation in incommensurate two-dimensional heterostructures', why: 'continuum / mechanical relaxation 基础，理解 moiré domains 与 domain walls。', url: 'https://doi.org/10.1103/PhysRevB.98.224102' },
+  { year: '2020', title: 'Weston et al. — Atomic reconstruction in twisted bilayers of transition metal dichalcogenides', why: '最值得先读：先建立 TMD moiré atomic reconstruction 的物理尺度与重要性。', url: 'https://doi.org/10.1038/s41565-020-0682-9' },
+  { year: '2024', title: 'Wang et al. — Fractional Chern insulator in twisted bilayer MoTe₂', why: '把 reconstruction accuracy 与 correlated/topological end goal 接起来。', url: 'https://doi.org/10.1103/PhysRevLett.132.036501' },
+  { year: '2025', title: 'Pre-training, fine-tuning, and distillation for machine-learned interatomic potentials', why: '补 universal potential → fine-tune → compact task-specific model 的方法路线。', url: 'https://doi.org/10.1103/sbz6-btz8' }
 ]} />
 
 ## Reading checklist
 
 - [ ] Fig. 1：复述 dataset → teacher → student pipeline
-- [ ] Fig. 2：理解 `N=8` few-shot jump 与 `α≈0.29` scaling 的含义
+- [ ] Fig. 2：理解 few-shot jump 与 α≈0.29 scaling
 - [ ] Table 1：区分 force / energy RMSE 与 OOD split
-- [ ] Fig. 3：亲自找一个“RMSE 尚可但 reconstruction 错”的例子
+- [ ] Fig. 3：找一个“RMSE 尚可但 reconstruction 错”的例子
 - [ ] Fig. 4：理解 direct-force + deep-narrow 为什么省 memory
 - [ ] Fig. 5–6：说明 439,473 atoms 带来的新 physics 是什么
-- [ ] 读 Weston 2020，补 atomic reconstruction 物理背景
-- [ ] 思考：如果把此 workflow 移植到 correlated-electron effective Hamiltonian，最终 scientific observable 应该怎么设计 validation？
+- [ ] 读 Weston 2020
+- [ ] 思考最终 scientific observable 应如何进入 validation
 
 ## Sources and attribution
 
 - Original paper: arXiv:2610.04115v1.
-- 正文核查范围：全文 HTML，包括 dataset、fine-tuning、reconstruction validation、distillation、million-atom trilayer application、appendix 导航与参考文献链。
-- 原文使用 arXiv perpetual non-exclusive license；本 guide **没有复制原 Figure**，而是链接 arXiv 原始 Figure 位置。
-- 所有流程图均为 AI-generated explanatory diagrams，只表达已核查概念关系，不重绘原论文定量曲线或 datapoints。
+- 正文核查范围：全文 HTML，包括 dataset、fine-tuning、reconstruction validation、distillation、million-atom trilayer application 与参考文献链。
+- 本页没有复制原 Figure。概念图为 AI-generated explanatory diagram，不重绘原论文定量曲线或 datapoints。
