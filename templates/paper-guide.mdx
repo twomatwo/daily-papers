@@ -1,0 +1,74 @@
+---
+layout: ../../src/layouts/PaperLayout.astro
+title: "Paper title"
+authors: "Author A, Author B"
+date: "YYYY-MM-DD"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://..."
+notionUrl: "https://..."
+summary: "One-sentence takeaway."
+readingTime: "20–30 min"
+---
+
+import Callout from '../../src/components/Callout.astro';
+import PaperFigure from '../../src/components/PaperFigure.astro';
+import ReadingPath from '../../src/components/ReadingPath.astro';
+import Timeline from '../../src/components/Timeline.astro';
+
+<Callout title="30-second takeaway">
+One paragraph: what changed and why it matters.
+</Callout>
+
+<ReadingPath
+  quick={['Abstract + one key figure', 'Main conclusion']}
+  standard={['Problem', 'Method', 'Key figures', 'Caveats']}
+  deep={['Derivation / supplement', 'Historical papers']}
+/>
+
+## Big picture
+
+Explain **before → this paper → what changes**.
+
+## Key figures
+
+<PaperFigure
+  src="/papers/YYYY-MM-DD/slug/figure-1.webp"
+  alt="Description"
+  caption="Explain axes, salient feature, supported claim, and caveat."
+  sourceUrl="https://..."
+/>
+
+## Mechanism / theory
+
+Use Markdown + LaTeX. Keep intuition visible; place long derivations later.
+
+## Authors claim vs interpretation
+
+### Authors claim
+
+State only what the paper supports.
+
+### Interpretation
+
+Explain why it may matter.
+
+### Caveats
+
+Separate limitations and open questions.
+
+## Historical Reading Chain
+
+<Timeline items={[
+  { year: 'YYYY', title: 'Foundational paper', why: 'Why read it now', url: 'https://...' },
+]} />
+
+## Reading checklist
+
+- [ ] Key figure
+- [ ] Core equation / method
+- [ ] Discussion
+- [ ] One historical paper
+
+## Sources and attribution
+
+List original paper, supplementary material, and any reused figure sources. Label AI-generated explanatory diagrams explicitly.

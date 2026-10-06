@@ -1,0 +1,10 @@
+---
+const { src, alt = '', caption = '', sourceUrl = '', label = 'Paper figure' } = Astro.props;
+---
+<figure class="figure">
+  <img src={src} alt={alt} loading="lazy" />
+  <figcaption>
+    <strong>{label}.</strong> {caption}
+    {sourceUrl && <> · <a href={sourceUrl} target="_blank" rel="noreferrer">source ↗</a></>}
+  </figcaption>
+</figure>

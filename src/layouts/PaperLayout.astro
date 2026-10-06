@@ -1,0 +1,45 @@
+---
+import '../styles/global.css';
+
+const {
+  title,
+  authors = '',
+  date = '',
+  track = '',
+  paperUrl = '',
+  notionUrl = '',
+  summary = '',
+  readingTime = '20–30 min'
+} = Astro.props.frontmatter ?? {};
+---
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={summary || title} />
+    <title>{title} · Daily Papers</title>
+  </head>
+  <body>
+    <main>
+      <article>
+        <div>
+          {track && <span class="pill">{track}</span>}
+          <span class="pill">{readingTime}</span>
+        </div>
+        <h1>{title}</h1>
+        <div class="meta">
+          {authors}{authors && date ? ' · ' : ''}{date}
+        </div>
+        <div class="hero-actions">
+          {paperUrl && <a href={paperUrl} target="_blank" rel="noreferrer">Original paper ↗</a>}
+          {notionUrl && <a href={notionUrl} target="_blank" rel="noreferrer">Notion record ↗</a>}
+          <a href="/">All guides</a>
+        </div>
+        <slot />
+      </article>
+      <footer>
+        Daily Papers · Interactive reading guides generated from verified paper sources.
+      </footer>
+    </main>
+  </body>
+</html>

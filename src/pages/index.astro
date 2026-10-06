@@ -1,0 +1,39 @@
+---
+import '../styles/global.css';
+
+const guides = Object.values(
+  import.meta.glob('./papers/**/*.mdx', { eager: true })
+)
+  .map((mod) => ({
+    ...(mod.frontmatter ?? {}),
+    url: mod.url ?? '#'
+  }))
+  .filter((g) => g.title)
+  .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')));
+---
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="Interactive reading guides for daily paper recommendations." />
+    <title>Daily Papers</title>
+  </head>
+  <body>
+    <main>
+      <article>
+        <span class="pill">Daily Papers</span>
+        <h1>Interactive paper guides</h1>
+        <p class="meta">Two deep reads per day, with key figures, equations, historical context, and guided reading paths.</p>
+        <div class="grid">
+          {guides.map((guide) => (
+            <a class="card" href={guide.url}>
+              <div class="meta">{guide.date} · {guide.track}</div>
+              <strong>{guide.title}</strong>
+              {guide.summary && <p>{guide.summary}</p>}
+            </a>
+          ))}
+        </div>
+      </article>
+    </main>
+  </body>
+</html>
