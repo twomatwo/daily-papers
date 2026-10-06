@@ -1,0 +1,168 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Broken scale symmetries in undercomplete linear autoencoders"
+authors: "Farhad Pashakhanloo, Jacob A. Zavatone-Veth"
+date: "2026-10-06"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2610.03640"
+notionUrl: "https://app.notion.com/p/3f07dd5567ec8128bbc4e9e730167ed7"
+summary: "Finite-step minibatch SGD breaks an exact scale symmetry and drives deterministic parameter drift along a functionally equivalent solution manifold."
+readingTime: "25–35 min"
+---
+
+import Callout from '../../../components/Callout.astro';
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+<Callout title="30-second takeaway">
+undercomplete linear autoencoder 已经学到 PCA projection 后，仍存在无穷多个实现**同一个函数**的参数解。连续 gradient flow 尊重层间 scale symmetry，但 finite learning rate + minibatch noise 会破坏这一守恒结构，使参数沿 solution manifold 出现有方向的慢漂移；漂移最终在 edge-of-stability 附近停止。
+</Callout>
+
+<ReadingPath
+  quick={['理解 scale symmetry', '看 SGD drift 的方向', '理解 edge of stability 为什么截断漂移']}
+  standard={['solution manifold geometry', 'fast/slow timescale separation', 'effective scale dynamics']}
+  deep={['Noether-like conserved quantity', 'stochastic reduction', '与 deep-network progressive sharpening 的联系']}
+/>
+
+## Big picture
+
+这篇论文讨论一个非常 Physics-of-AI 的问题：
+
+> **如果网络输出的函数已经完全不变，训练为什么还会继续改变参数？**
+
+linear autoencoder 的最优函数是 PCA projection，但参数化不是唯一的。
+
+如果 encoder 与 decoder 写成 (W_e, W_d)，那么在合适条件下：
+
+[
+W_e ightarrow a W_e,qquad
+W_d ightarrow a^{-1} W_d
+]
+
+可以保持组合函数 (W_dW_e) 不变。
+
+于是 global minima 不是单独一个点，而是一条带有 scale symmetry 的 **solution manifold**。
+
+## Continuous dynamics: symmetry and conservation
+
+在连续 gradient flow 中，这种 scale symmetry 对应一个 Noether-like conserved quantity。直觉上：
+
+- loss 不关心沿 symmetry direction 的移动；
+- gradient flow 不应该凭空选择某一个 scale；
+- 因此参数不会产生系统性的单向 scale drift。
+
+如果只看连续优化方程，故事到这里就结束了。
+
+## What SGD changes
+
+真实训练使用：
+
+- finite learning rate；
+- minibatch stochastic gradients。
+
+作者发现，在 PCA solution manifold 附近，encoder / decoder 两侧的 stochastic geometry 并不对称。
+
+某些方向上的 minibatch noise 会被 loss curvature 和参数化几何“整流”，于是原本看似无偏的 stochastic fluctuations 变成**有方向的慢漂移**。
+
+结果是：
+
+- decoder scale 系统性增大；
+- encoder 相对缩小；
+- 但 network function 基本不变。
+
+这是一种 **broken scale symmetry**，不是“模型继续学到了新的 input-output mapping”。
+
+## Fast and slow variables
+
+论文最漂亮的地方之一是 timescale separation：
+
+- **normal direction**：偏离 solution manifold 后，很快被 loss curvature 拉回；
+- **tangent / scale direction**：沿 manifold 的 drift 慢得多。
+
+因此可以把 fast relaxation 积掉，得到 scale variable 的 effective stochastic dynamics。
+
+这种“fast mode → eliminate → slow effective theory”的思路与统计物理非常相似。
+
+## Edge of stability
+
+漂移不会无限继续。
+
+decoder scale 增大时，Hessian 的最大特征值也上升。finite-step gradient descent 的稳定性条件最终接近：
+
+[
+eta,mu_{max}sim 2,
+]
+
+其中 (eta) 是 learning rate，(mu_{max}) 是最大 Hessian eigenvalue。
+
+于是 scale drift 被 **edge of stability** 截断。
+
+这给 progressive sharpening 提供了一个很有意思的解释：
+
+> sharpness 可以继续增加，即使模型函数早已基本不变。
+
+因此 sharpness 并不天然是 parameterization-independent 的“学习质量”指标。
+
+## Authors claim vs interpretation
+
+### Authors claim
+
+在可解的 undercomplete linear autoencoder 中，有限步长 minibatch SGD 系统性破坏 scale symmetry，产生沿 functionally equivalent solution manifold 的定向 drift，并由 stability boundary 限制最终 scale。
+
+### Interpretation
+
+这篇论文的价值主要不是 linear autoencoder 本身，而是提供一种研究深度学习动力学的范式：
+
+**symmetry → conserved quantity → perturbation breaks symmetry → timescale separation → effective slow dynamics → stability boundary**
+
+这套语言和凝聚态 / 统计物理训练非常兼容。
+
+### Caveats
+
+- 严格可解结果主要限于 linear autoencoder。
+- 对 ReLU / homogeneous nonlinear networks 的证据目前更偏机制类比，而非普适定理。
+- 不能直接推出现代 transformer 的 late-training dynamics 都由同一机制控制。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  {
+    year: '1989',
+    title: 'Baldi & Hornik — Neural Networks and Principal Component Analysis',
+    why: 'linear autoencoder 与 PCA solution geometry 的经典起点。',
+    url: 'https://doi.org/10.1016/0893-6080(89)90014-2'
+  },
+  {
+    year: '2021',
+    title: 'Kunin et al. — Neural Mechanics',
+    why: '最值得先读：用 symmetry 与 broken conservation laws 描述 deep-learning dynamics 的直接理论语言来源。',
+    url: 'https://arxiv.org/abs/2012.04728'
+  },
+  {
+    year: '2021',
+    title: 'Cohen et al. — Gradient Descent at the Edge of Stability',
+    why: '理解为什么 finite-step stability boundary 会决定训练后期状态。',
+    url: 'https://arxiv.org/abs/2103.00065'
+  },
+  {
+    year: '2023',
+    title: 'Pashakhanloo & Koulakov — SGD-Induced Drift of Representation',
+    why: '同一作者关于 minimum-loss manifold 上 stochastic drift 的直接前作。',
+    url: 'https://proceedings.mlr.press/v202/pashakhanloo23a.html'
+  }
+]} />
+
+## Reading checklist
+
+- [ ] 搞清楚 linear autoencoder 的 PCA solution manifold
+- [ ] 找到 scale symmetry 与 conserved quantity
+- [ ] 理解 minibatch noise 为什么不是简单无偏 random walk
+- [ ] 看 fast / slow reduction
+- [ ] 理解 (etamu_{max}sim2) 的 edge-of-stability 条件
+- [ ] 读 Kunin 2021，建立 symmetry-based learning dynamics 语言
+
+## Sources and attribution
+
+- Original paper: arXiv:2610.03640.
+- 本页没有把“摘要推断”冒充完整证明；公式和机制解释基于已核查的正文与现有 Notion 精读记录。
+- 后续若加入原论文 Figure，会标注 **Paper figure**；自行重绘会标注 **AI-generated explanatory diagram**。

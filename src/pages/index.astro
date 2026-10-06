@@ -1,12 +1,12 @@
 ---
 import '../styles/global.css';
 
-const guides = Object.values(
+const guides = Object.entries(
   import.meta.glob('./papers/**/*.mdx', { eager: true })
 )
-  .map((mod) => ({
+  .map(([path, mod]) => ({
     ...(mod.frontmatter ?? {}),
-    url: mod.url ?? '#'
+    url: path.replace('./', '/').replace(/\.mdx$/, '')
   }))
   .filter((g) => g.title)
   .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')));
