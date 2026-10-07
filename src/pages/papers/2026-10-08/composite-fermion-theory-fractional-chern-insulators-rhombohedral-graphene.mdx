@@ -1,0 +1,120 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Composite Fermion Theory of Fractional Chern Insulators in Rhombohedral Graphene"
+authors: "Peize Ding, Andrew J. Millis, Yongxin Zeng"
+date: "2026-10-08"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.07174"
+notionUrl: "https://app.notion.com/p/3f27dd5567ec819b8b91e112965aa533"
+summary: "A composite-fermion picture makes remote-layer moiré potentials unexpectedly relevant to fractional Chern insulators in rhombohedral graphene."
+readingTime: "30–45 min"
+---
+
+import Callout from '../../../components/Callout.astro';
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+<Callout title="30-second takeaway">
+Rhombohedral graphene 的带底电子近乎全局域在一层，远端 graphene/hBN moiré potential 因而几乎不改变单粒子 miniband。但在 **composite fermion（CF）** 描述中，flux attachment 形成的 LL 具有更强的跨层分布；remote moiré 在 **ν=1/3** 时可以分裂 CF 亚带，特定参数下约 **2 meV** 的 gap 经 self-consistent Hartree–Fock 扩大至 **15 meV**。这是稳定 FCI 的候选微观机制，**不是无条件预言 Hall 符号的理论**。
+</Callout>
+
+<ReadingPath
+  quick={['Fig. 2：普通电子为什么看不到远端 moiré', 'Fig. 3：CF LL 为什么比带底电子更跨层', 'Fig. 4：gap 放大与 Hall sign 的非鲁棒性']}
+  standard={['Model 和电子 layer polarization 定义', 'flux attachment 与 Jain sequence', 'Fig. 2/3 的对照', 'Fig. 4 HF subband ordering 与 caveat']}
+  deep={['检查 Supplementary 中其他 filling 的反例', '复推 flux attachment / magnetic translation counting', '追踪 LL form factors 与 remote charge density', '读 Jain 1989 与 Dong et al. 2024']}
+ />
+
+## Big Picture
+
+实验中 RLG 的 FQAH 让人问：如果 remote moiré 对普通电子 band bottom 的影响极小，它是否仍能参与稳定分数态？作者不用单粒子 flat Chern band 作为唯一出发点，而是先将低能关联电子转换成 **composite fermion 变量**。
+
+### AI-generated explanatory diagram
+
+**Electron band bottom（高层极化）→ remote moiré coupling 弱**
+
+**Flux attachment → CF LLs（layer delocalization）→ remote moiré 使 CF bands 分裂 → CF–CF interactions 增强 gap → 某些 Jain fillings 下的 incompressible fractional Hall state**
+
+这是经过正文核查后给出的**概念示意**，不是原论文 Figure，也不重绘定量数据。
+
+## Fig. 2 — 电子零假设
+
+以 pentalayer R5G 为例，model 采用 **2L-band layer/sublattice Hamiltonian**，叠加 displacement field 和作用于 remote layer 5 的 moiré potential；示例取 **a_m=11.5 nm，|V_m|=20 meV，u_D=25 meV**。论文中用波函数权重定义的 layer polarization 显示 conduction-band bottom 强烈偏向 layer 1，因此只对 layer 5 施势时带底几乎不变。
+
+[原文 Fig. 2，第 2 页](https://arxiv.org/pdf/2610.07174#page=2)
+
+## Fig. 3 — 附着磁通后的有效粒子不同
+
+CF 的直观定义是：为电子附着 **2s** 个统计磁通量子。对应的 Jain 序列可写作
+
+$$
+\nu=\frac{n}{2sn\pm1}.
+$$
+
+原本在零真实外磁场下的 RLG 也会在 CF mean field 中出现密度依赖的 **effective field**。作者指出，统计磁场与 parent-band Berry curvature 方向相反时，CF LL spacing 较大，最低 CF LL 不再只集中在 layer 1，而是包含其他层不同轨道指数的成分。对于 **ν=1/3**、给定 a_m 的示例，计算用的 \(\Delta B\) 约 **−24 T**；请勿误读成实验真实施加了 −24 T。
+
+这也解释了为什么 remote-layer moiré 对普通电子很弱，却可能明显影响 CFs。
+
+[原文 Fig. 1/3，第 2–3 页](https://arxiv.org/pdf/2610.07174#page=3)
+
+## Fig. 4 — 相互作用把亚带排序翻转
+
+在同一 **ν=1/3** 示例中，remote-layer moiré 使 CF LLL 分成两条 magnetic Bloch subbands，打开约 **2 meV** gap；引入 self-consistent **Hartree–Fock** 后 gap 增大至约 **15 meV**。非相互作用与 HF 图中的**下带 Chern number 可以不同**，因为相互作用会反转子带排列。指定 HF 解中两子带 Chern numbers 为 **+1、−2**，下带为 +1，于是
+
+$$
+\sigma_{xy}=-\frac{C}{2sC+1}\frac{e^2}{h}
+\quad\Longrightarrow\quad
+\sigma_{xy}=-\frac{e^2}{3h}\ \ (s=C=1).
+$$
+
+以上系 **model-dependent mean-field prediction**，不是该论文新测量的 Hall plateau。
+
+[原文 Fig. 4，第 4 页](https://arxiv.org/pdf/2610.07174#page=4)
+
+<details>
+<summary>自测：为什么“数值吻合 ν=1/3”还不是普适机理的定论？</summary>
+
+因为 subband ordering 依赖 moiré phase、LL form factors 与选择的 HF solution；Supplementary 对其他 fractions 发现部分计算 Hall 符号与实验不一致。作者认为还须考虑 dynamical Chern–Simons gauge fluctuations，才能更可靠地比较候选态能量。
+
+</details>
+
+## Authors report vs AI interpretation
+
+### Authors report
+
+flux attachment 为 RLG FCI 提供一个 CF LL picture。CF LL 的层间离域和远端 moiré 所产生的 magnetic Bloch gap，加上 CF 间相互作用的 HF 修正，能在若干参数选择下产生 incompressible fractional response。
+
+### AI interpretation
+
+这提示 FQAH 的理论判断不应只看非相互作用 Chern miniband 的 flatness：**有效变量选取、layer-resolved wavefunction 和相互作用后的能带重构**可能同样关键。
+
+### Caveats
+
+- 理论论文：2/15 meV 均非新测量，且取特定参数。
+- **mean-field 的 Hall sign 不鲁棒**；有些 Jain fractions 计算失败，原文明确指出 dynamical CS gauge fluctuations 尚未处理。
+- remote moiré 假设、phase、dielectric environment 与实际器件可能有差异。
+- 本站只链接原文 Figure，没有在公开仓库复制图或重绘曲线。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  { year: '1989', title: 'Jain — Composite-fermion approach for the fractional quantum Hall effect', why: '最先读：flux attachment 与 Jain sequence 的核心物理。', url: 'https://doi.org/10.1103/PhysRevLett.63.199' },
+  { year: '2023', title: 'Ledwith et al. — Vortexability: A unifying criterion for ideal fractional Chern insulators', why: '补 ideal Chern bands / quantum geometry 的另一条理论路线。', url: 'https://doi.org/10.1103/PhysRevB.108.205144' },
+  { year: '2024', title: 'Dong et al. — Anomalous Hall crystals in rhombohedral multilayer graphene I', why: 'RLG 中相互作用生成拓扑态的理论前作。', url: 'https://doi.org/10.1103/PhysRevLett.133.206503' },
+  { year: '2026', title: 'Butler et al. — 1/3 fractional and gapless integer quantum anomalous Hall states', why: '本论文直接参照的 ν=1/3 实验背景。', url: 'https://arxiv.org/abs/2606.06450' }
+]} />
+
+## Reading Checklist
+
+- [ ] Fig. 2 中电子层极化与远端 moiré 的弱效应
+- [ ] Fig. 3 中 CF LL 与 electron band bottom 的层分布差异
+- [ ] 区分有效统计磁场和实际外加磁场
+- [ ] Fig. 4 中 noninteracting / HF 子带排序与 Chern 号
+- [ ] 明确为何部分 fillings 的 Hall sign 预测失败
+- [ ] 先读 Jain 1989，然后自行理解 fractional Hall 响应公式
+- [ ] 设计一项可检查 layer-sensitive CF response 的实验
+
+## Sources and attribution
+
+- [Peize Ding, Andrew J. Millis, Yongxin Zeng, arXiv:2610.07174v1](https://arxiv.org/abs/2610.07174); [PDF + supplement](https://arxiv.org/pdf/2610.07174).
+- **核查范围：**全文主要论证、Fig. 1–4、Supplementary 有关 competing HF solutions / Jain fillings 的说明与参考文献。
+- 本页无第三方图片上传；所有 Figure 链接指向原 PDF；箭头链为 **AI-generated conceptual explanatory diagram**。

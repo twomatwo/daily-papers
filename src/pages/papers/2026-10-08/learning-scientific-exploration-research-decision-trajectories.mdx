@@ -1,0 +1,128 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Learning Scientific Exploration from Human Research Decision Trajectories"
+authors: "Xuchen Gong, Shane Gu, Haokun Liu, Dixi Yao, Chenhao Tan, Tian Li"
+date: "2026-10-08"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2610.07184"
+notionUrl: "https://app.notion.com/p/3f27dd5567ec81dcbcf7c9bb63095e1e"
+summary: "ResearchTrails reconstructs evidence-backed human research decisions from Git histories, then evaluates trajectory-based skills for predicting the next decision."
+readingTime: "30–45 min"
+---
+
+import Callout from '../../../components/Callout.astro';
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+<Callout title="30-second takeaway">
+研究论文几乎只呈现 final outcome，不记录试错路径。ResearchTrails 从 NeurIPS 2022–2025 论文配对的 **GitHub commit histories** 中抽取有 evidence 的研究决策，构建 **599 条 repository research trajectories、13,271 条 decisions**。历史轨迹蒸馏出的 skills 改善了对 **下一条人类研究决策**的预测。这个结果评估的是 **LLM-judged decision similarity**，还没有证明真实科研产出或发现率提升。
+</Callout>
+
+<ReadingPath
+  quick={['Fig. 2/3：commit 如何映射到 research decisions', 'Table 1：15K papers → 599 trajectories 及其偏差', 'Fig. 7：skills 与 baseline 的效果比较及评价口径']}
+  standard={['§2：什么过程信息没有保留在 final papers 中', '§3 + Fig. 2/3：代码证据和决定的抽取/校验', 'Table 1 + Fig. 4/5：轨迹规模、类型和科研启发式', 'Fig. 6/7 + §5：next-decision evaluation', 'Caveats：真实科研绩效尚未测量']}
+  deep={['复核 commit evidence schema 和 LLM validator', '看 4% 选择偏差和方法/实验/ablation 的分类', '深入查看 judge rubric 与 train/test split', '读 ScholaWrite / Repo-to-Skill 并提出 personal agent memory 原型']}
+ />
+
+## Big Picture — 从成果模仿到过程学习
+
+Final paper 告诉你“最后有效的方法”，却省略“先尝试了什么、为什么失败、如何设计下一步诊断”。对科研 agent，忽略这部分会导致建议看似正确，却缺少**策略性的实验探索能力**。
+
+### AI-generated explanatory diagram
+
+**Paper → GitHub repo → commit sequence / patches → research-relevant decisions → evidence verification + temporal links → retrieval / skill distillation / next-action learning → research agent suggestion**
+
+这是本 guide 的概念示意，不是论文原图或定量复刻。
+
+## Fig. 2/3 — commit 并不自动等于科研决定
+
+作者从论文与其 repository 的匹配关系开始，按时间处理提交，把 commit 划分为 irrelevant / support / revise / new / multiple / uncertain，再通过 decision threads 聚合、合并或 supersede。验证阶段将每个声称的 commit ID、path、date、code diff snippet 对回真实保存的证据；没有有效 evidence 的 decision 会被拒绝。每条 decision 同时标注 **method / experiment / ablation** 和 **retained / abandoned / superseded**。
+
+[原论文 Fig. 2/3 与数据提取方法，PDF 第 3–5 页](https://arxiv.org/pdf/2610.07184#page=3)
+
+## Table 1 — 为什么只有 599？
+
+作者收集约 **15K NeurIPS papers**，其中约 **5K** 能配对到 GitHub；时间跨度、论文前进展和 commit 数条件筛到 **677** 组，最后得 **599** 组有足够 validated decisions 的轨迹（约占最初论文 **4%**），共 **13,271 decisions**。
+
+统计中，约 **39% methods、51% experiments、9% ablations**；生命周期约 **76.3% retained、11.5% abandoned、12.1% superseded**；决策数中位数 **15**。
+
+[原论文 Table 1，PDF 第 5–6 页](https://arxiv.org/pdf/2610.07184#page=5)
+
+## Fig. 5 — 哪些 research heuristics 具有迁移价值？
+
+论文发现可重复的 diagnostic pattern：若多种机制都能解释观测，先制作可控 toy setting 隔离变量；若某个指标只能间接反映失败，先检验它与目标行为的联系；若评价指标受 representation 与 measurement 同时影响，试 alternative probe / calibration。这些是从历史研究过程归纳的策略，**不是保证成功的定律**。
+
+[原文 Fig. 4–5，PDF 第 6–7 页](https://arxiv.org/pdf/2610.07184#page=6)
+
+## Fig. 6/7 — 模型到底提高了什么？
+
+给模型 **1、2 或 3 条 prior human decisions**，让它预测下一步；LLM judge 按 component match 与 operation match 打分。只有一条前置决策时，论文 Fig. 7 给出：
+- baseline：**1.256 ± 0.090**
+- trajectory-based skill：**1.697 ± 0.088**
+- retrieved two demonstrations：**1.361 ± 0.043**
+- skill derived only from final paper：**1.500 ± 0.020**
+
+这里并**没有**评价是否成功发现新规律；它是在 held-out human trajectories 上的 action similarity。Fig. 6 还报告已有决策到 3–5 条时表现大致饱和。
+
+[原文 Fig. 6–7，PDF 第 7–8 页](https://arxiv.org/pdf/2610.07184#page=7)
+
+<details>
+<summary>阅读自测：模仿 human next commit 和做出更好的科研决策一样吗？</summary>
+
+不一样。历史 human action 可能不是最优的，论文的 judge 只看目标组件及操作相似度。更严格的评估应前瞻地测量 **information gain、已排除假设数量、实验预算消耗、最终独立复现结果**。这属于本 guide 的 AI interpretation，作者未声称已完成这样的真实实验。
+
+</details>
+
+## Mechanism — 科学探索的序列决策视角
+
+将项目描述记为 \(p\)，以前的决策记为 \(a_{<t}\)，下一步建议是条件策略：
+
+$$
+\hat a_t \sim \pi_\theta(\cdot \mid p,a_{<t}).
+$$
+
+作者既研究 **test-time** retrieval/demonstration/skill harness，也进行基于 trajectories 的模型 fine-tuning。请区分“把人类轨迹预测得更像”与“真的得到更多可靠科学知识”，两者需要不同 evaluation designs。
+
+## Authors report vs AI interpretation
+
+### Authors report
+
+ResearchTrails 将开放源代码历史转为结构化、证据支持的 human research trajectories。相关 trajectories 或其蒸馏 skill 可以帮助 held-out next-decision prediction，基于轨迹的模型训练也展示一定泛化收益。
+
+### AI interpretation
+
+实际建设 science agent 时，可把记录格式定为 **problem → hypothesis → decision → code/data evidence → outcome → why revised**，检索失败模式和 diagnostic patterns，而不只按论文题目向量近邻检索。这样的数据库才可能形成“科研决策记忆”。
+
+### Caveats
+
+- **Git history 是 proxy**：线下讨论、未 commit 的尝试和真正关键的科学决定可能不存在于数据里。
+- 公开仓库且时间线丰富的 NeurIPS 项目只占样本约 **4%**，有明显 selection bias。
+- 决策抽取、分类和 judge 都涉及 LLM；模型可能学到 annotation convention。
+- 指标是 next-action similarity，**并非真实实验成功率、发现率或研究生产率**。
+- 本导读只链接原始 figures，不复制未经明确许可的图片。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  { year: '1988', title: 'Klahr & Dunbar — Dual Space Search During Scientific Reasoning', why: '最先读：hypothesis space 和 experiment space 交替迭代是科研过程的重要结构。', url: 'https://doi.org/10.1207/s15516709cog1201_1' },
+  { year: '2024', title: 'Lu et al. — The AI Scientist', why: '自动科学发现端到端路线，与本文学习 human intermediate decisions 形成对照。', url: 'https://arxiv.org/abs/2408.06292' },
+  { year: '2025', title: 'Le et al. — ScholaWrite', why: '从 LaTeX edits 学学术写作过程的接近方向。', url: 'https://arxiv.org/abs/2502.02904' },
+  { year: '2026', title: 'Chen et al. — Repo-to-Skill', why: 'repo 内容到 skill 的前作；比较这篇如何利用 temporal commits。', url: 'https://arxiv.org/abs/2609.02749' }
+]} />
+
+## Reading Checklist
+
+- [ ] 解释 raw commit、research decision、scientific hypothesis 的区别
+- [ ] Table 1：说清 15K → 599 的样本筛选偏差
+- [ ] Fig. 2/3：找到一条 patch evidence 如何支持某个 decision
+- [ ] 区分 method / experiment / ablation 与 retained / superseded
+- [ ] Fig. 7：明确 1.697 是 LLM decision similarity score
+- [ ] 对比 trajectory skill 和 final-paper-only skill
+- [ ] 先读 Klahr & Dunbar，再构思自己的 decision-log schema
+- [ ] 设计可衡量 prospective scientific utility 的盲测
+
+## Sources and attribution
+
+- [Gong et al., arXiv:2610.07184v1](https://arxiv.org/abs/2610.07184); [PDF, main paper + appendix](https://arxiv.org/pdf/2610.07184).
+- **核查范围：**完整原文及附录的 dataset construction、commit evidence validator、figures、decision score 解释和 historical references。
+- 本页只链接原文 Figure；流程箭头属于 **AI-generated explanatory diagram**，没有拷贝第三方内容或定量曲线。
