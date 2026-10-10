@@ -1,0 +1,93 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Orbital magnetic susceptibility and de Haas–van Alphen effect of a flat band from quantum geometry"
+authors: "Ethan Huecker, Mengxing Ye, Yuxuan Wang"
+date: "2026-10-11"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.12193"
+notionUrl: "https://app.notion.com/p/3f57dd5567ec819abd5fdb4f60169b1b"
+summary: "Quantum geometry induces orbital quantum oscillations in an isolated flat band."
+readingTime: "25–35 min"
+---
+
+import Callout from '../../../components/Callout.astro';
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+<Callout title="30-second takeaway">
+**零场没有 Fermi surface 的完全平带，也可能出现磁量子振荡。** 磁场通过 Bloch 波函数几何诱导 orbital-moment dispersion；当化学势固定在原平带能量、orbital moment 零等值线闭合时，便出现 emergent Fermi contour。修正 LK 公式预测能级间距随 $B^2$ 缩放。本文属于理论与数值验证，尚非实验证实。
+</Callout>
+
+<ReadingPath
+  quick={['摘要 + Fig. 1：找 M(k)=0 等值线', 'Fig. 2：辨别带宽 B 与间距 B²', 'Conclusion：复述假设']}
+  standard={['Sec. II：磁场下的二阶色散', 'Sec. III + Fig. 3：轨道磁化率', 'Sec. IV/V + Fig. 4：修正 LK 公式', 'Sec. VI + Fig. 5：窄带 crossover']}
+  deep={['验证二阶几何系数的 gauge invariance', '检查 exact diagonalization 与 contour integral', '比较 Gao & Niu 2017 与 Hwang 2021']}
+/>
+
+## Big picture / mechanism diagram
+
+普通 dHvA 把**已存在**的 Fermi surface 量子化；零场严格平带没有普通轨道。但波函数可以有非平凡几何，磁场把内部结构映射为新的有效色散。
+
+**AI-generated explanatory diagram（定性流程）**
+
+**flat band** → **magnetic-field orbital moment** → **M(k)=0 closed contour** → **modified quantization** → **dHvA oscillation**
+
+*流程不是论文 Figure，也不重绘数据。*
+
+## Core formula
+
+作者得到弱场展开
+
+$$
+\epsilon(\mathbf k;B)=\varepsilon_0+B\mathcal M(\mathbf k)+\frac12 B^2\mathcal X(\mathbf k)+O(B^3).
+$$
+
+$\mathcal M$ 是 Bloch orbital moment，$\mathcal X$ 为二阶 gauge-invariant 系数；Berry curvature $\Omega$ 参与相空间态数与相位修正。条件是**孤立平带、小场、固定 $\mu=\varepsilon_0$ 且存在闭合零等值线**。
+
+## Key Figure guide
+
+请直接打开[原论文 Fig. 1–5](https://arxiv.org/html/2610.12193v1)；本站不复制或修改原图。
+
+- **Fig. 1**：orbital moment 在动量空间变号，闭合的零等值线为 emergent contour，而非零场 Fermi surface。
+- **Fig. 2**：Landau cluster 的总体 bandwidth 约随 $B$ 增长；固定 $\mu$ 附近能级间距却随 $B^2$ 缩放，二者不能混为一谈。
+- **Fig. 3**：展示平滑 orbital susceptibility，区分 flat-band Curie peak 与 gap 内几何抗磁平台。
+- **Fig. 4**：比较 $1/B$ 振荡及 thermal damping；量子化相位不仅由 Berry phase 决定，二阶 $\mathcal X$ 也重要。
+- **Fig. 5**：finite bandwidth 时，从普通 Fermi-surface frequency 连续过渡到 orbital-moment contour frequency。
+
+## Authors report vs AI interpretation
+
+### Authors report
+
+作者在孤立 flat band 的弱磁场理论中建立几何展开、orbital susceptibility 与修正 LK 关系；用 flattened Chern lattice model 的 exact diagonalization 检验一系列标度、相位与窄带 crossover。
+
+### AI interpretation
+
+对 moiré / Chern bands 的启发是：**能谱的平坦不等于量子态的几何无响应**。这一理论值得与 Dingle damping、磁场下的强关联和实际实验条件联读。
+
+### Caveats
+
+- **不是**在实验材料里直接观测到平带 dHvA，也不能凭此认定存在 FCI。
+- 若化学势固定条件、带隔离、闭合轨道或弱磁场近似失效，需要另行分析。
+- 模型的数值点、相位和频率不可直接移植到实际 twisted TMD。
+- 作者未证明散射、相互作用和有限温度对所有真实材料都无影响。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  {year:'2021',title:'Hwang, Rhim & Yang — Geometric characterization of anomalous Landau levels of isolated flat bands',why:'最值得先读：平带 Landau-level spreading 的几何机制。',url:'https://doi.org/10.1038/s41467-021-26765-z'},
+  {year:'2017',title:'Gao & Niu — Zero-field magnetic response functions in Landau levels',why:'量子化规则中的高阶磁响应与相位修正。',url:'https://doi.org/10.1073/pnas.1702595114'},
+  {year:'2010',title:'Xiao, Chang & Niu — Berry phase effects on electronic properties',why:'Berry curvature、orbital moment 的基础综述。',url:'https://doi.org/10.1103/RevModPhys.82.1959'}
+]} />
+
+## Reading checklist
+
+- [ ] 能解释没有零场 Fermi surface 仍可能有量子振荡
+- [ ] 理解 $\mathcal M$、$\mathcal X$ 和 $\Omega$ 的不同作用
+- [ ] 分清 Fig. 2 的 bandwidth $B$ 与 spacing $B^2$
+- [ ] 理解 Fig. 3 smooth 与 Fig. 4 oscillatory response
+- [ ] 说明 Fig. 5 crossover 及其理论边界
+- [ ] 先读 Hwang 2021 并回头核对本文
+
+## Sources and attribution
+
+[arXiv:2610.12193v1](https://arxiv.org/abs/2610.12193)；[HTML 正文与 Figure](https://arxiv.org/html/2610.12193v1)。核查范围：正文 Sections II–VI、Fig. 1–5 captions、主要方程与结论；没有独立复算所有附录。**No paper figures reproduced.** 图示仅为 **AI-generated explanatory diagram**。

@@ -1,0 +1,106 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "PXtal: Learning to Align Powder X-Ray Diffraction and Crystal Structures under Information Asymmetry across Modalities"
+authors: "Zhuoran Yang, Christopher M. Collins, Bei Peng, Luke M. Daniels, Matthew J. Rosseinsky, Vladimir V. Gusev"
+date: "2026-10-11"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2610.10653"
+notionUrl: "https://app.notion.com/p/3f57dd5567ec8127a9d9f905504be60a"
+summary: "Unbalanced optimal transport improves PXRD–crystal representation alignment under lossy modality projections."
+readingTime: "25–35 min"
+---
+
+import Callout from '../../../components/Callout.astro';
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+<Callout title="30-second takeaway">
+**粉末 X 射线衍射（PXRD）和晶体三维结构不是对等信息模态。** 从 3D 结构投影到 1D diffraction pattern 会丢失复散射振幅的相位、取向与分辨率相关信息；一组相似谱峰并不意味着唯一结构。PXtal 用 **Unbalanced Optimal Transport (UOT)** 学习跨模态配对表示，允许运输计划对困难或含歧义样本分配非均匀质量，而不是强制一一等权。在六套 retrieval evaluation（含四套 zero-shot）优于所比较基线。它改进的是**表示学习/候选检索**，而不是解决所有结构的唯一逆衍射问题。
+</Callout>
+
+<ReadingPath
+  quick={['Fig. 1：为什么结构→PXRD 是信息损失投影', '看 UOT 如何区别于 balanced OT', '读 abstract/conclusion 的任务边界']}
+  standard={['Sec. 2：PXRD intensity 与 phase loss', 'Sec. 3：双编码器 + UOT coupling/GKL', 'Fig. 2：相似 PXRD neighbor 中的 retrieval reversal', '结果表：six retrieval sets 与 transfer']}
+  deep={['推导 entropic UOT 的边缘 KL penalty', '比较 CLIP、balanced OT、UOT 的公平对照', '阅读 XtalNet 2025 与 Chizat 2018', '思考实验 PXRD 的噪声与 domain shift']}
+/>
+
+## Big picture
+
+传统晶体表征通常依据 diffraction pattern 搜索候选材料并通过 Rietveld refinement 比对；许多神经网络则把 PXRD–structure 当作普通 contrastive two-view matching。然而物理前向过程是 **多对一的、非可逆的观测压缩**，所以从 one-dimensional peaks 检索 structure 的误差并非普通 embedding noise。
+
+### AI-generated explanatory diagram
+
+**3D crystal structure** → **diffraction / powder averaging / phase loss** → **1D PXRD peaks**  
+↓ two distinct encoders  
+**crystal graph embedding** ↔ **PXRD spectrum embedding**  
+↓ **UOT + generalized KL**，允许跨模态 pairing strength 非均匀  
+**ambiguous neighboring patterns 的结构候选排序改善**
+
+*这是文字化的 AI 解释性机制图，不是原作者 Figure，也没有重绘峰位、强度或实验曲线。*
+
+## Mechanism：为什么不是 ordinary CLIP？
+
+对编码后的 PXRD embedding $z_i^P$ 与 crystal embedding $z_j^C$，定义相似度成本：
+
+$$
+C_{ij}=1-\cos(z_i^P,z_j^C).
+$$
+
+Balanced OT 规定 transport plan 的 row/column marginals 都近似相等，容易忽略观测模态天然存在的信息含量不对称。UOT 放宽边缘等式约束，通过 generalized KL 对偏离指定 marginal 的运输质量进行**软惩罚**：
+
+$$
+P^*=\underset{P\geq0}{\arg\min}\;\langle C,P\rangle-\epsilon H(P)+\alpha D_{\rm GKL}(P\mathbf1\,\Vert\,a)+\beta D_{\rm GKL}(P^\top\mathbf1\,\Vert\,b).
+$$
+
+请注意：$P$ 是 learned coupling 的非负权重矩阵，不是 PXRD 物理强度的重建，也不是实验测得的相位。PXtal 再使用 coupling-level generalized KL supervision 来学习配对表示。
+
+## Key figure guide（linked originals）
+
+原图见 [HTML 正文 / Fig. 1–2](https://arxiv.org/html/2610.10653v1)。**本站没有复制论文原图。**
+
+### Fig. 1 — Information asymmetry is physical
+
+(a) 是 crystal-to-PXRD 的信息丢失；(b) balanced OT 强制均匀边际；(c) UOT 允许不同 pair / point 承载非等权 marginal mass。留意作者画的线宽和节点大小分别代表 coupling 与 marginal mass，不能把图当成晶体化学键结构。
+
+### Fig. 2 — Similar PXRD does not imply same structure
+
+作者基于 JARVIS-DFT-3D 的 nearest nonpaired PXRD patterns 分组，检查邻居间相似度、晶体结构标签 entropy，以及 paired crystal 的 ranking margin。最相似的 Q4 中，paired candidate 胜过十个 nearest competing neighbors 的比例从 matched CLIP 的 **61.34%**，提升至 UOT-GKL 的 **70.74%**；请同时看中间的 balanced-OT baseline **65.03%**。这些是作者设定的局域检索指标，不能解释成所有材料的结构预测成功率。
+
+## Authors report vs AI interpretation
+
+### Authors report
+
+作者报告在六套 PXRD-to-crystal candidate retrieval tests、含四套 zero-shot transfer 中，UOT/GKL 方法相对设定的检索基线具有优势；尤其当 PXRD 邻域有类似谱但晶体学不同的样本时更明显。下游 transfer 也有改善，但各任务指标并非始终优于所有 specialized baselines。
+
+### AI interpretation
+
+在 AI for Science 中，**模态不对称应反映在 objective 的约束里，而不是只寄希望于更大的 encoder**。XRD、光谱、显微图和 atomic structures 经常不保留相同的信息；按物理损失设计 alignment 比盲目对称 contrastive learning 更稳妥。
+
+### Caveats
+
+- 不是从任意一条实验 PXRD 唯一生成三维晶体结构的通用 inverse solver。
+- PXRD 模拟分布、仪器分辨率、杂相/缺陷、profile noise 都可能改变真实实验泛化。
+- UOT 的 marginal mass 是算法权重，**不是物理测量置信度的直接标定**。
+- 检索 top-k 增强与后续材料性质预测进步是两个不同任务；不能将前者当成后者的保证。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  {year:'2025',title:'Lai et al. — End-to-End Crystal Structure Prediction from Powder X-Ray Diffraction (XtalNet)',why:'最值得先读：PXRD–structure contrastive pretraining 与候选生成的直接相关前作。',url:'https://doi.org/10.1002/advs.202410722'},
+  {year:'2018',title:'Chizat et al. — Unbalanced optimal transport: Dynamic and Kantorovich formulations',why:'理解 UOT 允许可变运输质量的数学根基。',url:'https://doi.org/10.1016/j.jfa.2018.03.008'},
+  {year:'1969',title:'Rietveld — A profile refinement method for nuclear and magnetic structures',why:'经典 diffraction-profile structural refinement 的参照。',url:'https://doi.org/10.1107/S0021889869006558'},
+  {year:'2019',title:'Peyré & Cuturi — Computational Optimal Transport',why:'OT coupling、entropy regularization 与数值算法基础。',url:'https://research.google/pubs/computational-optimal-transport/'}
+]} />
+
+## Reading checklist
+
+- [ ] 解释 PXRD 投影具体丢失了哪三类结构信息
+- [ ] 区分 crystal encoder 与 spectrum encoder 的输入输出
+- [ ] 能写出 balanced OT 和 UOT 边缘约束的差异
+- [ ] 阅读 Fig. 2 Q4：61.34%、65.03%、70.74% 分别是什么
+- [ ] 区分 retrieval、generation 与 downstream prediction
+- [ ] 先读 XtalNet，再用 UOT 文献补 transport theory
+
+## Sources and attribution
+
+[arXiv:2610.10653v1](https://arxiv.org/abs/2610.10653)；[HTML 正文及 Fig. 1–2](https://arxiv.org/html/2610.10653v1)。核查范围：摘要、方法、Fig. 1–2、检索实验结果与主要局限，未声称独立复现实验。**No paper figures reproduced**；概念箭头明确标注为 **AI-generated explanatory diagram**。
