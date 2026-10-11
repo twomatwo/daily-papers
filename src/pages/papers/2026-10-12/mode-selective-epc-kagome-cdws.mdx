@@ -1,0 +1,111 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Mode-selective electron-phonon coupling drives charge density waves in YRu3Si2 and LaRu3Si2"
+authors: "Wenqian Tu, Run Lv, Dingfu Shao, Yuping Sun, Wenjian Lu"
+date: "2026-10-12"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.11689"
+notionUrl: "https://app.notion.com/p/3f67dd5567ec81198afcf48558ed338f"
+summary: "Wavevector-selective EPC and anharmonic phonons explain high-temperature kagome CDWs."
+readingTime: "30–40 min"
+---
+
+import Callout from '../../../components/Callout.astro';
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+<Callout title="30-second takeaway">
+YRu3Si2 / LaRu3Si2 的 kagome CDW 实验温度约 800/400 K。作者通过 DFT + MLFF-MD 获得温度依赖的**非谐声子**，再分析 mode-resolved electron–phonon coupling（EPC）。**Ru 面外振动**与 Ru-d、Si-p 轨道选择性耦合：phonon linewidth 在 CDW ordering wavevector 达峰，而 bare electronic susceptibility 没有对应特征，支持 EPC 驱动而非简单 Fermi-surface nesting。注意 Y 理论 soft-mode 恢复实频的温度是 **700 K**，并非实验的 800 K。
+</Callout>
+
+<ReadingPath
+  quick={['Abstract：理解问题与两种材料的 T_CDW','Fig. 2 看非谐软模；Fig. 3 看 EPC vs χ(q)','先掌握最核心 caveat：Y 700 K vs 800 K']}
+  standard={['Fig. 1 轨道特征与电子线宽','Fig. 2 非谐声子、lambda 的温度与材料比较','Fig. 3 linewidth 与 susceptibility 分离','Fig. 4–5 MD melting 与 Ru–Ru bonding']}
+  deep={['Methods：DFT/MLFF-MD/phonon renormalization/DFPT EPC','分析 matrix-element-weighted linewidth 表达式','检查 Cccm 与 P6/mmm 的 q 坐标约定','先读 Johannes–Mazin 2008']}
+/>
+
+## Big picture
+
+平常把 CDW wavevector 与 Fermi-surface nesting 联系起来，但多轨道晶格中，电子–声子矩阵元、特定原子偏振模和非谐动力学同样关键。本论文把三种量分开：电子 susceptibility、**有 EPC vertex 权重**的声子线宽，以及随温度变化的**实际声子稳定性**。
+
+**AI-generated explanatory diagram（独立概念示意；不是原论文图或数据）**
+
+**Ru-d / Si-p states → Ru 面外软模 → mode-selective EPC at q → CDW softening → anharmonic thermal stabilization → CDW melting**。
+
+另一路：**Y3+ 较小 → Ru–Ru bond 较强 → 晶格更 rigid → 高温 CDW 更稳定**。
+
+## Key figures — read original images
+
+[Original HTML and figures (arXiv v1)](https://arxiv.org/html/2610.11689v1)。本页不复制论文图或重绘数据。
+
+### Fig. 1 — electronic orbitals
+
+观察 Ru-dxz/dyz 和 Si-px/py 主导的 orbital-projected band weight 与计算 electron linewidth。哪些轨道对 EPC 敏感？不要把计算线宽误写成 ARPES 实测。
+
+### Fig. 2 — thermal anharmonicity
+
+Harmonic P6/mmm 声子存在广泛虚频；非谐 renormalization 使其随升温逐步稳定。Y 与 La 的 soft q 在 P6/mmm 分别为 (1/2,0,1/2)、(1/4,0,1/2)；文中实验 Cccm 的 q_z 约定不同。Y 理论约 700 K、La 理论约 400 K；实验分别约 800 K、400 K。
+
+### Fig. 3 — evidence against simple nesting
+
+声子 linewidth 在 CDW q 处有显著局域峰，χ'(q)、χ''(q) 却不显示匹配的峰。**真正支持作者解释的是这个对照**，而非一句“kagome 有 van Hove singularity”。
+
+### Fig. 4–5 — melting and bond rigidity
+
+6000-atom MLFF MD 展示模拟中的有序熔化；化学键比较将更高 Y T_CDW 与 Ru–Ru stiffness 联系。两图均是作者计算支持的推理，未独立复现。
+
+## Core mechanism
+
+作者定义的 linewidth 在物理上包含
+
+$$
+\gamma_{\mathbf q\nu}\propto \omega_{\mathbf q\nu}\sum_{mn\mathbf k}
+\left|g_{mn,\nu}(\mathbf k,\mathbf q)\right|^2
+\delta(\epsilon_{n\mathbf k}-E_F)
+\delta(\epsilon_{m,\mathbf k+\mathbf q}-E_F).
+$$
+
+区别于仅考虑电子 phase space 的 nesting proxy，**EPC matrix element** 引入 mode 与 orbital 的选择性。作者还计算
+
+$$
+\lambda=2\int_0^\infty \frac{\alpha^2F(\omega)}{\omega}\,d\omega.
+$$
+
+Y、La 的 Brillouin-zone averaged λ 分别为 **1.8、2.2**；La 的总 λ 更大，T_CDW 却更低，说明总 λ 并不能单独预测 ordering vector 或 transition temperature。
+
+## Authors report / AI interpretation / caveats
+
+### Authors report
+
+非谐声子、q-resolved EPC、MLFF MD 和 Ru–Ru bonding 共同支持两种高温 kagome CDW 的 mode-selective EPC 机制。
+
+### AI interpretation
+
+这是 *AI for physics* 的好例子：MLFF 让高温长时空尺度计算成为可能，真正的科学结论仍来自与其他机制可区分的 observables（尤其 Fig. 3）。
+
+### Caveats
+
+- Y 理论 700 K 与实验 800 K 有约 12% 差距；作者未包括中间 Cccm phase。
+- 以 P6/mmm parent phase 和特定 EPC 近似分析，不构成所有 kagome CDW 的普适定理。
+- bare susceptibility 缺少峰不等于排除了全部 electron-driven interactions。
+- 所有图解均只指向原论文；没有复制或猜测量化曲线。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  {year:'2008',title:'Johannes & Mazin — Fermi-surface nesting and origin of CDWs',why:'最值得先读：理解 χ(q) 与 ordering vector 之间的逻辑边界。',url:'https://doi.org/10.1103/PhysRevB.77.165135'},
+  {year:'2022',title:'Neupert et al. — Charge order and superconductivity in kagome materials',why:'kagome 电子结构与 CDW 研究的全局背景。',url:'https://doi.org/10.1038/s41567-021-01404-y'},
+  {year:'2024',title:'Anharmonic strong-coupling effects in CsV3Sb5',why:'强 EPC / 非谐 CDW 的重要材料先例。',url:'https://doi.org/10.1038/s41467-024-45865-0'}
+]} />
+
+## Reading checklist
+
+- [ ] 懂得 phonon linewidth 与 χ(q) 的差异
+- [ ] 能解释不同 q 表记与 Cccm 中间相
+- [ ] 从 Fig. 2–3 提取 CDW 机制证据
+- [ ] 能解释 La 的 λ 更高但 T_CDW 更低
+- [ ] 阅读 Johannes–Mazin 2008
+
+## Sources and attribution
+
+[arXiv:2610.11689v1](https://arxiv.org/abs/2610.11689)，2026-10-08。已核 HTML 正文、Methods、Fig. 1–5 图注、核心方程、结果及局限；没有复制 paper figure、没有复现数值计算。概念文字图明确标注 AI-generated explanatory diagram。
