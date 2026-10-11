@@ -1,0 +1,68 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Diffusion Removes Langevin's Conditioning Dependence: A Sharp Gaussian Analysis"
+authors: "Adam Perbost, Francis Bach, Pierre Marion"
+date: "2026-10-12"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2610.12052"
+notionUrl: "https://app.notion.com/p/3f67dd5567ec819ab8c5f4f8cc82b3b6"
+summary: "Gaussian sampling bounds explain why noise schedules can avoid condition-number penalties."
+readingTime: "30–40 min"
+---
+
+import Callout from '../../../components/Callout.astro';
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+<Callout title="30-second takeaway">
+本文严格研究 Gaussian 目标分布，比较经过调参的 ULA/ULD 与 time-dependent diffusion sampling。采用精确 score 时，diffusion 的 W2 error bound 无须承受同样的额外 condition-number 因子。结论并未说明真实、非 Gaussian 的 diffusion 训练总是更高效。
+</Callout>
+
+<ReadingPath
+quick={['摘要：区分采样与训练', 'Table 1：比较误差速率', 'Fig.1：核对Gaussian实验']}
+standard={['Section 2.1 基础', 'Theorem 1/3', 'Fig. 2 与条件数关系', 'Section 3 score learning']}
+deep={['完整误差分解', '优化几何时间网格', '与经典采样论文对比']}
+/>
+
+## Big picture
+
+**AI-generated explanatory diagram (conceptual):** Ill-conditioned Gaussian → add isotropic noise → smoother score at large noise level → decrease noise geometrically → recover target anisotropy. This is independent educational text, not reconstructed numerical data.
+
+## Key figures
+
+[Original Table 1 and Fig. 1–2](https://arxiv.org/html/2610.12052v1) are linked, not reproduced.
+
+**Table 1** summarizes the optimized W2 error rates and iteration complexities; the additional square-root condition number factor belongs to the specified Langevin schemes. **Fig. 1** calculates Gaussian W2 at d=1000 and condition number one million. **Fig. 2** varies spectral conditioning and target precision; captions explain step-size validity.
+
+## Core mechanism and equation
+
+For p=N(0,Sigma), score s(x) = - inverse(Sigma) times x. Noising changes Sigma to Sigma + tI; the effective ratio of largest to smallest eigenvalue is (largest+t)/(smallest+t), approaching one as t grows.
+
+Under the stated schedule, Theorem 3 proves the leading W2 error asymptotic: five eighths times square root of trace(Sigma) times log(N)/N. The reported coarse upper bound scales as square root of d times the largest covariance eigenvalue, times log(N)/N.
+
+## Authors report / AI interpretation / caveats
+
+**Authors report:** compared with the optimized Euler Langevin baselines, the diffusion algorithm avoids the same conditioning penalty. A linear Gaussian score-learning section suggests that adding noise need not independently improve estimation in empirical covariance directions.
+
+**AI interpretation:** the advantage resembles numerical continuation, smoothly moving from an isotropic distribution toward the difficult target.
+
+**Caveats:** assumptions include centered Gaussian, exact score, fixed target covariance, specific discretizations and optimization choices. These do not imply a universal advantage across learned scores or generic non-Gaussian data.
+
+## Historical Reading Chain
+
+<Timeline items={[
+ {year:'2021',title:'Song et al. — Score-Based Generative Modeling through Stochastic Differential Equations',why:'First read: noising and reverse-time score.',url:'https://arxiv.org/abs/2011.13456'},
+ {year:'2018',title:'Cheng et al. — Underdamped Langevin MCMC',why:'Classical sampler comparison.',url:'https://arxiv.org/abs/1707.03663'},
+ {year:'2025',title:'Beyler and Bach — Convergence of diffusion samplers',why:'Direct Wasserstein precursor.',url:'https://arxiv.org/abs/2508.03210'}
+]} />
+
+## Reading checklist
+
+- [ ] Understand conditioning of Sigma+tI
+- [ ] Compare Table 1 and Theorem 3
+- [ ] Interpret Fig. 1/2 with their captions
+- [ ] Distinguish sampling from linear score learning
+
+## Sources and attribution
+
+Verified arXiv:2610.12052v1 main text, Theorems 1/3, Table 1, Figures 1/2 captions and learning section. No copied or reconstructed paper figures. All diagrams are labeled educational concepts.
