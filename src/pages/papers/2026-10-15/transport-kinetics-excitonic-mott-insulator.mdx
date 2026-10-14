@@ -1,9 +1,62 @@
 ---
 layout: ../../../layouts/PaperLayout.astro
 title: "Transport kinetics in excitonic Mott insulator"
+authors: "W. J. Brunner et al."
 date: "2026-10-15"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.14426"
+notionUrl: "https://app.notion.com/p/3f97dd5567ec81d98caec3c3f07fa1f0"
+summary: "High-density moire exciton transport is suppressed after an initial expansion."
+readingTime: "25–45 min"
 ---
 
-# Reading guide
+## 30-second takeaway
 
-Original paper: https://arxiv.org/abs/2610.14426
+A high-mobility MoSe2/WSe2 interlayer-exciton cloud initially expands and then contracts when optically excited to higher densities. The authors propose occupation-induced Mott localization. Importantly, the observed PL response is a transport signature, not a direct gap or superfluid stiffness measurement.
+
+## Reading paths
+
+**5 min:** abstract, Fig. 1 and conclusion.
+
+**20 min:** Figs. 1–3 and drift–diffusion modeling; compare measured cloud dynamics with the proposed occupation dependence.
+
+**Deep dive:** derive the continuity equation, check PL-blueshift density calibration, inspect temperature controls and Bose-Hubbard predictions.
+
+## Big picture
+
+**AI-generated explanatory diagram (conceptual):** mobile low-filling excitons → repulsive expansion → moire sites fill → effective mobility drops → accumulation around illumination center. This is an explanatory sequence, not reconstructed figure data.
+
+## Key figure guide
+
+- **[Fig. 1](https://arxiv.org/html/2610.14426v1):** seek the time-resolved spatial extent; distinguish expansion from later contraction.
+- **[Fig. 2](https://arxiv.org/html/2610.14426v1):** locate the new central PL peak and temperature dependence.
+- **[Fig. 3](https://arxiv.org/html/2610.14426v1):** examine the modeled density-dependent mobility and simulated cloud evolution.
+
+## Mechanism
+
+The drift–diffusion equation combines density gradients, repulsive interaction-driven drift, optical injection and decay. The authors' effective mobility decreases near unit moire occupation, inferred via an approximate mean-field PL blueshift. This assumed mobility profile reproduces cloud kinetics; it does not derive a Mott gap from first principles.
+
+## Authors report versus AI interpretation
+
+**Authors report:** non-monotonic exciton cloud width and central accumulation in a high-mobility sample; drift–diffusion simulations reproduce them.
+
+**AI interpretation:** the low-density transport regime acts as an important internal control against simple static disorder trapping.
+
+**Caveats:** high mobility only suggests superfluid behavior, and a cloud contraction alone cannot uniquely establish a thermodynamic Mott phase. The density calibration and occupation-dependent mobility require further tests.
+
+## Historical Reading Chain
+
+1. **First read:** [Fisher et al. 1989 — boson localization and the superfluid-insulator transition](https://doi.org/10.1103/PhysRevB.40.546), clean Mott versus disordered Bose glass.
+2. [Wu et al. 2017 — topological exciton bands in moire heterojunctions](https://doi.org/10.1103/PhysRevLett.118.147401), exciton miniband foundation.
+3. [Wang et al. 2021 — interlayer exciton diffusivity](https://doi.org/10.1103/PhysRevLett.126.106804), relevant transport precedent.
+
+## Reading checklist
+
+- [ ] Distinguish measurement from model and phase interpretation.
+- [ ] Explain why the same sample's mobile regime matters.
+- [ ] Revisit Mott versus disorder.
+- [ ] Check supplementary material and density assumptions.
+
+## Attribution
+
+[Original preprint and figures](https://arxiv.org/abs/2610.14426), v1 HTML body/Figs. 1–3 examined. Original figures linked, not copied; conceptual diagram is AI-generated and non-quantitative.
