@@ -15,7 +15,7 @@ import ReadingPath from '../../../components/ReadingPath.astro';
 import Timeline from '../../../components/Timeline.astro';
 
 <Callout title="30-second takeaway">
-扩散生成过程常被形容为“把噪声运输到数据”，但它通常**不是**二次代价意义下的 deterministic optimal transport (OT)。Biroli 与 Mézard 证明：对 Ornstein–Uhlenbeck (OU) 加噪，数据与加噪变量的联合分布在每个时刻恰是一个 **entropic optimal-transport coupling**，温度为 \(T_t=2\sinh t\)。反向生成因此可以理解成降低 regularization 的 annealing。作者再用高维两团 Gaussian mixture 比较 diffusion、flow matching 与 deterministic OT 的 **speciation** 时间尺度：普通 OT 的分裂可压到指数窄的初始边界层；熵正则把它“抹平”。请记住：这是关于精确耦合/可解模型的结论，不是“训练出的所有 diffusion 都等价于 OT”。
+扩散生成过程常被形容为“把噪声运输到数据”，但它通常**不是**二次代价意义下的 deterministic optimal transport (OT)。Biroli 与 Mézard 证明：对 Ornstein–Uhlenbeck (OU) 加噪，数据与加噪变量的联合分布在每个时刻恰是一个 **entropic optimal-transport coupling**，温度为 `T_t=2\sinh t`。反向生成因此可以理解成降低 regularization 的 annealing。作者再用高维两团 Gaussian mixture 比较 diffusion、flow matching 与 deterministic OT 的 **speciation** 时间尺度：普通 OT 的分裂可压到指数窄的初始边界层；熵正则把它“抹平”。请记住：这是关于精确耦合/可解模型的结论，不是“训练出的所有 diffusion 都等价于 OT”。
 </Callout>
 
 <ReadingPath
@@ -46,16 +46,16 @@ import Timeline from '../../../components/Timeline.astro';
 <details>
 <summary>概念交互：把噪声 t 增大，会发生什么？</summary>
 
-在本文 OU convention 中，前向噪声增大意味着 \(T_t=2\sinh t\) 增大，entropic OT 更重视 coupling 的 entropy；沿着反向生成，t 逐步减小，正则化趋弱。注意第二个 marginal \(P_t\) **也同时变化**，因此这不是固定两个端点、只减温度的 ordinary OT path。
+在本文 OU convention 中，前向噪声增大意味着 `T_t=2\sinh t` 增大，entropic OT 更重视 coupling 的 entropy；沿着反向生成，t 逐步减小，正则化趋弱。注意第二个 marginal `P_t` **也同时变化**，因此这不是固定两个端点、只减温度的 ordinary OT path。
 </details>
 
 ## Key figure and derivation reading
 
-**Eq. (2) — 定义，而非“扩散就等于 OT”的口号。** 读清楚 coupling 集合 \(\Pi(\mu,\nu)\)、二次 transport cost、\(D_{\mathrm{KL}}(\pi\|\mu\otimes\nu)\)。温度参数不是物理数据温度。
+**Eq. (2) — 定义，而非“扩散就等于 OT”的口号。** 读清楚 coupling 集合 `\Pi(\mu,\nu)`、二次 transport cost、`D_{\mathrm{KL}}(\pi\|\mu\otimes\nu)`。温度参数不是物理数据温度。
 
-**Eq. (13)–(20) — 全文最硬核、也最适合自己复算的推导。** 展开 OU Gaussian kernel 的 \(|x-e^{-t}a|^2\)；其中 \(a\cdot x\) 的系数给出 Sinkhorn coupling 的 \(T_t\)。再验证 Tweedie-style posterior-mean denoiser 与 score 的对应。
+**Eq. (13)–(20) — 全文最硬核、也最适合自己复算的推导。** 展开 OU Gaussian kernel 的 `|x-e^{-t}a|^2`；其中 `a\cdot x` 的系数给出 Sinkhorn coupling 的 `T_t`。再验证 Tweedie-style posterior-mean denoiser 与 score 的对应。
 
-**Fig. 1 — 同样两个高斯模态，三种“何时分叉”。** 左：deterministic OT straight-line fan，分叉压在生成开始处极薄区间；中：独立耦合的 linear-clock flow matching，形成 tuning fork；右：OU clock 展示另一种时间定位。文中 \(m=2.2,\sigma=0.6\) 只是示例图参数，不能据此推断真实图像模型中模式形成时间。[阅读原论文 Figure 1（PDF）](https://arxiv.org/pdf/2610.13614)。
+**Fig. 1 — 同样两个高斯模态，三种“何时分叉”。** 左：deterministic OT straight-line fan，分叉压在生成开始处极薄区间；中：独立耦合的 linear-clock flow matching，形成 tuning fork；右：OU clock 展示另一种时间定位。文中 `m=2.2,\sigma=0.6` 只是示例图参数，不能据此推断真实图像模型中模式形成时间。[阅读原论文 Figure 1（PDF）](https://arxiv.org/pdf/2610.13614)。
 
 **Section 3 — 更广的 variational principle。** 论文对所有满足同一端点边界条件的 admissible drift 设定特定 quadratic-cost functional，并展示 score-driven reverse drift 的 cost 等于端点 entropy 差。这里的“optimal”不是 Eq. (2) 的同一个优化问题。
 
@@ -63,30 +63,27 @@ import Timeline from '../../../components/Timeline.astro';
 
 Quadratic-cost **entropic OT**：
 
-$$
+```math
 \pi_T^*=\mathop{\arg\min}_{\pi\in\Pi(\mu,\nu)}
 \left[
 \int\frac{\|a-x\|^2}{2}\,d\pi(a,x)
 +T\,D_{\mathrm{KL}}(\pi\|\mu\otimes\nu)
 \right].
-$$
-
+```
 OU forward noising and the corresponding EOT temperature：
 
-$$
+```math
 x_t=e^{-t}a+\sqrt{1-e^{-2t}}\,z,\quad
 z\sim\mathcal N(0,I),\qquad
 T_t=\frac{1-e^{-2t}}{e^{-t}}=2\sinh t.
-$$
+```
+Optimal score equals a denoiser under the joint coupling `\pi_t`：
 
-Optimal score equals a denoiser under the joint coupling \(\pi_t\)：
-
-$$
+```math
 \nabla_x\log P_t(x)=\frac{B_t(x)-e^t x}{T_t},
 \qquad B_t(x)=\mathbb E[a\mid x_t=x].
-$$
-
-推导题：从高斯核的交叉项 \(e^{-t}a\cdot x/(1-e^{-2t})\) 出发，自己验证 \(T_t\)；然后解释为何 score 需要额外的 \(-e^t x\) 项。
+```
+推导题：从高斯核的交叉项 `e^{-t}a\cdot x/(1-e^{-2t})` 出发，自己验证 `T_t`；然后解释为何 score 需要额外的 `-e^t x` 项。
 
 ## Authors report vs AI interpretation
 
@@ -117,7 +114,7 @@ $$
 ## Reading checklist
 
 - [ ] 能解释 deterministic OT 与 entropic OT 的**coupling 差异**。
-- [ ] 从 OU kernel 正确推导 \(T_t=2\sinh t\)。
+- [ ] 从 OU kernel 正确推导 `T_t=2\sinh t`。
 - [ ] 自己验证 posterior-mean denoiser 和 score 恒等式。
 - [ ] 指出 Fig. 1 中三种路径在 *coupling* 和 *clock* 上分别如何选择。
 - [ ] 区分高维模式分离的边界层结论与真实深度生成网络的行为。
