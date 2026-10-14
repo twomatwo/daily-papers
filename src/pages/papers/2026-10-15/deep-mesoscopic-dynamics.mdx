@@ -1,7 +1,69 @@
 ---
 layout: ../../../layouts/PaperLayout.astro
 title: "Deep Mesoscopic Dynamics"
+authors: "Yue Zhao et al."
 date: "2026-10-15"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2610.17885"
+notionUrl: "https://app.notion.com/p/3f97dd5567ec81cc90a0e5214bb38bf6"
+summary: "Learning mesoscopic stochastic dynamics from microscopic trajectories."
+readingTime: "30 min"
 ---
 
-Primary paper: https://arxiv.org/abs/2610.17885
+## 30-second summary
+
+DeepMesoD learns a thermodynamically structured **mesoscopic field equation** from microscopic spin trajectories: free energy, nonlocal interaction kernel, and state-dependent dissipation tied to thermal noise. The authors validate it on Ising-Kac, a two-dimensional ferromagnet, and CrBr3 stacking faults, reporting 3–4 orders of magnitude faster simulation.
+
+## Reading paths
+
+- **5 min:** abstract and Figure 1 pipeline.
+- **20 min:** Equation 1, Figures 2–4, and study limitations.
+- **Deep dive:** coarse graining, state-dependent thermal noise, physical validation, supplementary derivations.
+
+## Big picture / explanatory diagram
+
+**AI-generated conceptual diagram:** microscopic spin trajectories → spatial averaging → learn free-energy functional and kernel → enforce dissipation/noise coupling → predict a mesoscale field. No paper data are recreated.
+
+## Key Figure guide
+
+- [Figure 1](https://arxiv.org/html/2610.17885v1): Identify which physical operators are learned.
+- [Figure 2](https://arxiv.org/html/2610.17885v1): Compare Ising-Kac results against its known hydrodynamic limit.
+- [Figure 3](https://arxiv.org/html/2610.17885v1): Compare two-dimensional spin-field predictions and physical constraints.
+- [Figure 4](https://arxiv.org/html/2610.17885v1): See how a CrBr3 stacking fault changes interlayer magnetic response.
+
+## Core mechanism / formula
+
+The nonconserved field equation combines gradient flow and thermal noise:
+
+```text
+d(phi)/dt = -K * grad(F) + div(K)/(beta*Vc)
+            + sqrt(2/(beta*Vc)) * B * noise
+K = B * transpose(B)
+```
+
+The additional divergence term represents an Itô correction when dissipation depends on state. The learned nonlocal spatial kernel enters the free-energy functional.
+
+## Authors report / AI interpretation / caveats
+
+**Authors report:** Ising-Kac limit recovered; atomistic ferromagnet trajectories matched through about 1 ns; a different initial state remains bounded for 25 ns; CrBr3 inferred stacking-fault-dependent interlayer coupling.
+
+**AI interpretation:** learning an interpretable physical functional and operator can improve scientific validation relative to black-box rollouts.
+
+**Caveats:** remaining bounded at 25 ns does not demonstrate 25 ns quantitative agreement. An assumed Markovian coarse closure can miss unresolved memory effects. Stacking assignments need independent structural tests.
+
+## Historical Reading Chain
+
+1. **First read:** [Hohenberg & Halperin 1977](https://doi.org/10.1103/RevModPhys.49.435): Model A dynamics.
+2. [Allen & Cahn 1979](https://doi.org/10.1016/0001-6160(79)90196-2): energy-gradient interface kinetics.
+3. [Mori 1965](https://doi.org/10.1143/PTP.33.423): projection and memory in coarse-grained dynamics.
+
+## Reading Checklist
+
+- [ ] Identify energy, kernel, dissipation and thermal noise.
+- [ ] Check physical constraints in Figure 3.
+- [ ] Distinguish short-horizon accuracy from stability.
+- [ ] Trace the inferred interlayer interaction in CrBr3.
+
+## Sources and attribution
+
+[Original arXiv preprint](https://arxiv.org/abs/2610.17885); [figures and appendix](https://arxiv.org/html/2610.17885v1). The text, key figures and equation were checked. Original figures are linked rather than reproduced; diagram labeled AI-generated.
