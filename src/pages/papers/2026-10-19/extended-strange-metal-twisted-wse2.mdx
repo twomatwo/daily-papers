@@ -1,0 +1,103 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Extended strange metal and superconductivity in partially filled moiré Hubbard bands"
+authors: "Yiyu Xia, Yichi Zhang, Zhongdong Han, Hongyuan Li et al."
+date: "2026-10-19"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.22307"
+notionUrl: "https://app.notion.com/p/3fd7dd5567ec81368f17e9f3198228ea"
+summary: "A second superconducting dome grows out of an extended strange metal in twisted bilayer WSe2."
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+In **twisted bilayer WSe2**, changing twist angle, hole filling and displacement field reveals an **extended strange metal** with nearly linear temperature-dependent resistance over a broad range. The authors find a **second superconducting dome** near filling 0.55, separate from the Mott-proximate dome near filling 1 and the van Hove singularity near 0.78. This challenges an explanation relying only on a narrowly tuned quantum critical point, without identifying a unique microscopic strange-metal mechanism.
+
+<ReadingPath
+  quick={['Abstract and Fig. 1e: name SC1, SC2, Mott and vHS.', 'Fig. 2d–e: inspect T-linear resistivity and low-field robustness.']}
+  standard={['Figs. 1–2: compare filling and displacement field.', 'Fig. 4: inspect the six-device twist-angle phase map.', 'Identify direct data versus extrapolated boundaries.']}
+  deep={['Methods: resistance power-law extraction and contact considerations.', 'Extended Data: compare critical current, Hall response and transition scale.', 'Read Xia et al. 2026 before debating the phase diagram.']}
+/>
+
+## Big picture: why partial Hubbard-band filling matters
+
+**Before:** moiré-TMD Hubbard studies emphasized the Mott state near one hole per effective moiré site and superconductivity adjacent to it. **Here:** correlated phases persist far away from this filling. **Consequence:** low-energy transport and pairing may depend on correlations across a broad portion of the band.
+
+**AI-authored explanatory flow (conceptual, not a paper figure):**
+
+```text
+twist angle + gate-controlled filling
+                 |
+         band width / U and occupation
+                 |
+    +------------+---------------------+
+    |                                  |
+near filling 1                    near filling 0.55
+Mott region → SC1                extended strange metal → SC2
+                 |
+      separate vHS near filling ~0.78
+```
+
+The diagram is explanatory only: it does not represent measured phase boundaries.
+
+## Key Figure reading guide
+
+Original figures are **linked, not reproduced**; check the authors' axes and captions in the [27-page PDF](https://arxiv.org/pdf/2610.22307).
+
+1. **[Figure 1 (PDF page 13)](https://arxiv.org/pdf/2610.22307#page=13)** — Panels d–e show resistivity and a constructed phase diagram across four twist angles. Locate the vHS from panel c, then ask whether either dome is centered on it. Note that schematic phase boundaries come from observations plus interpolation.
+2. **[Figure 2 (PDF page 14)](https://arxiv.org/pdf/2610.22307#page=14)** — Panel a maps temperature/filling; b–c show the superconducting current and magnetic-field response near SC2. Panels d–e compare resistance and power-law exponent at different fillings. The relevant distinction is an exponent near one over a range, rather than a single curve.
+3. **[Figure 4 (PDF page 16)](https://arxiv.org/pdf/2610.22307#page=16)** — Six-device twist-angle dependence and, near filling 0.5, a Hall signal showing the competing ferromagnetic insulator. Some boundaries in the illustrated map are manually interpolated rather than sharply observed.
+
+## Core mechanism / formula
+
+The resistance analysis considers a low-temperature form
+
+```text
+rho_xx(T) = rho_0 + A * T^alpha
+
+Fermi-liquid-like: alpha ~ 2
+Strange-metal-like: alpha ~ 1
+```
+
+Extracting alpha is a **diagnostic**; T-linear resistance alone does not specify the microscopic scattering process. Experimental symmetry breaking and superconductivity are separate observables. In particular, low zero-field resistance, finite critical current and low-field suppression are compared instead of treating one resistivity minimum as conclusive superconducting proof.
+
+<details>
+  <summary><strong>Self-check: does a broad T-linear region prove there is no quantum criticality?</strong></summary>
+  No. It disfavors an explanation restricted to one narrowly tuned critical point. Multiple nearby instabilities, disorder-free incoherent transport, and other correlated mechanisms require independent testing.
+</details>
+
+## Authors report vs AI interpretation
+
+### Authors report
+
+The experiments show an extended strange-metal region for smaller twist angles, an SC2 dome far from the Mott filling and van Hove singularity, and a competing ferromagnetic insulating state near half filling. The authors argue the observations favor intrinsic correlated strange-metal physics.
+
+### AI interpretation
+
+This is a useful example of **mechanism discrimination by multidimensional transport controls**: filling, displacement field, twist angle, temperature and weak magnetic field. The new SC2 dome constrains theories that attach superconductivity exclusively to doping a weak Mott insulator.
+
+### Caveats
+
+The analysis does **not** determine pairing symmetry, directly measure a strange-metal scattering spectrum or exclude every quantum critical scenario. The phase boundaries near crossover regimes are not sharp thermodynamic transitions. Devices sample a finite range of twist angles. The manuscript is a preprint, not an independently reproduced result.
+
+## Historical Reading Chain
+
+1. **First read:** [Xia et al. (2026), Bandwidth-tuned Mott transition and superconductivity in moiré WSe2](https://doi.org/10.1038/s41586-025-10049-3). The direct predecessor establishes the Mott-adjacent regime.
+2. [Wu et al. (2018), Hubbard model physics in transition metal dichalcogenide moiré bands](https://doi.org/10.1103/PhysRevLett.121.026402). Why moiré TMDs emulate tunable Hubbard physics.
+3. [Phillips, Hussey & Abbamonte (2022), Stranger than metals](https://doi.org/10.1126/science.abh4273). Historical perspective on T-linear resistance and caveats.
+4. [Ghiotto et al. (2021), Quantum criticality in twisted TMDs](https://doi.org/10.1038/s41586-021-03585-1). Compare earlier critical-point evidence with an extended strange metal.
+
+## Reading Checklist
+
+- [ ] Distinguish moiré filling, displacement field and twist angle.
+- [ ] Locate Mott, vHS, SC1 and SC2 on Figure 1.
+- [ ] Check the low-field and nonlinear-current evidence for SC2.
+- [ ] Separate fitted alpha from a microscopic mechanism.
+- [ ] Read the direct 2026 Nature precursor.
+
+## Sources and attribution
+
+Source: [Xia et al., arXiv:2610.22307v1](https://arxiv.org/abs/2610.22307), full main text and selected Extended Data examined. Original figure links target the source PDF; none are copied, cropped or redrawn. The ASCII mechanism flow is **AI-authored conceptual explanation**, not author-supplied data or a quantitative diagram.
