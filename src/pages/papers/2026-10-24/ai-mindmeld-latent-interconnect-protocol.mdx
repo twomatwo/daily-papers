@@ -1,0 +1,101 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "AI Mindmeld: A Latent Interconnect Protocol"
+authors: "Siavash Golkar, Jake Kovalic, Shirley Ho"
+date: "2026-10-24"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2610.30215"
+notionUrl: "https://app.notion.com/p/4027dd5567ec81078ec9e80560ec8b7c"
+summary: "Independent learned connectors pass specialist scientific embeddings into frozen LLM internal layers without first converting everything to text."
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+Scientific agents usually consume specialist-model output after it has been converted into text or numbers. This **Latent Interconnect Protocol (LIP)** instead maps frozen specialist embeddings into **selected intermediate states of a frozen LLM** via small learned connectors. The authors test **three protein and three molecular specialists** with Gemma 3 4B/12B and Kimi K2.6, including **unseen objects and new tasks** and combinations of independently connected specialists. They explicitly warn: making representations available does not guarantee that the LLM understands or uses them reliably.
+
+<ReadingPath
+  quick={['Abstract, Fig. 1: contrast text tool output versus latent information transfer.', 'Fig. 2 and Section 2: learn the Align–Select–Train recipe.', 'Discussion: limitations of frozen LLM reasoning.']}
+  standard={['Section 2.1–2.3: slots, layers, independent connector registry.', 'Section 3: protein/molecule data splits and evaluation controls.', 'Section 4: unseen task, cross-domain transfer, and ablations.', 'Figure 1 vs Figure 4–6: connect mechanism to evidence.']}
+  deep={['Methods Appendix A: standardization, ridge alignment and layer selection.', 'Examine leakage controls for held-out tasks and molecular objects.', 'Compare single-layer versus six-layer injections.', 'Compare BLIP-2, Flamingo and LIP architectural assumptions.']}
+/>
+
+## Big Picture: when tool output is a bottleneck
+
+**Before:** a protein sequence model may encode many correlated biochemical attributes, but an LLM agent gets whatever summary the tool chooses to print. **This paper:** learned connectors deliver the specialist's *representation* directly. **Potential payoff:** multiple specialist encoders could inform one question even if an attribute was not explicitly requested. **Unresolved challenge:** the language model might misinterpret the incoming vector.
+
+**AI-generated explanatory diagram (conceptual, not a paper figure):**
+
+```text
+Protein specialist embedding -- connector A --\
+                                        > selected LLM layer/slot
+Molecule specialist embedding -- connector B --/
+                    |
+             frozen common LLM
+                    |
+          answer to scientific query
+
+Contrast:
+specialist -- explicit text report -- LLM prompt
+```
+
+Connectors are trained separately and compose at inference; the diagram does not display measured data or guarantee successful reasoning.
+
+## Mechanism: a learned write into model hidden states
+
+At a chosen prompt slot and layer, a simplified description is
+
+```text
+specialist representation z
+    -> normalize / linear projection W
+    -> inject/mix with LLM hidden state h at selected layer
+    -> continue forward through the FROZEN LLM
+```
+
+This is a **conceptual abstraction**; for precise mixing profiles and loss functions use the original Section 2 and Methods A.4–A.6, not this schematic. The training recipe is **Align** specialist outputs to reference states, **Select** suitable injection layers using held-out supervision, then **Train** connector parameters through the frozen model's answer loss. The pretrained specialist and LLM weights stay unchanged.
+
+The registry lets different encoders register different read/write profiles. This is **complementary to calling external tools**, not a claim that latent connectors replace explicit physical numerical calculations, provenance checks or other APIs.
+
+## Key Figure reading guide
+
+Original figures are **linked only**. Consult [authors' full HTML figures](https://arxiv.org/html/2610.30215v1) or [PDF](https://arxiv.org/pdf/2610.30215). No figure is copied, modified, or redrawn.
+
+1. **Figure 1 — protocol.** Compare the text-only route with latent embedding exchange, then locate separate connector registry entries and injection slots. The shown layers and one-token slots are illustrative, not necessarily each experiment's exact settings.
+2. **Figure 2 — training stages.** Identify alignment, layer selection, and connector training. Ask which components are optimized, which remain frozen and which supervision is used.
+3. **Figures 4–5 — new questions and unseen objects.** Pay attention to train/evaluation separation. Distinguish transfer to unseen *items* from transfer to unseen *task types*.
+4. **Figure 6 and ablations — composition and reasoning.** Examine independent connector combinations and the effect of reasoning; raw embedding access does not ensure consistent downstream interpretation.
+
+## Authors report vs AI interpretation
+
+### Authors report
+
+The authors implement independent connectors for multiple frozen protein/molecule encoders and LLMs, with successful results for new entities and some new question types. They show that deeper-layer injection can improve performance over input-only injection, while using several injection layers gives the best average in the reported ablation. They release code and pretrained connectors.
+
+### AI interpretation
+
+For scientific agents, this suggests a future interface where spectroscopy embeddings, molecular simulations or microscopy feature models can be delivered to a reasoning model without first compressing everything to a fixed list of words. The most interesting capability may be **cross-model composition without jointly retraining every pair**.
+
+### Caveats
+
+The demonstration is **not** a generally validated protocol for all scientific instruments. It focuses on bio/molecular models and particular LLM architectures. Latent input may be hard to interpret, calibrate, audit or attach source provenance to. The authors explicitly observe that asking for a stepwise rationale can **reduce** performance on protein-property questions. Embedding transfer is not a mechanistic proof of what the LLM learned. Robust safety, uncertainty and independent scientific validation remain necessary.
+
+## Historical Reading Chain
+
+1. **First read:** [Li et al. (2023), BLIP-2](https://arxiv.org/abs/2301.12597). A close predecessor joining frozen encoders to frozen large language models with learned modules.
+2. [Alayrac et al. (2022), Flamingo](https://arxiv.org/abs/2204.14198). Few-shot multimodal language-model integration.
+3. [Lin et al. (2023), Evolutionary-scale prediction of atomic-level protein structure](https://doi.org/10.1126/science.ade2574). Shows why specialist protein embeddings can encode substantial nonlinguistic information.
+
+## Reading Checklist
+
+- [ ] Explain what information a text-only tool call discards.
+- [ ] Identify which weights remain frozen in Align–Select–Train.
+- [ ] Distinguish unseen objects, unseen task types, and cross-specialist composition.
+- [ ] Check how the authors chose read/write layers and held-out evaluation data.
+- [ ] Explain why availability of latent information is not reliable reasoning.
+- [ ] Read BLIP-2 before proposing a new specialist connector.
+
+## Sources and attribution
+
+[Golkar, Kovalic & Ho, arXiv:2610.30215v1 (21 October 2026)](https://arxiv.org/html/2610.30215v1). Main HTML text, Methods and figure captions were checked; numerical experiments were not reproduced. [Authors' code and released connectors](https://github.com/PolymathicAI/AI-Mindmeld). No original Figure images embedded. ASCII diagram is an **AI-generated explanatory diagram**, not quantitative data.
