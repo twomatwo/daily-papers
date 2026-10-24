@@ -1,0 +1,122 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Superconductivity and ferroelectric orbital magnetism in semimetallic rhombohedral hexalayer graphene"
+authors: "Jinghao Deng, Jiabin Xie, Hongyuan Li, Takashi Taniguchi, Kenji Watanabe, Jie Shan, Kin Fai Mak, Xiaomeng Liu"
+date: "2026-10-25"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://doi.org/10.1038/s41567-026-03443-9"
+notionUrl: "https://app.notion.com/p/4037dd5567ec81a4a923c167dcb088d9"
+summary: "Quantum-oscillation mapping of a six-layer graphene semimetal connects dual electron–hole Fermi surfaces to fragile superconducting-like regions and electric-field-switchable orbital magnetic hysteresis."
+readingTime: "30–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+In **rhombohedral hexalayer graphene**, the conduction and valence bands can overlap: it is a correlated **semimetal**, not simply one isolated flat conduction band. The authors map its electrically tuned **Fermi-surface reconstructions** with quantum oscillations and report two **superconducting-like** regions inside electron–hole half-metal regimes. They also find two different orbital-magnetic phases: **ferrovalley magnetism** and an **electric-field-switchable, ferroelectric-like orbital magnetic phase**. Crucial restraint: the measured resistance **does not reach zero** in either putative superconducting state; the polarization is inferred from Hall hysteresis, and microscopic pairing symmetry is not established. This was an August **2025 preprint** newly published online by *Nature Physics* on **21 October 2026**.
+
+<ReadingPath
+  quick={['Abstract + Fig. 1: locate semimetal, SC1/SC2, and two magnetic regions.', 'Fig. 3b–h: follow electron and hole Fermi surfaces through two inversions.', 'Fig. 4: compare field- and displacement-driven Hall hysteresis.']}
+  standard={['Introduction and Fig. 1: semimetallic ABC hexalayer and dual gates.', 'Figs. 2–3: identify quantum-oscillation branches and Lifshitz transitions.', 'Figs. 1f and 3e–f: inspect superconducting-like transport evidence.', 'Fig. 4 and Discussion: separate ferrovalley and ferroelectric orbital magnetism.']}
+  deep={['Methods: band parameters, dual gating, Raman selection and device geometry.', 'Supplementary Figs. S5–S12: Fourier peaks, effective masses, in-plane field and finite resistance.', 'Figs. S13–S15: test the proposed polarization–magnetization coupling.', 'Compare previous trilayer superconductivity and pentalayer multiferroicity results.']}
+/>
+
+## Big Picture: an overlapping-band playground
+
+**Before:** rhombohedral graphene had yielded correlation-induced magnetism and superconductivity, with many interpretations emphasizing isolated narrow bands. **This paper:** follows a **conduction–valence overlap regime** where magnetic flavor selection reconstructs *both* kinds of carrier pockets. The association of superconducting-like resistance drops with coexisting pockets motivates, but does not identify, a pairing mechanism.
+
+**AI-generated explanatory diagram — conceptual only, not an original paper figure:**
+
+```text
+ABC-stacked six-layer graphene + dual gates
+                    |
+         density n / displacement E
+                    |
+          band overlap and isospin
+             symmetry breaking
+                    |
+   quantum oscillations -> Lifshitz changes
+                    |
+     electron pockets + hole pockets
+                    |
+       SC1/SC2-like transport regions
+
+A separate electric-field pathway:
+isospin / magnetoelectric order
+  -> Hall hysteresis versus E and B
+  -> different ferrovalley / ferroelectric-like phases
+```
+
+**This diagram is not a phase-boundary map** and contains no reconstructed data points.
+
+## Mechanism and observables
+
+An SdH frequency indexes an extremal momentum-space orbit by the Onsager relation:
+
+```text
+F = (hbar / 2 pi e) * A_k
+
+F: quantum-oscillation frequency
+A_k: extremal area of a closed momentum-space orbit
+```
+
+Different orbits and flavor degeneracies can therefore be separated experimentally. In this paper the changing spectral branches and their terminations are interpreted as **Lifshitz transitions**, including inversions among the electronic flavors and emergent electron/hole Fermi surfaces. A sudden shift in an oscillation frequency is *not by itself* proof of a discontinuous change of total doping.
+
+For the ferroelectric orbital magnetic phase, the authors propose a phenomenological coupling (their Fig. 4 discussion):
+
+```text
+F_coupling = - lambda * P * M * B
+
+P: electric polarization (inferred order parameter)
+M: orbital magnetization
+B: applied magnetic field
+```
+
+Changing displacement field can switch the inferred polarization and reverse **the polarity of magnetic hysteresis**. Contrast the nearby **ferrovalley** phase: its orbital magnetization changes with field but its hysteresis polarity does not reverse in the same way. These two experimentally distinguished response patterns should not be merged.
+
+## Key Figure reading guide — original figures linked, not copied
+
+Read [the original paper and Fig. 1–4](https://arxiv.org/pdf/2508.15909) alongside the [Nature Physics version](https://doi.org/10.1038/s41567-026-03443-9). No original images are embedded or changed.
+
+1. **Fig. 1 — phase map and transport.** Examine axes **carrier density n** and **electric field E**. Identify the two orbital magnetic regions and two SC-like pockets. Locate Fig. 1f's resistance drop: check the finite residual resistance before calling it a superconductor.
+2. **Fig. 2 — preliminary fermiology.** Track quantum-oscillation frequencies as a function of n and E. Ask which branch corresponds to an annular versus circular pocket, and where the isospin degeneracy changes.
+3. **Fig. 3 — electron/hole half-metals.** Compare Fermi-surface reconstructions with SC1/SC2 transport and the two dual-carrier regimes. In the source's text, Fig. 3h sketches overlapping annular hole and circular electron surfaces; Fig. 3e/f document superconductivity-related measurements.
+4. **Fig. 4 — magnetoelectric switching.** In panels a/b, notice displacement-sweep direction; in c/d, compare the polarity as perpendicular B flips; in e, compare magnetic-field hysteresis while E crosses roughly -35.5 to -36.2 mV/nm at a fixed density. Ask whether the inference of polarization is unique.
+
+## Authors report, AI interpretation, Caveats
+
+### Authors report
+
+They map low-temperature electronic phases of ABC hexalayer graphene using gate-tuned resistance, Hall hysteresis and quantum oscillations. They associate two superconducting-like regimes with electron/hole half-metals and distinguish a ferrovalley magnetic order near zero E from a finite-E electric-polarization-related orbital magnetism. They propose a free-energy coupling between polarization, orbital magnetization and B. The in-plane field survival of SC1 to approximately 6 T exceeds the estimated weak-coupling Pauli limit of roughly 0.3 T based on their observed transition temperature.
+
+### AI interpretation
+
+**Three independent diagnostic channels**—fermionic orbit area, longitudinal superconducting-like response and transverse hysteresis—make this a compelling *research strategy*. The result is a bridge from rhombohedral-trilayer superconductivity and pentalayer orbital multiferroicity to more complex semimetallic bands. For an experiment, it suggests deliberately mapping in-plane field, carrier sign and transverse Hall hysteresis on the same device rather than over-interpreting one resistance curve.
+
+### Caveats / what remains unsettled
+
+- **Finite resistance** in SC1 and SC2 means no demonstrated conventional zero-resistance state in the reported measurement; device filtering and fragile pairing are possible authors' explanations.
+- A **Pauli-limit exceedance** is evidence against a naive spin-singlet weak-coupling interpretation, not a unique measurement of pairing symmetry.
+- **Ferroelectric orbital magnetism** is inferred from switching transport signatures. Direct local polarization measurement and microscopic order remain open.
+- Band and degeneracy assignments rely on quantum-oscillation interpretation and tight-binding assumptions; not every microscopic carrier pocket is imaged independently.
+- Main-paper figures and methods were read from **arXiv:2508.15909 PDF**, not quantitatively reanalyzed. Publisher reuse rights were not assumed.
+
+## Historical Reading Chain
+
+1. **First read:** [Zhou et al. (2021), Superconductivity in rhombohedral trilayer graphene](https://doi.org/10.1038/s41586-021-03926-0). Establishes SC1/SC2, annular Fermi surfaces, orbital/isospin selection and transport diagnostics in a simpler stack.
+2. [Han et al. (2023), Orbital multiferroicity in pentalayer rhombohedral graphene](https://doi.org/10.1038/s41586-023-06572-w). The closest magnetoelectric experimental comparator; crucial to distinguish the new switching polarity.
+3. [Deng et al. (2026), Superconductivity from dual-surface carriers in rhombohedral graphene](https://doi.org/10.1038/s41567-026-03277-5). A related newer investigation of multi-carrier pairing hypotheses; compare model assumptions with the present semimetal.
+
+## Reading Checklist
+
+- [ ] Explain why an overlapping semimetal differs from an isolated narrow band.
+- [ ] Read Fig. 3 branch-by-branch; explain electron vs hole orbit signs/degeneracies.
+- [ ] Identify what supports superconducting-like response and what zero resistance would add.
+- [ ] Explain the difference between the two orbital magnetic orders.
+- [ ] Distinguish inferred ferroelectricity from a direct polarization measurement.
+- [ ] Read Zhou 2021 and compare its SC1/SC2 evidence with this six-layer experiment.
+
+## Sources and attribution
+
+[Published Nature Physics article, DOI 10.1038/s41567-026-03443-9 (online 21 October 2026)](https://doi.org/10.1038/s41567-026-03443-9); [preprint arXiv:2508.15909 (originally posted 21 August 2025)](https://arxiv.org/pdf/2508.15909). We examined the PDF main text, Fig. 1–4 captions and selected supplement references; **no independent numerical reanalysis**. No paper figures are copied or edited. The ASCII flow is an **AI-generated explanatory diagram**, not original author artwork or quantitative reconstruction.
