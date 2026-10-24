@@ -1,0 +1,128 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "GAV: A scientific experimentation environment for PDE agents"
+authors: "Muheng Li, Wenlong Mou"
+date: "2026-10-25"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2610.30292"
+notionUrl: "https://app.notion.com/p/4037dd5567ec81beba5fde82763eaa81"
+summary: "Use data-informed manufactured PDE problems to give scientific coding agents fresh, numerically verifiable experiments and feedback without an expensive new reference solve every time."
+readingTime: "30–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+Coding agents can produce plausible PDE solver code, but **reliably checking it on new problems** can be more expensive than generating the code itself. **GAV (Generator–Agent–Verifier)** learns plausible continuous solution fields from numerical or experimental data and uses the **method of manufactured solutions** (MMS) to construct matching PDE source and boundary conditions *with a reference answer already known*. This supports unlimited new tests, continuous spatial queries, targeted difficult cases and numerical feedback. In the reported Navier–Stokes benchmarks, adapting three existing PDE agents to GAV improves their mean test errors by over an order of magnitude. Yet the generated problems are **manufactured physical test cases**, not newly discovered natural laws, and their usefulness depends on how closely the generator captures the target regime.
+
+<ReadingPath
+  quick={['Read Abstract + Fig. 1: where does a correct reference solution come from?', 'Eq. (1–2): invert the usual PDE-solving direction.', 'Fig. 6: what changes relative to fixed-test PDE agents?']}
+  standard={['Section 2: distinguish solver generation and reduced observable prediction.', 'Section 3.1–3.2: continuous reference functions, MMS and verifier error.', 'Fig. 3/Table 1 and Fig. 6: compare development curves and baselines.', 'Section 4.4: ablate data learning, MMS and continuous queries.']}
+  deep={['Appendix B.1: continuous representation from data, differentiation and boundary compatibility.', 'Proposition 1: understand the KL and sub-exponential loss assumptions.', 'Appendix C.3: inspect original CodePDE/AutoNumerics/PDE-SHARP comparators.', 'Appendix D.1: inspect held-out references outside the learned Generator.']}
+/>
+
+## Big Picture
+
+**Before GAV:** a PDE agent evaluates code on a small set of fixed high-accuracy reference solutions. This can encourage accidental test adaptation and gives sparse feedback; making each new high-resolution ground truth from scratch is costly.
+
+**With GAV:** learn a distribution of *solutions*, sample new smooth ones, construct the inputs that make each sample an exact solution, and evaluate the agent's program against it. A separate Verifier computes numerical discrepancy and runtime; it is not the LLM deciding whether its own answer is correct.
+
+**AI-generated explanatory diagram (conceptual, not an original figure):**
+
+```text
+Scientific observations / simulations
+               |
+   fit a continuous solution generator
+               |
+   sample u_ref(x,t) and differentiate
+               |
+  manufactured PDE (f, boundaries, inputs)
+               |
+       PDE coding Agent
+        |          |
+    output u_hat  asks for new input queries
+        |          |
+        +-- Verifier: error / compute cost
+                        |
+              agent revises code
+                        |
+           next targeted test case
+```
+
+There are no reconstructed experimental data or plot curves in the diagram.
+
+## Core mechanism: solve the PDE backward
+
+In an ordinary PDE task, given a differential operator, forcing and boundary data, we compute an unknown solution. GAV instead **samples the reference first**:
+
+```text
+Given operator N_lambda and boundary operator B:
+
+sample continuous u_ref from learned solution distribution
+
+set source f := N_lambda[u_ref]
+set boundary / initial data g := B[u_ref]
+
+Now N_lambda[u_ref] = f and B[u_ref] = g by construction.
+```
+
+This is the **method of manufactured solutions**. The target solution can be evaluated or differentiated at many coordinates, allowing the Agent to decide where more precision or mesh resolution is necessary. It does not guarantee that a learned u_ref is an exact solution of an **unforced original PDE**; GAV defines a **new matched problem** with its own forcing and boundary conditions.
+
+### Reliability: what the theory actually assumes
+
+The main result bounds evaluation error for a **fixed candidate program**, assuming the learned distribution of manufactured problems is sufficiently close to the intended physical problem distribution. In Proposition 1 the assumption involves
+
+```text
+KL(P_target || P_generated) <= epsilon
+```
+
+plus sub-exponential tails for normalized losses and a finite independent test sample. The theorem does *not* assert that arbitrary adaptive agents are automatically unbiased by repeated evaluation on the same held-out sample, nor that the generator is physically exact when trained on partial noisy laboratory observations.
+
+## Key Figure and Table reading guide
+
+Paper figures are **linked only**: [read the original v1 HTML and figure captions](https://arxiv.org/html/2610.30292v1) or [PDF](https://arxiv.org/pdf/2610.30292). No original figure is copied, recolored or reconstructed.
+
+1. **Figure 1 — Generator / Agent / Verifier.** Identify the distinction between a data-derived solution reference and the code produced by the Agent. Check where **new PDE inputs** are generated.
+2. **Figure 2 — multi-round development.** See how an experiment log survives across two coding-agent roles, one exploring and one improving an existing method. It illustrates orchestration, not itself a proof of correctness.
+3. **Figure 3 + Table 1 — Navier–Stokes.** Table 1 reports mean velocity error **0.1046% for GAV-Full** versus **1.6352% for COMSOL**, 0.3510% for FEniCSx and 1.9042% for Nektar++ **on the authors' specific numerical test set**. Do not generalize this as universal superiority over professional solvers.
+4. **Figure 4 + Table 2 — kinetic equations.** Track reductions for Vlasov–Poisson and VP–Fokker–Planck macroscopic observables; the six runs report first-to-final reductions from about 25% to 90% on their generated tests.
+5. **Figure 6 — adaptation of existing agents.** GAV/GAV-Full lower held-out numerical-NS test error for CodePDE, AutoNumerics and PDE-SHARP versus each method's original fixed-collection environment. Compare identical test sets, not only training curves.
+
+## Authors report vs AI interpretation
+
+### Authors report
+
+They demonstrate a general Generator–Agent–Verifier environment on Navier–Stokes and kinetic PDE tasks with numerical and experimental data sources. Continuous queries, data-informed generation and MMS contribute to solver development; they give theoretical conditions for fixed-program evaluation reliability. On numerical NS, reported improvements versus the original experimental environments of three agents are greater than tenfold in mean test error. Independent reference checks are reported to detect overfitting to the learned generator.
+
+### AI interpretation
+
+This is a particularly useful pattern for **AI-controlled materials simulations**: a coding agent should be able to request new *physically meaningful and verifiable* tests, not only run one script and trust its self-assessment. MMS is powerful because the test generator carries its own answer. The research opportunity is to adapt this to **diffusion, elasticity, spin/phase-field PDEs**, with precise audits of which boundary conditions and distributions represent actual microscope or transport measurements.
+
+### Caveats
+
+- **Manufactured answers are exact for manufactured inputs**, not necessarily independent truths for arbitrary real-world observations or the original PDE forcing.
+- The guarantee relies on a *known bound* on distribution mismatch and a **fixed** program evaluated on independent tests. A real agent can adapt to the feedback and shift the distribution.
+- Experimental references include model-based continuous reconstructions of discrete data, creating unavoidable interpolation and modeling choices.
+- Benchmark improvements depend on numerical resolution, target regimes, evaluation points and time budgets; the comparisons are not evidence that GAV dominates all high-quality CFD software in general.
+- The source is an **arXiv preprint**; experiments and theorem derivations were read, but **not independently reproduced**.
+
+## Historical Reading Chain
+
+1. **First read:** [Salari & Knupp (2000), Code Verification by the Method of Manufactured Solutions](https://doi.org/10.2172/759450). Exactly the technical trick behind free-to-verify constructed PDE problems.
+2. [Li et al. (2025), CodePDE: An Inference Framework for LLM-driven PDE Solver Generation](https://arxiv.org/abs/2505.08783). A direct agent baseline showing how code generation, numerical tests and refinement previously worked.
+3. [Raissi, Perdikaris & Karniadakis (2019), Physics-informed neural networks](https://doi.org/10.1016/j.jcp.2018.10.045). Offers a contrasting route that learns PDE solutions in a neural function representation, instead of coding solvers with a separate verifier.
+
+## Reading Checklist
+
+- [ ] Derive f = N[u_ref] for a simple 1D diffusion manufactured test.
+- [ ] Explain why a *sampled solution* is not generally an unforced solution.
+- [ ] Read Fig. 1 and identify the trust boundary between Agent and Verifier.
+- [ ] Inspect Table 1 baselines and the independent reference test.
+- [ ] State precisely which KL and loss assumptions Proposition 1 needs.
+- [ ] Check the effects of disabling MMS and continuous queries.
+- [ ] Read Salari & Knupp before designing an automated scientific test harness.
+
+## Sources and attribution
+
+[Li & Mou, arXiv:2610.30292v1, first posted 21 October 2026](https://arxiv.org/html/2610.30292v1); [authors' released source code](https://github.com/PotatoJnny/PDE-GAV). Sections 2–4, main theorem statement, key figure captions, Table 1–2 and selected appendix descriptions were checked; **no numerical experiment reproduced**. No original figures embedded. The ASCII flow is an **AI-generated explanatory diagram** used solely to clarify the workflow.
