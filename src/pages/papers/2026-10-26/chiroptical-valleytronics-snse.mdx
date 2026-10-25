@@ -1,0 +1,115 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Chiroptical Valleytronic in SnSe"
+authors: "Yiming Pan, Sotirios Fragkos, Umberto Dellasette et al."
+date: "2026-10-26"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.30930"
+notionUrl: "https://app.notion.com/p/4047dd5567ec816f8317f2bd125bf9f2"
+summary: "Circularly polarized light selects opposite SnSe valleys, directly resolved by time-resolved photoemission; transient valley current is a prediction, not a direct current measurement."
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**The measured result:** SnSe, despite lacking the familiar hexagonal TMD valley structure, exhibits **opposite valley carrier populations under opposite helicities** of optical pump pulses. Time-resolved XUV photoemission measures an initially **−4.6 ± 0.3%** imbalance and an approximately **603 ± 78 fs** relaxation time (95% fit confidence bounds). **The predicted result:** ab initio dynamical calculations connect this asymmetric momentum population to a short-lived, helicity-switchable photocurrent **in an individual layer**. Neither a photocurrent nor a net bulk current was directly measured; adjacent bulk layers cancel the ideal signal.
+
+<ReadingPath
+  quick={['Abstract and Fig. 2: what is directly measured?', 'Fig. 3(b): identify the sign and decay of helicity asymmetry.', 'Fig. 4: mark the predicted photocurrent as simulation, not experiment.']}
+  standard={['Fig. 1 and the crystal symmetry of the X/X-prime valleys.', 'Fig. 2(d–f): reverse optical helicity and compare measured vs calculated momentum maps.', 'Fig. 3: time-resolved decay and the theory–measurement time-scale mismatch.', 'Quantum-geometric selection rule and Fig. 4 photocurrent mechanism.']}
+  deep={['Derive the link between circular transition amplitudes and interband Berry curvature.', 'Check the quantum metric trace bound on the dichroism magnitude.', 'Read supplementary dynamical simulations and their gradient approximation.', 'Compare the 2012 MoS2 valley-optics literature and assess bulk cancellation.']}
+/>
+
+## Big Picture: valley optics beyond hexagonal monolayers
+
+**Before:** opposite Berry curvature near K/K-prime valleys of monolayer transition-metal dichalcogenides enables helicity-selective optical transitions. But non-hexagonal lattice symmetry changes which optical responses are allowed. **Here:** SnSe supports opposite-momentum valleys X/X-prime, and the photon helicity changes their populations. **What changes:** momentum microscopy can directly see a hidden layer-sensitive nonequilibrium valley response, while a net bulk transport response can vanish by symmetry.
+
+**AI-generated explanatory diagram — conceptual only; not original paper data:**
+
+```text
+       circular pump helicity
+                |
+      Berry curvature + metric
+                |
+   unequal excitation at X / X'
+                |
+ time-resolved XUV photoemission  <-- DIRECT EXPERIMENT
+                |
+  scattering relaxes imbalance
+                |
+   layer-level photocurrent      <-- THEORY PREDICTION
+                |
+  adjacent layers cancel in ideal bulk
+```
+
+The arrows indicate logical dependencies, not measured quantitative scaling. Neither the reported time trace nor any quantitative curve has been recreated here.
+
+## Key Figures: read original figures at the source
+
+Open [arXiv v1 HTML, original figures and captions](https://arxiv.org/html/2610.30930v1). Original figure images are **linked only** and are **not reproduced, edited, or cropped here**.
+
+1. **Figure 1, apparatus and symmetry.** The IR **1.2 eV** pump, **21.6 eV** XUV probe and photoelectron momentum microscope identify the measured quantity: valley-resolved excited populations, not electrical contacts or measured current. Compare crystal zigzag and armchair axes.
+2. **Figure 2, the direct valley signal.** Panels (b,c) distinguish experimental momentum-distribution curves from calculations; (d) varies quarter-wave plate angle; (e,f) compare measured and computed opposite valley imbalances. Identify helicity reversal and the Brillouin-zone translation that helps rule out geometric photoemission artifacts.
+3. **Figure 3, relaxation.** Panel (b) reports **−4.6 ± 0.3%** initial asymmetry and **603 ± 78 fs** decay; compare measured and theoretical panels. The authors caution their numerical gradient approximation may relax carriers too quickly.
+4. **Figure 4, a proposal for transport and phonon probes.** The calculated current, its helicity reversal and phonon mode-resolved temperature differences are simulation outputs. **Do not label Fig. 4(b) as an experimentally measured photocurrent.**
+
+## Mechanism and equations
+
+Define left/right circular transition amplitudes at wavevector k as P_plus and P_minus. The normalized circular dichroism is
+
+```text
+eta(k) = (|P_plus(k)|^2 - |P_minus(k)|^2)
+         / (|P_plus(k)|^2 + |P_minus(k)|^2)
+
+       = -Omega_xy,vc(k) / [g_xx,vc(k) + g_yy,vc(k)]
+```
+
+Here the interband Berry curvature Omega is the antisymmetric/imaginary part of the interband quantum geometric tensor, and the metric g is its real/symmetric part. The positive-semidefinite metric implies |eta| ≤ 1; crystal symmetry can make the bound unattainable. That is why **optically visible nonzero polarization need not be nearly 100% valley-selective** as in some hexagonal TMDs.
+
+For the current *estimated in theory*, the authors sum occupied band velocities:
+
+```text
+j(t) ∝ sum_(band n, k) f_nk(t) * v_nk
+v_nk = (1 / hbar) grad_k epsilon_nk
+```
+
+The optical pump shifts valley populations. Since opposite momenta can have opposite group velocities, the population imbalance creates an allowed **layer-level** directional current along zigzag in the model. The ideal bulk's symmetry-related neighboring layers contribute opposing signals, so **the measurement of a surface-sensitive momentum imbalance is not equivalent to a net bulk current**.
+
+## Authors report, interpretation, and caveats
+
+### Authors report
+
+Time- and angle-resolved photoemission verifies helicity-switchable momentum-space population imbalance in SnSe. Fits give a sub-picosecond relaxation time. Ab initio time-dependent Boltzmann simulations support quantum-geometric optical selection rules and predict a transient directional photocurrent in individual layers. The simulations relate relaxation to electron–phonon intervalley scattering.
+
+### AI interpretation
+
+The scientifically useful achievement is a **triangulation of symmetry, spectroscopy and microscopic simulation**. A natural next test is an independent electrical or ultrafast emitted-radiation measurement in a sufficiently symmetry-broken layer/few-layer sample. Such a result would independently test the predicted photocurrent, beyond measuring valley populations alone.
+
+### Caveats
+
+- **Measured:** photoexcited valley occupations and their lifetime. **Not measured:** an electrical photocurrent.
+- Surface sensitivity and symmetry permit layer-local imbalances even though ideal bulk currents cancel.
+- The computed decay is faster than the experiment in the discussed approximation; exact phonon-mode attribution depends on dynamics modeling.
+- Optical dichroism reflects a transition matrix element and crystal symmetries; it is not a direct standalone measurement of arbitrary Berry curvature at every k.
+- The preprint's reported fits were checked against text and figure captions; **no experiment or simulation independently reproduced**.
+
+## Historical Reading Chain
+
+1. **First read:** [Xiao, Liu, Feng, Xu & Yao (2012), Coupled Spin and Valley Physics in Monolayers of MoS2](https://doi.org/10.1103/PhysRevLett.108.196802). Derive helicity-dependent valley selection from Berry curvature and orbital character.
+2. [Mak et al. (2012), Control of valley polarization in monolayer MoS2 by optical helicity](https://doi.org/10.1038/nnano.2012.96). Canonical optical valley-polarization demonstration; compare the measured observables with SnSe.
+3. [Sodemann & Fu (2015), Quantum Nonlinear Hall Effect Induced by Berry Curvature Dipole](https://doi.org/10.1103/PhysRevLett.115.216806). Context for geometric momentum-space asymmetry and response; **this is a different, nonlinear transport mechanism**, not the model directly tested here.
+
+## Reading Checklist
+
+- [ ] Identify the direct spectroscopic observable in Fig. 2 and reject "measured photocurrent" as a description.
+- [ ] Read Fig. 3 and account for the numerical mismatch in relaxation.
+- [ ] Derive dichroism in terms of the metric trace and Berry curvature.
+- [ ] Explain why opposite layers cancel the net response while a probe can resolve a hidden layer-sensitive signal.
+- [ ] Sketch a realistic follow-up independent current or phonon measurement.
+- [ ] Read Xiao et al. before comparing to hexagonal MoS2 valley optics.
+
+## Sources and attribution
+
+Original [Pan et al., arXiv:2610.30930v1](https://arxiv.org/html/2610.30930v1), first posted **22 October 2026**. Consult the original online article for Figures 1–4 and supplementary links. The main text, formulas, figure captions and selected limitations were checked. No figure image was copied; the ASCII flow above is an **AI-generated explanatory diagram** with no recreated quantitative plots.
