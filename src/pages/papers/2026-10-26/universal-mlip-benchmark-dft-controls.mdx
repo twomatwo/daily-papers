@@ -1,0 +1,123 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "How good are universal MLIPs for alloys? A benchmark is only as trustworthy as its controls"
+authors: "Gus L. W. Hart, Jacob N. Pursley"
+date: "2026-10-26"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2610.30641"
+notionUrl: "https://app.notion.com/p/4047dd5567ec8164a53cc0af5d59c952"
+summary: "An independent 1.45-million-alloy benchmark exposes the DFT-to-DFT disagreement floor and shows how energy reference conventions and relaxation drift can distort universal ML interatomic potential rankings."
+readingTime: "30–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**The central finding:** rankings of universal machine-learned interatomic potentials (uMLIPs) can change dramatically when benchmark labels, reference-energy conventions, and geometry are carefully controlled. The authors score **14 models** on **1.45 million ordered intermetallics** against independent **AFLOW** DFT, then compare to Alexandria and OQMD references. Typical cross-DFT energy disagreement is roughly **6–8 meV/atom** (median), while heavy tails make average differences larger. Once **per-element energy offsets** and **relaxation drift** are controlled, the apparent leading trio's formation-energy errors cluster within **0.7 meV/atom** in the authors' Fig. 3 analysis. This is not evidence that every model is equally accurate or that DFT disagreement measures error relative to nature.
+
+<ReadingPath
+  quick={['Read abstract and Fig. 1: are two DFT references truly identical?', 'Fig. 3: locate raw vs controlled energy error.', 'Fig. 12: see why one global ranking is inadequate.']}
+  standard={['Introduction: two assumptions about an MLIP leaderboard.', 'Results: benchmark and the DFT-vs-DFT reference discrepancy.', 'Fig. 2–3 and Table 3: trace elemental re-referencing and common-geometry controls.', 'Fig. 12: compare energy, hull, forces, shear, polymorph order and cost.']}
+  deep={['Derive elemental reference invariance of fixed-composition polymorph gaps.', 'Distinguish single-point from relaxed energies and their effect on rank.', 'Inspect AFLOW/Alexandria/OQMD matching protocol and heavy-tail robust statistics.', 'Examine hull-stability and residual-force diagnostics and generalization controls.']}
+/>
+
+## Big Picture: benchmark the reference itself
+
+A leaderboard frequently says that model A has lower formation-energy mean absolute error than model B **relative to a single DFT database**. But what if databases differ in pseudopotentials, workflows, relaxation geometry, and elemental reference energy? Measuring both models against only one reference may reward a matching convention rather than a more faithful potential-energy surface.
+
+**AI-generated explanatory diagram (conceptual, not original paper data):**
+
+```text
+   candidate structures and compositions
+                     |
+         independent AFLOW reference
+                     |
+               model predictions
+                     |
+       +-------------+--------------+
+       |                            |
+   raw formation MAE       reference disagreement
+       |                            |
+       +-- same geometry? ------+    |
+       |                        |    |
+    isolate drift       element-energy reset
+       |                        |    |
+       +----------+-------------+----+
+                  |
+        residual agreement with AFLOW
+                  |
+      compare energies + forces + hull
+      + symmetry + polymorph + cost
+```
+
+This schematic is explanatory, not a reconstructed quantitative ranking or plot.
+
+## Method: reference, geometry, and what an energy error means
+
+A formation energy can be written conceptually as
+
+```text
+E_form(compound) = E(compound) - sum_i n_i * mu_i(element)
+```
+
+If a model uses different elemental reference values `mu_i` from the benchmark's DFT source, every compound containing element i receives a systematic offset even if the interatomic force law is otherwise good. For two **polymorphs of identical composition**, the elemental offsets cancel:
+
+```text
+Delta E_polymorph = E(structure A) - E(structure B)
+```
+
+The authors run model energies at two geometries: AFLOW reference structures (single-point) and the model's own relaxed structures. Comparing the two isolates **relaxation drift**; independently adjusting an elemental zero-point convention (Rung-0 control) isolates a **reference offset**. Neither operation retrains network weights. These controls separate the model's structure-dependent errors from bookkeeping and geometry-dependent factors.
+
+### The measured cross-DFT "noise floor" is a resolution diagnostic
+
+AFLOW, Alexandria and OQMD differ because of protocols and approximations; matching the same structures gives typical reference differences of about **6–8 meV/atom**. A minority of large differences push the mean to roughly **16–30 meV/atom**. These are **DFT-versus-DFT disagreements**, not statistical uncertainty of a laboratory measurement or an immutable bound on true physical accuracy. Even a model may appear closer to AFLOW than a second DFT database; that does not prove its energy is closer to experiment.
+
+## Figure and table itinerary: follow the controls
+
+[Open original v1 figures and captions](https://arxiv.org/html/2610.30641v1). All paper figures are **linked only**. No images or quantitative plots were reproduced.
+
+1. **Figure 1 — baseline disagreement.** Check how independent DFT reference calculations scatter relative to one another and whether outliers affect the mean more than the median. Ask what should count as an attainable benchmark resolution.
+2. **Figure 2 — raw formation energy error.** Trace the predicted errors and the DFT-reference bands, paying attention to the same data selection and per-element conventions.
+3. **Figure 3 + Table 3 — the decisive controlled comparison.** Open circles/diamonds distinguish relaxed vs single-point error; filled markers additionally remove elemental re-referencing offsets. The top three cluster within approximately **0.7 meV/atom only after both controls**; do not quote that as a raw leaderboard margin.
+4. **Figure 5 and the hull section — stability is a different task.** A small energy MAE does not uniquely determine which structure lies on a convex hull. Verify the compound reference states and compare chemically matched structure sets.
+5. **Figure 12 — nine axes.** Some columns for force, shear, stability and polymorph ranking reorder the models. The comparison does not justify one model being universally best; report the requested property and budget.
+
+## Authors report, AI interpretation, and caveats
+
+### Authors report
+
+The authors benchmark 14 universal MLIPs using 1.45 million AFLOW intermetallics from a reference outside the studied models' stated training corpora. DFT databases show non-negligible inter-protocol discrepancies. Controls for geometry and elemental reference explain part of some model ranking gaps, but not all remaining errors. They report differing orderings on several properties and demonstrate how the training corpus shapes which uMLIPs generalize.
+
+### AI interpretation
+
+This is a **measurement theory paper for ML benchmarks** as much as a materials-model comparison. For any AI-for-science workflow, first quantify independent-label disagreement, identify symmetries/offsets that should cancel, check provenance, then evaluate properties that matter for downstream science. If an autonomous materials agent optimizes only one held-out formation-energy MAE, it can preferentially learn a DFT convention rather than the stability or forces relevant to an actual experiment.
+
+### Caveats
+
+- The benchmark is for **ordered intermetallic structures** and specified training/data protocols; performance rankings do not generalize to every alloy, oxide, defect, phase, or temperature.
+- AFLOW is an independent **computational reference**, not experimental truth.
+- The model's performance on energy, force, elastic response, lattice dynamics and hull classification is not interchangeable.
+- Comparing a single-point energy at a fixed structure with a fully relaxed structure changes the physical question and must be stated clearly.
+- Differences below the cross-DFT discrepancy scale need caution; they are not automatically statistically or physically distinguishable as improvements in the potential energy surface.
+- The body, methods narrative, key figure captions and discussion were checked. **No benchmark computation rerun**.
+
+## Historical Reading Chain
+
+1. **First read:** [Deng et al. (2023), CHGNet as a pretrained universal neural network potential for charge-informed atomistic modelling](https://doi.org/10.1038/s42256-023-00716-3). Direct entry into the uMLIP design and evaluation problem.
+2. [Behler & Parrinello (2007), Generalized Neural-Network Representation of High-Dimensional Potential-Energy Surfaces](https://doi.org/10.1103/PhysRevLett.98.146401). The foundational atomistic neural-potential idea.
+3. [Jain et al. (2013), The Materials Project: A materials genome approach to accelerating materials innovation](https://doi.org/10.1063/1.4812323). How high-throughput DFT datasets are assembled and used.
+4. [Merchant et al. (2023), Scaling deep learning for materials discovery](https://doi.org/10.1038/s41586-023-06735-9). Example of downstream claims built on ML and DFT stability evaluation.
+
+## Reading Checklist
+
+- [ ] Explain why the elemental reference cancels for a same-composition polymorph gap.
+- [ ] Distinguish relaxed and AFLOW-geometry single-point predictions in Fig. 3.
+- [ ] Quantify and correctly interpret a DFT-versus-DFT agreement "floor."
+- [ ] Reconcile Fig. 3 energy rankings with Fig. 12 multi-metric reorderings.
+- [ ] Identify one downstream scientific decision for which force or phase stability matters more than energy MAE.
+- [ ] Read the CHGNet paper and compare its training set and evaluation reference to this independent benchmark.
+
+## Sources and attribution
+
+[Hart & Pursley, arXiv:2610.30641v1](https://arxiv.org/html/2610.30641v1), first publicly posted **22 October 2026**. Read the main article, figure captions and selected results/methods text. No original images were copied or altered. The ASCII diagram is an **AI-generated explanatory diagram**, not a reproduction of original quantitative figures.
