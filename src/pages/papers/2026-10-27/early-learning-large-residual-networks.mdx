@@ -1,0 +1,168 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Early learning in large residual networks"
+authors: "Vladimir Narovlansky and Boris Hanin"
+date: "2026-10-27"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2610.31783"
+notionUrl: "https://app.notion.com/p/4057dd5567ec8135a055e1b88dad34ac"
+summary: "In an analytically controlled early-training high-dimensional limit, a mean-field residual network learns linear input structure more readily than nonlinear monomials; the limit order and activation scaling are essential."
+readingTime: "30–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+Does an infinitely large residual network necessarily learn rich nonlinear features? Narovlansky and Hanin give a useful **counterexample for early training**. They calculate the output and hidden-state response after the first few gradient-descent steps in a simplified nonlinear ResNet. The sequential limits are unusual but central: **width and depth first; then training-set size; finally input dimension**. Their diagrammatic expansion reveals that higher-degree learned functions of the input are increasingly suppressed at high input dimension. A carefully centered activation and output scaling proportional to the square root of input dimension can still learn a **linear** target efficiently. This is **not a theorem that all practical ResNets remain linear indefinitely**.
+
+<ReadingPath
+  quick={['Read Abstract and Eq. (1.3): identify the special residual-block architecture.', 'Read Fig. 1 caption: input nonlinearity drops as input dimension increases.', 'Read the Discussion: the result is an early-time, ordered-limits statement.']}
+  standard={['Section 1: identify input dimension N0, hidden width N and depth L, and the order of limits.', 'Sections 2–5: compare one/two/three gradient steps with the Neural Tangent Kernel (NTK) baseline.', 'Section 6 and Fig. 1: interpret the input-inner-product diagrams and suppression of nonlinear monomials.', 'Figures 3–4: see when gamma=sqrt(N0) helps and when activation offsets break the scaling.']}
+  deep={['Derive the first update as a tangent-kernel expression for squared-error training.', 'Follow the Z2-symmetry cancellation at two steps and the first nonlinear-in-label term at three steps.', 'Expand the activation in Hermite polynomials and power-count input Gram factors chi_ab=(x_a · x_b)/N0.', 'Read Appendix E for a route beyond diagrams, then the single-hidden-layer and frozen-readout ablations in Section 7.']}
+/>
+
+## Big Picture: an order of limits can change your intuition
+
+The familiar **Neural Tangent Kernel (NTK)** picture describes the evolution of a function when trained weights effectively realize a fixed kernel. Mean-field models permit nontrivial representation changes. One might therefore expect a very large, very deep *nonlinear* ResNet to freely learn nonlinear functions.
+
+**This paper:** in its specific early-time and large-input-dimension limit, nonlinear **target dependence** and nonlinear **input dependence** appear at different orders. The output can show nonlinear dependence on training labels after several updates while remaining approximately linear as a function of the test input. These statements are related but are **not equivalent**.
+
+**AI-generated explanatory diagram (conceptual, not a paper plot):**
+
+```text
+  Simplified nonlinear residual network
+  x in R^(N0)
+      |
+  projection W0
+      |
+  L residual blocks, width N
+      |
+  readout scaled by gamma / N
+      |
+  full-batch gradient-descent steps
+      |
+  width N, depth L --> infinity
+      |
+  sample size n --> infinity
+      |
+  input dimension N0 --> infinity
+      |
+    Hermite / Wick expansion
+    of input Gram factors
+      |
+   linear input term survives
+      |
+   quadratic/higher terms suppressed
+```
+
+This diagram expresses the authors' *logical analysis pipeline* only; no quantitative scaling curve is reconstructed.
+
+## Mechanism: what actually vanishes?
+
+Write the simplified residual recurrence, where every hidden residual block has **zero additional hidden layers**:
+
+```text
+z_0(x) = W_0 x / sqrt(N0)
+
+z_l(x) = z_(l-1)(x)
+         + W_l phi(z_(l-1)(x)) / (L sqrt(N))
+
+f(x)   = (gamma / N) W_out phi(z_L(x))
+```
+
+The weights are initially Gaussian; squared-error loss is optimized by **full-batch gradient descent**. The paper chooses layer-specific mean-field learning-rate normalization before further analyzing dependence on sample size and input dimension.
+
+A central expansion variable is the normalized **Gram matrix** of inputs:
+
+```text
+chi_(a,b) = (x_a · x_b) / N0
+```
+
+Expanding the nonlinearity in **Hermite polynomials** and averaging Gaussian training inputs converts diagrams into powers of `1/N0`. Higher-degree learned monomials of the test input require extra Gram contractions and are more suppressed. For illustration, a target may contain
+
+```text
+y(x) = v1 · x + (v2 · x)^2 + ...
+```
+
+The authors explicitly analyze first through third training updates and organize their terms in these overlaps; extending the diagrammatic description to arbitrary updates is partly conjectural/heuristic. Under the specified scaling, **learning the linear component dominates the quadratic component** in high dimension.
+
+### Why activation centering matters
+
+A sufficient Gaussian-centering condition is
+
+```text
+E_(z ~ Normal(0,1)) [phi(z)] = 0.
+```
+
+It removes the zeroth Hermite coefficient. A concrete example of a centered ReLU is
+
+```text
+phi(z) = max(z, 0) - 1 / sqrt(2 pi).
+```
+
+For this special setting the authors study `gamma = sqrt(N0)` with `delta = 1`, allowing an order-one response to a linear target without the same divergence seen with more aggressive scaling. The uncentered activation or a frozen output layer can change the details. **The prescription is not a generally validated optimizer rule for arbitrary production ResNets.**
+
+### Two axes of nonlinearity
+
+```text
+Does f depend nonlinearly on training labels y?
+    -- can occur from third gradient step
+
+Does f(x) respond nonlinearly to input x?
+    -- higher monomials suppressed as N0 grows
+```
+
+The distinction helps avoid a common misreading: **departure from fixed-NTK dynamics alone does not guarantee efficient recovery of higher-degree input features**.
+
+## Key figures — inspect the original paper
+
+Go to [arXiv:2610.31783v1 HTML, Figures 1–4](https://arxiv.org/html/2610.31783v1) for original plots, captions and appendices. Original figures are **not copied, cropped, or recreated here**.
+
+1. **Figure 1 — input nonlinearity test.** The measure `|f(2x) + f(0) - 2f(x)|` is zero for every affine function. Inspect how it changes with `N0`, including the alternative normalizations and the distinction between held-out and training inputs. The authors treat a near-inverse scaling as **suggestive**, not an exact universal exponent.
+2. **Figure 2 — dependence on labels.** The experiment probes additivity in target-label directions. It is **not the same as** the affine-in-input measure in Fig. 1. A symmetry of the initial final-layer weights explains cancellations at two steps in the analyzed setting.
+3. **Figure 3 — output scaling.** Training-error curves compare `gamma = 1, sqrt(N0), N0` across input dimensions and activation choices. Beware that extremely large gamma can destabilize the selected parameterization; it is not a direct test of generalization.
+4. **Figure 4 — activation dependence.** Compare the centered activations with shifted/uncentered functions. The effect of zeroth Hermite mode on growth or divergence is a major qualification to the scaling law.
+
+Section 7 further presents **Figures 5–10** for one-hidden-layer blocks or a frozen readout. They support some trends but show that finer symmetry-based claims depend on architecture.
+
+## Authors report, AI interpretation, and caveats
+
+### Authors report
+
+The paper derives early-time updates (through three steps) with a diagrammatic expansion of large-width, large-depth mean-field residual-network dynamics and input inner-product statistics. Under the stated sequential high-dimensional limit, nonlinear terms in the learned input function are progressively suppressed. The authors present numerical experiments for target functions and activation/output scaling choices consistent with the theory.
+
+### AI interpretation
+
+This is a lesson in **the limits of simplified learning models**: even a nonlinear architecture with evolving features can show early-time high-dimensional rigidity. If a proposed infinite-width/depth mean-field model predicts easy nonlinear feature learning, its **input dimension, sample-size scaling, activation mean, time horizon, and readout trainability** must be checked before transferring that prediction to actual networks.
+
+One productive research question is what change in joint limit (for example, training horizon or dataset scaling) is necessary for stable nonlinear features, rather than assuming that deeper or wider models resolve the issue.
+
+### Caveats
+
+- The core analysis assumes **special residual blocks, Gaussian initialization and inputs, full-batch squared-error training, and a definite order of infinite limits**.
+- Only the first few discrete gradient steps are explicitly calculated; general-time behavior is not fully proven by the diagrammatic evidence.
+- **Nonlinearity of the function in inputs** and nonlinearity of training dynamics/labels must be distinguished.
+- Figure 1's apparent approximate scaling power is explicitly qualified by the authors; they note finite data and the restricted time regime.
+- The paper includes extensions by experiments, but does **not** prove identical detailed results for all ResNets, Transformers, realistic non-Gaussian data, or long-time SGD.
+- The arXiv v1 text, equations and figure captions were checked; calculations and simulations were **not independently reproduced**.
+
+## Historical Reading Chain
+
+1. **Read first:** [Jacot, Gabriel & Hongler (2018), *Neural Tangent Kernel: Convergence and Generalization in Neural Networks*](https://arxiv.org/abs/1806.07572). Learn what it means for kernel dynamics to stay fixed, then revisit the paper's first through third updates.
+2. [Yang & Hu (2021), *Tensor Programs IV: Feature Learning in Infinite-Width Neural Networks*](https://arxiv.org/abs/2011.14522). Compare a theoretically nontrivial feature-learning scaling with the present ordered input-dimension limit.
+3. [Bordelon & Pehlevan (2022), *Self-consistent dynamical field theory of kernel evolution in wide neural networks*](https://arxiv.org/abs/2205.09653). A complementary route to computing representation/kernel evolution through training.
+
+## Reading Checklist
+
+- [ ] Identify which width, depth, data-count and input-dimension limits are taken, and in which order.
+- [ ] Write the residual recursion and verify the meaning of gamma and delta.
+- [ ] Distinguish nonlinearity in labels from nonlinearity in test inputs.
+- [ ] Explain why a zero zeroth Hermite coefficient matters.
+- [ ] Read Figures 1, 2, 3 and 4 against their actual axes, not a generic theory summary.
+- [ ] State precisely what the authors prove for three steps versus conjecture for later steps.
+- [ ] Compare the result with the original NTK theory.
+
+## Sources and attribution
+
+[Narovlansky & Hanin, *Early learning in large residual networks*, arXiv:2610.31783v1](https://arxiv.org/html/2610.31783v1), first submitted **22 October 2026**. Main Sections 1–7 and selected appendix descriptions were checked. Original figure imagery is **linked only**. The conceptual diagram is **AI-generated**, not an original paper figure and not a recreation of any numerical plot.
