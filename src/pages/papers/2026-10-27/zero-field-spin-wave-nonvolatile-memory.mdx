@@ -1,0 +1,114 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Zero-field spin-wave networks with integrated non-volatile memory"
+authors: "K. O. Nikolaev, D. Raskhodchikov, J. Bensmann et al."
+date: "2026-10-27"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://doi.org/10.1038/s41563-026-02778-1"
+notionUrl: "https://app.notion.com/p/4057dd5567ec818a848be369595595a6"
+summary: "Non-volatile waveguide magnetization can route magnons through a YIG cross at zero applied bias field; full networks and selective-write operation remain simulations."
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+A magnonic device normally separates **signal waveguides** from **memory and control circuitry**. Nikolaev and colleagues make the static magnetization configuration of a yttrium iron garnet (YIG) waveguide itself the stored routing state. In a fabricated submicrometre cross, Brillouin light scattering (BLS) maps **zero-field spin-wave transmission** and its dependence on an earlier programming field. Micromagnetic calculations then explore 200 nm waveguides, more complex networks and local switching. **Do not confuse the experimental single-cross result with a built-and-tested multi-node memory circuit.**
+
+<ReadingPath
+  quick={['Abstract and Fig. 1–2: find the real YIG cross, antennas, and the experimentally measured BLS response.', 'Fig. 4: recognize network routing as a simulation.', 'Fig. 5: recognize selective low-field write as a simulation.']}
+  standard={['Read the motivation: static magnetic bias versus a persistent magnetic state.', 'Follow Fig. 1–2 from geometry and magnetization preparation to zero-field BLS maps.', 'Compare Fig. 3 device downscaling (200 nm) with the measured cross dimensions.', 'Read Fig. 4–5: distinguish network design, write operation, and demonstrated hardware.']}
+  deep={['Inspect magnetostatic effective-field and exchange contributions in the micromagnetic model.', 'Check the paper Methods and supplementary details for waveguide fabrication, BLS sensitivity and domain-wall pinning.', 'Estimate wavelength, group velocity and propagation length from reported dispersion; avoid inferring them from schematic arrows.', 'Compare Wang et al. 2024 and Papp et al. 2021; propose a fully electrical memory/readout test.']}
+/>
+
+## Big Picture: the routing element remembers
+
+**Before:** magnons propagate as spin-wave excitations in magnetic waveguides, with propagation often conditioned on externally imposed magnetic fields. An externally applied bias can interfere with using a magnetization texture as independent non-volatile memory. **This work:** a low-loss YIG cross stores a magnetization configuration after a preparation pulse, and that configuration steers the spin-wave propagation **without an externally maintained bias field**. **What changes:** a waveguide may serve simultaneously as the physical data path and its control state.
+
+**AI-generated explanatory diagram (conceptual, not a paper figure or data):**
+
+```text
+    program magnetic field       remove programming field
+              |                           |
+       choose static M         retained M in YIG waveguides
+              |                           |
+              +-------------+-------------+
+                            |
+            anisotropic spin-wave dispersion
+              + local effective field landscape
+                            |
+    RF antenna --> travelling magnon --> YIG cross
+                                             |
+                               preferred exit arm
+                                             |
+                             optical BLS signal map
+
+   EXPT: fabricated cross + routing at zero external bias
+   MODEL: 200 nm scaling + multi-node network + local writing
+```
+
+This is a **logical dependency sketch**, not a reproduction of experimentally measured intensity or any simulated vector field.
+
+## Key Figures — open and inspect the originals
+
+Read [the original Nature Materials article and Figures 1–5](https://doi.org/10.1038/s41563-026-02778-1). All paper figures are **linked only**; none are copied, modified, or re-plotted.
+
+1. **Figures 1–2 — fabricated junction and BLS routing.** Identify the lithographically defined YIG cross and excitation antenna, the magnetization-setting procedure, and the BLS map taken after removal of the programming field. Ask: does the pattern indicate *directionality in a particular state*, or simply a geometric power splitter? Track the magnetization orientation carefully.
+2. **Figure 3 — size scaling in simulation.** The authors consider **200 nm wide, 50 nm thick YIG** guides, in contrast to the submicrometre cross measured experimentally. The changed dispersion matters: reducing width modifies the accessible frequencies and guiding regime.
+3. **Figure 4 — simulated multi-node routing.** A layout of **three horizontal and two vertical waveguides** with **1.5 µm** spacing between intersections is evaluated at **2.2 GHz and zero bias field**. The propagation maps are simulated, not measured multi-cross-chip data.
+4. **Figure 5 — proposed writing of individual branches.** The numerical example uses a **12 mT global field** below a roughly **12.6 mT coercive threshold**, combined with a **1 mT local assist** at a junction, to move domain walls and reverse the selected branch. This is a promising **device proposal**, not an experimentally demonstrated low-energy addressing scheme.
+
+## Core mechanism
+
+For a magnetization field `M(r,t) = M_s m(r,t)`, a schematic Landau–Lifshitz–Gilbert equation is
+
+```text
+d m / dt = - gamma * (m x H_eff)
+           + alpha * [m x (d m / dt)]
+```
+
+**Intuition:** the local effective field contains applied, demagnetizing, anisotropy and exchange contributions. An in-plane YIG waveguide has a geometry-dependent demagnetizing field; changing its *static* magnetization direction changes the small-amplitude spin-wave mode dispersion and which part of the network can carry the incoming wave. After the field pulse is removed, a metastable magnetization state persists, so routing can persist without continuous bias.
+
+For a one-dimensional guide, dispersion `omega(k; M, geometry)` determines group velocity `v_g = d omega / dk`. Whether a selected branch actually carries substantial wave amplitude also depends on mode matching at junctions, reflection and damping. **Neither the arrows in a routing schematic nor a good simulated path establish a fully useful logic gate with read/write endurance.**
+
+## Authors report, AI interpretation, caveats
+
+### Authors report — experimental evidence
+
+The team fabricates YIG waveguides and demonstrates reprogrammable spin-wave paths after setting distinct magnetization states. BLS spatially resolves routing in the cross geometry at **zero applied bias field**. This validates the physical principle of storing a routing configuration in waveguide magnetization. The official publication date is **22 October 2026**.
+
+### Authors report — simulation and proposals
+
+Micromagnetic modeling extends the principle to **200 nm** widths, a multi-intersection network, and a potential strategy for locally triggered magnetization reversal under a small additional field. The paper's network topology, microscopic domain-wall manipulation and energy-cost estimates **are not the same as measured integrated memory-cell performance**.
+
+### AI interpretation
+
+The key advance is not that spin waves can carry signals, but the potentially powerful **co-location of non-volatile control state and wave path**. This suggests compact routing and reconfigurable interference circuitry. A rigorous next experiment should demonstrate independently addressed write operations on a multi-node chip with measured BLS or on-chip electrical receivers; quantify insertion loss, route contrast, switching energy, retention and reproducibility.
+
+### Caveats / alternative explanations
+
+- A BLS map measures local spin-wave intensity under the optical probing scheme; it is not automatically a calibrated electrical transfer function.
+- Zero external field **during readout** does not mean the device was never exposed to a magnetizing field.
+- Network-scale selective routing is supported by micromagnetic simulations, with lithographic roughness, thermal noise, variability and electrical addressability awaiting full validation.
+- Dissipation, impedance at junctions, fan-out and switching cost determine circuit usefulness beyond a visually clear routing map.
+- Paper main text, available figure explanations and metadata were checked; data were **not independently reproduced**.
+
+## Historical Reading Chain
+
+1. **Read first:** [Wang, Csaba, Verba, Chumak & Pirro (2024), *Nanoscale magnonic networks*](https://doi.org/10.1103/PhysRevApplied.21.040503). Motivates the wave-based network architecture, dispersion, route control and scaling issues this work targets.
+2. [Kruglyak, Demokritov & Grundler (2010), *Magnonics*](https://doi.org/10.1088/0022-3727/43/26/264001). Background on spin-wave physics, low-damping waveguides and information processing.
+3. [Papp, Porod & Csaba (2021), *Nanoscale neural network using non-linear spin-wave interference*](https://doi.org/10.1038/s41467-021-26711-z). Shows how magnetically programmed interference networks could support computations, but does not by itself validate this paper's zero-field hardware.
+
+## Reading Checklist
+
+- [ ] Separate the magnetization **programming** field from the zero-field **readout** condition.
+- [ ] Distinguish the experimental YIG cross from the simulated 200 nm waveguide network.
+- [ ] Explain physically why the static `M` configuration changes mode propagation.
+- [ ] Describe what BLS measures and which circuit metrics it does not measure.
+- [ ] Contrast Figure 4 and Figure 5 demonstrations versus simulations.
+- [ ] Read Wang et al. 2024 and formulate a test of individually addressed, non-volatile routing.
+
+## Sources and attribution
+
+**Original paper:** [Nikolaev et al., *Nature Materials*, published 22 October 2026](https://doi.org/10.1038/s41563-026-02778-1). [Author-associated source data (Zenodo)](https://doi.org/10.5281/zenodo.22960338) is available for independent numerical figure checks but was not re-plotted here. Original figure images belong to the authors and publisher and **are only linked**. The ASCII flow is an **AI-generated explanatory diagram**, not an original paper figure, quantitative re-creation, or independent experiment.
