@@ -1,0 +1,141 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Second-Harmonic Bulk Response of Fractional Quantum Hall Fluids"
+authors: "J. Luke Pimlott, Pablo Reiser, T. Hans Hansson, Habib Rostami"
+date: "2026-10-28"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.33606"
+notionUrl: "https://app.notion.com/p/4067dd5567ec81de9bc3cf549ed1813c"
+summary: "A projected tilted Dirac band and composite-boson Chern–Simons theory predict a finite-frequency, second-harmonic bulk Hall resistivity of fractional quantum Hall fluids; its low-frequency real and imaginary parts vanish as different powers of drive frequency."
+readingTime: "30–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+Ordinary quantum Hall transport emphasizes a **linear** Hall plateau. Can the bulk of a **fractional** quantum Hall liquid produce a measurable **second harmonic** when inversion and rotational symmetries are broken, without invoking nonlinear edge-mode dispersion? Pimlott and colleagues derive a positive answer in an analytically controlled *model*: project a tilted massive Dirac band, retain the induced nonlinear electromagnetic coupling, and calculate the response with composite-boson Ginzburg–Landau–Chern–Simons (GLCS) theory. The second-harmonic **Hall resistivity** vanishes at zero frequency; its low-frequency real part scales as frequency squared, the imaginary part as frequency, and the finite-frequency filling dependence is proportional to **1/nu squared** under the stated plateau assumptions. This is a **theoretical prediction**, not an experimental observation or universal quantization of nonlinear response.
+
+<ReadingPath
+  quick={['Read Abstract and Fig. 1: identify driven current at omega and measured transverse voltage at 2 omega.', 'Read Eq. (2): nonlinear resistivity is not the same tensor as nonlinear conductivity.', 'Read Fig. 2 and Discussion: note omega -> 0, angular anisotropy, and plateau assumptions.']}
+  standard={['Follow Fig. 1 and the response-inversion derivation in Eqs. (1)–(2).', 'Read the tilted Dirac model and projected band terms in Eqs. (11)–(14).', 'Read GLCS construction and Eq. (22), then the low-frequency result Eq. (4).', 'Inspect Fig. 2: distinguish real and imaginary contributions and the role of crystalline angle.', 'Read the last discussion paragraph on disorder, localized quasiparticles and the model limits.']}
+  deep={['Reproduce the order-by-order inversion of j(E) to E(j), keeping the three factors of linear resistivity in the second-order response.', 'Trace which projected-band electric-field couplings break the naive linear-only effective action.', 'Follow Supplemental I–II: project the gapped Dirac model; integrate out Chern–Simons gauge fluctuations and check the Ward/gauge constraints.', 'Examine Supplemental V and VII: identify one- and two-photon Kohn-mode poles in conductivity and why they cancel from rho^(2).', 'Explain what extra disorder/localization physics would be necessary to predict a plateau width.']}
+/>
+
+## Big Picture: a new bulk probe, not a replacement for Hall quantization
+
+**Before:** the integer and fractional Hall effects are characterized by quantized *linear* transverse response. Nonlinear signals can also arise from Berry geometry, crystallographic asymmetry, and edge dynamics, but these mechanisms should not be conflated.
+
+**This paper:** a specific **bulk** model produces second-harmonic transport even when nonlinear edge dispersion is not invoked. The result is sensitive to *wavefunction projection* and *fractional topological order*.
+
+**After:** a future finite-frequency lock-in transport experiment could search for the predicted phase-sensitive second-harmonic voltage and angular dependence, while separately ruling out contacts, heating, and ordinary device nonlinearities.
+
+**AI-generated explanatory diagram (conceptual; not a paper figure or data reconstruction):**
+
+```text
+  Tilted, gapped Dirac bands + B field
+                    |
+       projection to low-energy band
+                    |
+     extra E-dependent band couplings
+                    |
+  composite boson + Chern-Simons gauge field
+                    |
+        integrate gauge fluctuations
+                    |
+        sigma^(1) and sigma^(2)
+                    |
+         perturbative tensor inversion
+                    |
+      rho_TLL^(2) at twice drive frequency
+                    |
+    vanishing dc; anisotropic ac response
+```
+
+This diagram explains the logical mechanism only; it is **not** an original Figure and does not depict quantitative data.
+
+## Mechanism I — the observable is resistivity, not conductivity
+
+Drive a current at frequency omega and measure a transverse electric field at 2 omega. The authors write a nonlinear current response and **invert it order by order**. In their longitudinal/transverse basis (paper Eq. 2):
+
+```text
+rho_TLL^(2)(2 omega)
+  = - rho_Ta(2 omega)
+      sigma_abc^(2)(2 omega; omega, omega)
+      rho_bL(omega) rho_cL(omega)
+```
+
+Repeated tensor indices are summed. All **three factors** of linear resistivity matter; substituting sigma_TLL^(2) alone would give the wrong observable and may misidentify resonances. A Hall plateau has approximately
+
+```text
+rho_H ~= h / (nu e^2)
+sigma^(2) scales with nu  [within this theory]
+
+therefore rho_TLL^(2) scales with nu^(-2)
+```
+
+This filling dependence is *not* a statement that the second harmonic is exactly quantized in arbitrary materials.
+
+## Mechanism II — finite-frequency scaling and a cancellation
+
+Let X be omega/omega_c, with omega_c the cyclotron frequency. In the large-gap, weak-tilt, low-frequency limit, the reported structure is (paper Eq. 4 and Supplemental Eq. S92):
+
+```text
+rho_TLL^(2)(2 omega, theta)
+       ~= [h^2 / (nu^2 e^3)]
+           { X^2 f(theta) + i X g(theta) }
+
+Re rho^(2) ~ omega^2
+Im rho^(2) ~ omega
+rho^(2) -> 0 as omega -> 0
+```
+
+The functions f and g depend on band gap, Dirac velocity, valley, tilt and orientation; their prefactors are **not universal**. Their leading angular dependences are cosine-like and sine-like in the weak-tilt expansion. Compare the real and imaginary signal as well as the orientation of the Hall bar relative to the tilt axis.
+
+**Kohn-mode subtlety:** the authors find poles corresponding to cyclotron/Kohn resonances in the *nonlinear conductivity*, but the product with the three linear resistivities cancels those poles in the *nonlinear resistivity* within the controlled regime. Remaining formal high-frequency poles lie beyond the effective single-band description. It would be misleading to predict a sharp 2-omega resistivity peak at the naively expected conductivity resonance.
+
+## Key figures — read the originals, not an invented replotted curve
+
+Original figures are **linked only**, with no copying/cropping or reconstruction of quantitative traces. See the [arXiv v1 HTML with figure captions](https://arxiv.org/html/2610.33606v1).
+
+1. **Fig. 1 — geometry and Landau-level content.** In the top panel find the fundamental current drive and both transverse voltage harmonics; in the lower schematic compare opposite valleys and the anomalous n=0 Landau level. The bands are **schematic**, not measured electronic spectra. Check why a tilted dispersion and broken spatial symmetries are necessary.
+2. **Fig. 2 — frequency and orientation.** Its main panel separates real and imaginary parts of rho_TLL^(2), plotted in the authors' chosen normalization, and the inset scans orientation. Inspect the omega-to-zero limit and the absence of a surviving Kohn pole in this *resistivity* observable. Neither curve is a material-independent universal value.
+3. **Supplemental Material — field-theory audit.** The paper supplies the large-gap projection, effective gauge action, nonlinear conductivity and inverse-response derivations. Read equations and diagram labels directly rather than treating the simplified flow chart above as an independent derivation.
+
+## Authors report
+
+- A **projected tilted massive Dirac model** produces nonlinear electromagnetic terms retained in an effective GLCS action for Laughlin-type fillings.
+- Its computed second-harmonic Hall **resistivity** shows low-frequency omega-squared (real) and omega (imaginary) behavior, crystalline anisotropy and a nu-inverse-square scaling.
+- Resonance poles in a second-order *conductivity* need not appear in the corresponding second-order *resistivity*.
+
+## AI interpretation
+
+This is a useful new observable for comparing *bulk fractional Hall response* and *edge-based nonlinear scenarios*. More broadly, it is an excellent lesson for second-harmonic transport: **the experiment fixes which quantity is driven and which is read out**, so converting sigma to rho must be done at nonlinear order. In bilayer/multiband devices, checking tensor inversion and symmetries can matter as much as fitting a power law.
+
+## Caveats / discrimination experiments
+
+- All central results are **theoretical**, obtained in a particular tilted, gapped, approximately single-band model and a perturbative mean-field GLCS treatment.
+- Control of the band projection assumes drive energies and cyclotron energies well below the electronic gap; strong tilt and high drive frequencies fall outside the controlled approximation.
+- Filling-factor **plateau width** is not derived: outside the exact filling, the authors assume extra carriers become localized quasiparticles while the bulk fluid remains intact. Disorder and localization need independent treatment.
+- A second-harmonic Hall signal alone cannot prove fractional topological order; contacts, rectification, thermal signals and non-fractional Berry-geometry mechanisms must be discriminated.
+- The full arXiv v1 HTML main text and relevant Supplemental sections were inspected, but numerical/field-theory algebra was **not independently reproduced**.
+
+## Historical Reading Chain
+
+1. **Read first:** [Zhang, Hansson & Kivelson (1989), *Effective-field-theory model for the fractional quantum Hall effect*](https://doi.org/10.1103/PhysRevLett.62.82). This is the closest conceptual source for flux attachment and the GLCS effective description used here.
+2. [Hansson, Hermanns, Simon & Viefers (2017), *Quantum Hall physics: hierarchies and conformal field theory techniques*](https://doi.org/10.1103/RevModPhys.89.025005). Build a reliable picture of fractionalized Hall liquids and gauge approaches.
+3. [Sodemann & Fu (2015), *Quantum nonlinear Hall effect induced by Berry-curvature dipole in time-reversal invariant materials*](https://doi.org/10.1103/PhysRevLett.115.216806). Compare a different symmetry setting and a different microscopic source of second-order response.
+
+## Reading Checklist
+
+- [ ] From Fig. 1, draw the measurement drive and voltage detection at omega and 2 omega.
+- [ ] Starting with Eq. (1), derive the tensor inversion in Eq. (2) and account for the three rho factors.
+- [ ] Explain which symmetry breaking is needed and what the tilted Dirac-band projection changes.
+- [ ] Check the difference between sigma^(2) resonance poles and rho^(2) in Fig. 2.
+- [ ] State exactly the low-frequency real/imaginary scalings and why the dc response vanishes.
+- [ ] Separate the nu^(-2) dependence from exact quantization and identify the disorder assumption behind a putative plateau.
+- [ ] Read the 1989 GLCS foundational paper before claiming to understand the gauge theory.
+
+## Sources and attribution
+
+[Pimlott, Reiser, Hansson & Rostami, *Second-Harmonic Bulk Response of Fractional Quantum Hall Fluids*, arXiv:2610.33606v1](https://arxiv.org/html/2610.33606v1). First submitted **24 October 2026**; this guide prepared **28 October 2026**. Original figure captions and selected Supplemental equations checked. **No original paper Figure has been reproduced**; the labeled conceptual flow is an **AI-generated explanatory diagram**, not a quantitative or licensed paper figure.
