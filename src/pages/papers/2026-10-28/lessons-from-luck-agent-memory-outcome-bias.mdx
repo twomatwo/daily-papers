@@ -1,0 +1,133 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Lessons from Luck: Do LLM-Written Lessons Carry Chance into an Agent's Next Decision?"
+authors: "Kazuki Nakayashiki"
+date: "2026-10-28"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2610.33029"
+notionUrl: "https://app.notion.com/p/4067dd5567ec8127bbfcd5173bbf1fa4"
+summary: "A preregistered synthetic-agent study finds that a chance failure of the better tool can enter an LLM-written lesson and bias a fresh agent toward the worse tool, even with authoritative logs available."
+readingTime: "30–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+Self-improving agents often summarize a completed task into a durable *lesson*, to guide later runs. But a **good decision can fail by chance**. Will a model-written lesson mistake unlucky execution for bad judgment? In this registered study, 11 LLM endpoints made **90,084** valid next-tool decisions across 256 synthetic worlds. After a chance failure of the **more reliable** tool, a failure-written lesson increased the rate of choosing the **worse** tool to **11.6%**, versus **0.4%** with an irrelevant memory item. A registered panel interaction was **+0.112** (95% interval **+0.097 to +0.126**). Prompt modifications partially reduced harm, but not uniformly across endpoints. The result concerns a **synthetic two-tool selection task**, not general real-world autonomous-agent safety.
+
+<ReadingPath
+  quick={['Read the Abstract and Section 3 overview: both tools have known reliability and one run can fail transiently.', 'Read Tables 1–2: locate the adverse cell good decision + chance failure.', 'Read Section 7: recognize the limited task model and the difference between memory writing and actual execution.']}
+  standard={['Section 3: map the four preceding decision/outcome conditions onto the lesson writer and fresh-session reader.', 'Section 4: distinguish P2 difference-in-differences from the raw 11.6% versus 0.4% rates.', 'Tables 1–2: compare RB failure memory, irrelevant memory, opposite-outcome memory, RBD and N.', 'Figure 1 / Table 3: inspect model heterogeneity and intervals, keeping exploratory per-endpoint readings separate from the registered panel test.', 'Section 5.4 and Section 6: understand two mitigation prompts and when a memory can override logs.']}
+  deep={['Trace the preregistered protocol, pilot, locked stimuli, confirmatory run and correction log; inspect the public Zenodo deposits.', 'Reconstruct P2 and P3m from a 2-by-2 decision/outcome design while holding the authoritative log identical across reader arms.', 'Compare the classical psychology definition of outcome bias to a mechanistic claim about LLM representations — the latter is NOT established here.', 'Inspect writer prompts (Appendix A), reader prompts (Appendix B) and example lesson content (Appendix C).', 'Check per-endpoint heterogeneity, tests and multiplicity notes, missing-data bounds and how an unreasoned planted directive calibrates the response.']}
+/>
+
+## Big Picture: decision quality is not outcome quality
+
+The basic failure mode is not an adversarial prompt injection. It is *ordinary experience summarization* under noisy outcomes.
+
+A **good action** means choosing the tool with the better documented reliability given the information available **before** the outcome. That choice may still suffer a transient outage. If an LLM is instructed to distill the failed run into advice about what to avoid, a new session can inherit an unjustified preference for the less reliable tool. The authoritative log is still visible to that new session: this is about the weight and interpretation of the *memory item*, not withholding the original evidence.
+
+**AI-generated explanatory diagram (conceptual — no numeric curves or original figures copied):**
+
+```text
+     Documented tool reliabilities
+                |
+       Choose more reliable tool
+                |
+       Unlucky transient failure
+                |
+    LLM writes "lesson from failure"
+                |
+  lesson stored as next session's memory
+                |
+  fresh LLM sees SAME authoritative log
+                |
+  sometimes chooses LESS reliable tool
+```
+
+**Counterfactual control:** supply a neutral memory item or a lesson written from a success, while holding the world and reliable run log fixed. The study measures differences between those reader arms.
+
+## Experimental design: the intervention is a memory item
+
+Across **256 synthetic worlds**, a task has two interchangeable tools with **recorded reliabilities**. A scripted previous run can choose the better (good decision) or worse (bad decision) tool, and the assigned outcome can be either success or transient failure. The model writes a lesson using an adapted released ReasoningBank instruction. A **fresh session of the same model** chooses a first tool with one controlled memory item; all other task information remains available.
+
+Four cases are conceptually distinct:
+
+```text
+                   outcome: success   outcome: failure
+ good decision       expected          unlucky / adverse
+ bad decision        lucky / adverse   expected
+```
+
+The two adverse cells are asymmetrical: the damaging observation is strongest after a **good decision that failed**. The reverse case — a bad decision that luckily succeeded — produced a small registered interaction in this experiment. Do **not** infer a theorem that luck never matters after bad decisions.
+
+Two important statistical quantities should not be confused:
+
+- **Observed choice rates, Table 2:** in the good-decision/failure cell, **11.6%** chose the worse tool with a failure-written lesson, **0.4%** with neutral memory, and **0.4%** with a lesson from success.
+- **Registered primary contrast P2, Table 1:** a difference-in-differences estimate of **+0.112**, with 95% interval **[+0.097, +0.126]** across the 256 worlds in the 11-endpoint panel. The contrast conditions on decision quality and outcome, controlling more factors than one rate subtraction.
+
+The registered P3m estimate for the reverse adverse cell is approximately **+0.002**, interval **[-0.001, +0.005]**. The authors characterize this as bounded below the specified 0.10 margin, **not as proof of zero effect**.
+
+## Key Figure and Tables — inspect the originals
+
+Read the [arXiv HTML v1](https://arxiv.org/html/2610.33029v1). No copyrighted or licensed figure is copied or altered here.
+
+1. **Table 1 — registered confirmatory quantities.** Identify P2, A2, L2, P3m and the planted-instruction positive control. The significance decision requires the paper's registered combination of tests; do not substitute post hoc thresholding of individual endpoints.
+2. **Table 2 — actual behavior rates.** Find the **good/failure** row. Compare RB, RBD, N, NEUTRAL and swapped-outcome arms. Use rates to understand *behavior* and Table 1 for the stated panel *causal contrast*.
+3. **Figure 1 and Table 3 — between-model heterogeneity.** Figure 1 displays P2 and P3m for individual model endpoints with registered intervals and a 0.10 line. Six endpoints met the authors' endpoint-level luck-carrying reading; five were classified as bounded. Exploratory endpoint estimates are **not multiplicity-adjusted** and do not imply every model behaves like the panel average.
+4. **Table 5 — countermeasures.** It separates the extra decision-quality note (RBD) from one neutral instruction with an explicit no-change option (N). The N intervention changes **two** instruction properties at once, so one cannot assign its whole effect solely to removing outcome routing.
+
+## Why mitigation only partially solves the problem
+
+The two tested alternatives were:
+
+- **RBD:** ask the lesson writer to judge the original action by the **information available before the result**. The adverse cell's worse-tool choice rate fell from 11.6% to **7.5%**.
+- **N:** use a common instruction after either outcome and explicitly allow **no change**. The rate fell to **3.1%**.
+
+The registered panel-level harm reduction holds for both in the paper's comparisons, but neither helps every endpoint under the preregistered rule; the improvements are not a clean head-to-head causal test of which exact prompt feature matters. The study's evaluated reader still uses a logged synthetic reliability task, not an unrestricted real tool environment.
+
+## Authors report
+
+- A frozen protocol, archived preregistration and locked run records preceded the confirmatory call, making the reported comparisons auditable.
+- In this experimental design, a failure-written lesson can transfer a chance outcome into the next tool choice, even when the next reader has the original authoritative evidence.
+- Panel-level harm shows an asymmetry between **unlucky good decisions** and **lucky bad decisions** in the measured interaction.
+- Two modest writing-instruction changes reduce but do not eliminate the measured rate on every model.
+
+## AI interpretation
+
+This paper makes a compelling case for treating an agent's persistent memory as **derived evidence, not ground truth**. A scientific Agent should record **pre-outcome decision rationale**, **observed outcome**, and **causal attribution confidence** as separate fields. It should be able to store: *"An apparent failure occurred; the evidence does not yet support changing the tool or protocol."*
+
+For an automated laboratory, a single instrument timeout after an otherwise valid setup should trigger diagnosis of connectivity/reliability, not instantly a durable lesson that the measurement protocol is intrinsically wrong. Such workflow advice is an **AI extrapolation** from the paper, not a tested laboratory result.
+
+## Caveats and alternative explanations
+
+- The test is intentionally **synthetic**: two tools, explicit reliability information and a single first-tool decision. Multi-step real-world failures, hidden tool reliabilities, nonstationary reliability and actual downstream rewards were not established.
+- Models write and read their own lessons; different endpoints' effects cannot isolate whether *writing* or *reading* was the weaker stage.
+- The specific ReasoningBank **released code** prompts were adapted in declared ways. The paper does not test every memory architecture or even the exact printed instructions in the original ReasoningBank paper.
+- Endpoint-specific comparisons are **exploratory and unadjusted across 11 endpoints**; the preregistered panel test and the separate model profiles should not be collapsed into one assertion.
+- P3m being small is **not** a general guarantee of no harm after lucky bad decisions.
+- The run records and statistical code were inspected through the paper's disclosures, **not independently reexecuted** for this guide.
+- This arXiv v1 first appeared on **12 October 2026**; it is being recommended as a **recent backlog find**, not misrepresented as an October 28 release.
+
+## Historical Reading Chain
+
+1. **Read first:** [Baron & Hershey (1988), *Outcome bias in decision evaluation*](https://doi.org/10.1037/0022-3514.54.4.569). Understand why judging the original choice by its eventual luck corrupts reasoning, then map that bias onto the lesson writer.
+2. [Ouyang et al. (2025), *ReasoningBank: Scaling agent self-evolving with reasoning memory*](https://arxiv.org/abs/2509.25140). This is the direct reference instruction/memory architecture adapted for the study.
+3. [Shinn et al. (2023), *Reflexion: Language Agents with Verbal Reinforcement Learning*](https://arxiv.org/abs/2303.11366). Background on using language reflections as cross-run learning signals.
+4. [Asadolahi et al. (2026), *Memory reward inflation in self-improving LLM agents*](https://arxiv.org/abs/2608.00017). A related diagnosis of how memory-writing loops can bias subsequent judgments.
+
+## Reading Checklist
+
+- [ ] Define *good decision*, *bad decision*, *success*, and *transient failure* without conflating them.
+- [ ] Reconstruct the reader's controls: same task, same authoritative log, different memory item.
+- [ ] Read Tables 1–2 and distinguish registered P2 from simple observed choice rates.
+- [ ] Check Table 3 / Figure 1 and avoid describing the result as uniform across models.
+- [ ] Explain the difference between outcome-based lesson writing and causal evidence that a tool is less reliable.
+- [ ] Explain why the RBD and N mitigations are not definitive fixes.
+- [ ] Inspect the preregistration and code-record claims before attempting replication.
+- [ ] State why results from synthetic two-tool tasks cannot automatically generalize to open-ended research Agents.
+
+## Sources and attribution
+
+[Nakayashiki, *Lessons from Luck: Do LLM-Written Lessons Carry Chance into an Agent's Next Decision?*, arXiv:2610.33029v1](https://arxiv.org/html/2610.33029v1), **first submitted 12 October 2026**. The authors link a [preregistered design deposit](https://doi.org/10.5281/zenodo.23253562) and [locked confirmatory-run records](https://doi.org/10.5281/zenodo.23272809). This guide is an interpretive educational aid prepared **28 October 2026**, based on a reading of main methods, results, selected appendices and limitations; it is not an independent replication. Original plot and tables remain at the source. The diagram above is **AI-generated and conceptual**, not an original paper Figure or reconstructed numeric data.
