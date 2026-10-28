@@ -1,0 +1,155 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Symmetry Breaking Is the Price of Finite Capacity"
+authors: "Maggie Chlon, Leon Chlon"
+date: "2026-10-29"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2610.36138"
+notionUrl: "https://app.notion.com/p/4077dd5567ec8182a388f3b8119eccf5"
+summary: "In a specified Gaussian low-rank prediction problem, finite capacity can make every loss-optimal model asymmetric even when target and data are exactly symmetric, with an exactly computable excess loss for enforcing symmetry."
+readingTime: "30–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+如果任务在旋转后答案不变，最优模型也一定对旋转不变吗？**容量不足时不一定。** Chlon 和 Chlon 研究了严格对称的 Gaussian 双线性预测任务：对称性把特征方向锁定为整个不可约表示块，rank-$k$ 模型可能只够购买某块中的几个方向。于是 **所有达到最小风险的有限秩解都必须偏好一个方向**，而强迫它保持对称会增加精确可算的风险
+
+$$
+\delta_G=\frac{U_k-I_k}{2\sigma^2}.
+$$
+
+单个 attention head 的 query–key similarity 也具有 rank 不大于 head dimension 的瓶颈；对 **logits 的平方误差**可推出同一公式。真实 softmax 下非二次损失的结果则更依赖具体实验，不能将定理不加条件地推广到所有 Transformer。
+
+<ReadingPath
+  quick={['先看 Fig. 1：预算 k=6，为什么既能取 6 个最好方向，又不能对称地保留部分表示块？', '看 Theorem 3.1 的精确公式：区分 Uk 与 Ik。', '看 Fig. 2–3：区分 logit regression 定理与 softmax 实验。']}
+  standard={['Section 2：理解对称性、irreducible blocks 和容量预算。', 'Section 3：从 Gaussian log loss 转化为矩阵 Frobenius 距离，再做低秩谱截断。', 'Section 4：把查询/键相似度的 rank 瓶颈映射到 attention head。', 'Section 5–6：比较旋转敏感度、logit regression、flat softmax 和 peaked softmax。', 'Limitations：细读定理假设与前层 routing 的可能绕行。']}
+  deep={['逐步证明 Theorem 3.1：Gaussian isotropy、Schur 引理和 Eckart–Young 定理分别负责什么？', '对 SO(3) spherical harmonics 推导块大小 1,3,5,7,... 与累计 1,4,9,16,...。', '检查 Theorem 4.2 的独立 query/key、squared-logit-loss、single-head 假设。', '检查为何 softmax 常数 logit 模式无效，使其整块尺寸从 1,4,9 变成 3,8,15。', '阅读 Appendix D：rotation test、block budget test 与全对称模型比较。']}
+/>
+
+## Big Picture — 对称任务也可能没有对称的最优低秩解
+
+在机器学习中通常把数据增强、对称网络和 equivariance 看作好事；但它们并非免费。当**对称的特征**必须成组存在，而 rank / head dimension 预算不足以容纳整组时，最佳有限模型宁愿留下一部分方向、牺牲对称性以换取更低误差。
+
+该机制与数据采样偏差、优化未收敛、模型训练初始值不对称不同：作者构造的是**总体分布本身完全对称，而且达到全局最优仍可能不对称**的例子。
+
+**AI-generated explanatory diagram（纯概念，不是原 Fig. 1，也没有重画论文的定量条形图）：**
+
+~~~text
+Symmetric target
+    |
+directions grouped by irreducible representations
+    |
+finite capacity / rank k
+    |
+    +-- enough for whole blocks --> symmetric optimum possible
+    |
+    +-- cuts an active block
+                 |
+          unrestricted: keep useful directions
+          invariant: take all or none
+                 |
+          unrestricted wins on risk
+                 |
+        each optimum picks an orientation
+~~~
+
+## Mechanism I — 为什么对称意味着「整块购买」？
+
+设群 $G$ 正交地作用于向量空间 $V$，将其分解为互不等价、绝对不可约表示块 $V_a$，各块维数 $d_a$。Schur 引理使对称矩阵在各块上必须是标量：
+
+$$
+M_\star=\bigoplus_a \lambda_a I_{V_a}, \qquad\lambda_a>0.
+$$
+
+假设预测矩阵必须满足 $M\succeq 0$、$\mathrm{rank}(M)\le k$。普通 rank-$k$ 近似可以在一个块内只选部分方向；但与群的所有作用都对易的 $M$，必须把整个块一起选中或一起丢弃。一个块需要一次支付 $d_a$ 个 rank 单位。
+
+论文以 isotropic Gaussian 对称矩阵 $X$ 为输入，以
+
+$$
+Y|X\sim\mathcal N(\langle M_\star,X\rangle_F,\sigma^2)
+$$
+
+为监督目标。Gaussian log loss 与平方 Frobenius 误差成正比，从而可以准确比较最优解。
+
+## Mechanism II — 一个可以直接算的 symmetry price
+
+设 $U_k$ 为按大小选择 **$k$ 个单独谱方向**所捕获的能量；设 $I_k$ 为在容量约束下选择**若干完整表示块**所捕获的最大能量：
+
+$$
+I_k=\max_{J:\sum_{a\in J}d_a\le k}
+\sum_{a\in J}d_a\lambda_a^2.
+$$
+
+Theorem 3.1 给出
+
+$$
+\boxed{\delta_G=\frac{U_k-I_k}{2\sigma^2}}.
+$$
+
+由于 $U_k\ge I_k$，对称不可能比同一容量内的非限制最优解更好；**当 $U_k>I_k$ 时，所有全局最优解都不对称**。这些解经群旋转形成一族等价最优解，这才是论文使用 spontaneous symmetry breaking 的精确定义。
+
+思考一个简单例子：只有一个 $d$ 维不可约块、强度 $\lambda$，而 $0<k<d$。非限制解保留任意 $k$ 维子空间，对称的可行解在该块上只能为零，因此 $\delta_G=k\lambda^2/(2\sigma^2)$。对称性不是数据中不存在，而是预算不足以表示它。
+
+## Mechanism III — 为什么 attention 会遇到同样的问题？
+
+一个 head 的打分形如
+
+$$
+s(x,y)=\langle q(x),k(y)\rangle,\quad q,k\in\mathbb R^k.
+$$
+
+无论前面的 token-wise 网络多复杂，**单个 head 的双输入 similarity operator rank 不大于 $k$**。因此，当目标是一个对称 similarity kernel、queries/keys 从指定对称分布独立采样、训练损失为 logits 上平方误差时，Theorem 4.2 将同一个 spectral block 的价格复制到 attention 情形。
+
+对 SO(3) 球面角向模式，阶数 $\ell$ 的 spherical harmonics 形成大小 $2\ell+1$ 的表示块，尺寸依次为 **1、3、5、7、…**。保留完整块的累计 head 预算依次为 **1、4、9、16、…**。Fig. 2 的 logit regression 正好在这些预算附近显示较低旋转敏感度；论文报告误差与理论的 RMSE 约 **0.004**。
+
+**Softmax 注意：**softmax 对每个 query 加一个共同常数 logit 不敏感，所以常数模式在其有效容量计数中是免费的，论文预测的对称预算变成 **3、8、15、…**。对于平坦 attention，实验近似支持；对于尖锐 attention，非二次 KL 改变方向的相对价值，20 个被评估 head dimension 中 16 个出现不对称解优于所比较的整块对称 head。**这不是一个适用于任意 softmax transformer 的严格定理。**
+
+## Key Figures / Table — 只链接原文
+
+请直接查看 [论文 arXiv HTML v1 和原图图注](https://arxiv.org/html/2610.36138v1)。未复制论文 Figure，也没有根据记忆绘制定量数据。
+
+1. **Fig. 1：最直观的「预算切块」。** 图例采用块尺寸 1、3、5、7 和预算 6；观察非限制 rank 近似如何切入第三块，而对称近似必须停在完整前两块。确认 $3.64-2.92$ 是原图给出的捕获信号差异，再除以 $2\sigma^2$。
+2. **Fig. 2：single-head logit regression。** 关注旋转敏感度在哪些 head dimension 恢复近零、以及对理论风险曲线的吻合，不要把有限三种 seeds 误认作模型训练结果的统计物理普适性。
+3. **Fig. 3：softmax 与 peakedness。** 比较 $m=0.1$ 和 $m=0.3$，特别是 $k=8$ 的行为变化；不要从某个异常维度泛化出 softmax 的确定阈值。
+4. **Table 1 与 Appendix D：** 不同对称群的 block sizes、whole-block budgets，以及如何诊断已观察到的不对称是否真由容量导致。
+
+## Authors report
+
+- 在明确的 Gaussian、PSD low-rank、绝对不可约表示假设下，给出完全对称数据/目标上**保持对称的精确总体风险代价**。
+- 对在 *logits 上平方误差* 训练的单 attention head，给出对应 exact rank-gap 定理；球面任务的训练结果与预先预测的对称维数及旋转敏感度吻合。
+- 对实际 softmax-KL 的受控数值任务，attention 的 sharpness 决定某些 whole-shell 预算是否仍能给出最优对称解。
+
+## AI interpretation
+
+这篇提供了一个关于 **inductive bias 与表示容量代价**的可证伪示例：如果模型面对旋转对称物理量仍有各向异性，不必立即把它归因于数据偏差；先检查是不是模型只能用有限 rank/head width 存储一组必须一起变换的表示。对科学建模而言，直接提供 distances、angles、equivariant features 等**便宜的对称输入**，有时比增加 data augmentation 更经济。
+
+## Caveats and what is *not* proved
+
+- Theorem 3.1 假设 isotropic Gaussian 设计、固定噪声方差、正确指定的 Gaussian 预测族、PSD coefficient 及特定表示分解；不能直接适用于所有数据分布。
+- Theorem 4.2 研究一个 head 对对称 similarity 的 **squared logit regression**，不是对任意多层 Transformer end-to-end 训练的精确答案。
+- Softmax 结果部分依赖三个 seeds、具体球面分布、给定 sharpness 与优化步数；非二次 loss 的胜负需要单独测量。
+- 某些表示类型不被本理论处理；深层 Transformer 前层可重路由 token 信息，缓解单 head 容量瓶颈。
+- 本导读核查 arXiv v1 Theorems 3.1/4.2、Fig. 1–3、SO(3) 部分与 Limitations；**未独立复现实验或逐行证明附录所有结论**。
+
+## Historical Reading Chain
+
+1. **先读：** [Cohen & Welling (2016), *Group Equivariant Convolutional Networks*](https://arxiv.org/abs/1602.07576) — 理解为什么主动把群对称性写入网络可以改善归纳偏置；和本文讨论的**表示对称性成本**形成对照。
+2. [Bhojanapalli et al. (2020), *Low-Rank Bottleneck in Multi-head Attention Models*](https://arxiv.org/abs/2002.07028) — head dimension 为什么直接限制 query–key similarity 的 rank。
+3. [Eckart & Young (1936), *The approximation of one matrix by another of lower rank*](https://doi.org/10.1007/BF02288367) — 从最佳低秩矩阵近似理解 $U_k$ 和 exact price。
+
+## Reading Checklist
+
+- [ ] 用一句话区分「任务对称」与「某个最优参数模型对称」。
+- [ ] 推出为何不可约块中的对称矩阵必须是标量。
+- [ ] 从 Gaussian log loss 写出 Frobenius distance，并说明 $U_k$ 与 $I_k$。
+- [ ] 用单个 $d$ 维块算出 $0<k<d$ 的 $\delta_G$。
+- [ ] 解释 $SO(3)$ 下 1、3、5、7 与 1、4、9、16 的来源。
+- [ ] 找出 squared-logit theorem 和 peaked-softmax 实验之间的边界。
+- [ ] 指出深度、输入 invariant features 和增加 head dimension 是三种不同的修复思路。
+- [ ] 阅读 Cohen & Welling 2016 并回到 Fig. 1 审查 block-budget 直觉。
+
+## Sources & attribution
+
+[Maggie Chlon & Leon Chlon, *Symmetry Breaking Is the Price of Finite Capacity*, arXiv:2610.36138v1，2026-10-26 首次公开](https://arxiv.org/html/2610.36138v1)。本导读编写于 2026-10-29。所有原始 Fig. 1–3 和 Table 1 均**只提供归属清晰的链接/文字导读**；上方概念流程为 **AI-generated explanatory diagram**，不是原 Figure，不含重画的实验/数值点。
