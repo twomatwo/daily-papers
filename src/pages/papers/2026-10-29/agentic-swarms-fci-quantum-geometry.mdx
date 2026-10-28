@@ -1,0 +1,163 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Agentic Swarms Discover Enhanchment of Fractional Chern Insulator Gaps Beyond Ideal Quantum Geometry"
+authors: "Yitong Zhang, Changwen Xu, Andrew Boshi Li, Siddhartha Sarkar, Kai Sun, Venkatasubramanian Viswanathan"
+date: "2026-10-29"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.35934"
+notionUrl: "https://app.notion.com/p/4077dd5567ec8100b80de7ae9d5d5b40"
+summary: "An agent swarm searches non-ideal Chern-band geometry and finds finite-size Laughlin-like states with strongly enhanced gaps; a real-space two-electron metric explains the short-range mechanism."
+readingTime: "35–60 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**直觉被挑战：理想 momentum-space quantum geometry 有利于 FCI，但它不一定让多体激发能隙最大。** Zhang 等让 MOSAIC 多智能体系统搜索保持 Chern number 为 1 的平带波函数，在有限尺寸 $\nu=1/3$ exact diagonalization 中找到比对应理想几何母带大 **11.5 倍和 15.8 倍**的能隙。两种模型在 27-site/9-electron 系统中分别得到 $28.75$ 和 $21.37$ 倍 lowest-Landau-level gap（同一屏蔽相互作用的归一化）。随后研究者与 AI 合作，用面积保持 *shear*、短程双电子波函数斜率和**实空间量子度规**解释增强。所有这些都是**特定模型的有限系统理论结果**，不是实验室已经获得更高温 FCI。
+
+<ReadingPath
+  quick={['先看 Fig. 1：区分 agent 提议模型、MOSAIC 搜索与 ED 数值裁判。', '看 Fig. 3：找到三重低能态、gap 的精确定义和 27-site 的两组数值。', '看 Fig. 5：为什么填满能带后的密度不变，gap 仍能因 shear 增强？']}
+  standard={['Introduction：理解以 LLL、理想 quantum geometry 和密度二阶矩作为旧基准的逻辑。', 'Eq. (1) 与 Fig. 2：动量相关的波函数包络为什么保 C=1 而破坏理想几何。', 'Fig. 3：检查不同系统的 Laughlin-like 谱与 screening-length 依赖。', 'Fig. 4：辨认 swarm 相对 isolated agents 的比较以及人类提供的问题/工具。', 'Fig. 5 与 Eq. (8)：从面积保持 shear 走向双电子相互作用。']}
+  deep={['Supplement S-I：推导投影相互作用的 form factors 和平带构造。', 'Supplement S-II：验证 shear 映射的 Jacobian、Berry curvature、quantum metric 及边界条件。', 'Supplement S-III：从反对称两电子波函数的小位移展开得到 d_s^3 有效作用与实空间 metric。', 'Supplement S-IV：核查 exact diagonalization 的集群、Hilbert 空间与保留 Laughlin-like 态的筛选。', 'Supplement S-V：检查 swarm/isolated 的 agent 数量、共享信息与 search-cost 对比。']}
+/>
+
+## Big Picture — 并非所有「理想几何」都同时最优
+
+在 $C=1$ 拓扑平带中，弱色散使相互作用能主导；具有近似 Landau-level 量子几何的波函数通常是良好 FCI 的设计线索。但 **FCI 是否存在**、**多体能隙的大小**，是不同目标函数。该研究通过波函数形状改变投影后的双电子相互作用，寻找在保持 Laughlin-like 基态时更昂贵的局域激发。
+
+**AI-generated explanatory diagram（仅概念流程，不是论文 Figure、不是数据重画）：**
+
+~~~text
+LLL-like C=1 flat band (ideal geometry)
+             |
+smooth k- and r-dependent envelope exp(gamma)
+             |
+Topology preserved, quantum geometry modified
+             |
+MOSAIC agents propose changes and share results
+             |
+Finite-size ED + Laughlin-like spectral checks
+             |
+Large numerical gaps in optimized bands
+             |
+Independent simplifying model: area-preserving shear
+             |
+Two-electron short-range slope / real-space metric
+~~~
+
+## Mechanism I — 保拓扑但改变波函数
+
+主文 Eq. (1) 的设计是
+
+$$
+\psi_{\mathbf k}(\mathbf r)
+=\frac{h^{(0)}(\mathbf r)e^{\gamma(\mathbf k,\mathbf r)}
+\varphi^{\rm LLL}_{\mathbf k}(\mathbf r)}{\sqrt{S(\mathbf k)}} .
+$$
+
+其中 $h^{(0)}$ 描述既有理想几何平带的空间包络，$\gamma$ 是在实空间与动量空间都周期、光滑的复函数。实部改变振幅，虚部改变相位。$e^\gamma$ 处处非零，因而保留母带零点的拓扑绕数和 **$C=1$**；但它一般会改变 Berry curvature 与 $g_{\mu\nu}(\mathbf k)$，破坏理想条件 $\mathrm{tr}\,g=|F_{xy}|$。
+
+Agent 搜索的不是任意可疑大能量：候选需要通过多个有限集群上的 **Laughlin-like 低能谱和拓扑筛选**；之后在 27-site、9 electrons 条件下报告图中大 gap。不要把这些数值当作可直接对应某个 MoTe2 样品的 meV 或 Kelvin。
+
+## Mechanism II — 不用增加平均密度，也能增强短程排斥
+
+Fig. 5 用面积保持坐标映射
+
+$$
+\mathbf F_s(x,y)=(x,y+sx),\qquad\det\left(\frac{\partial\mathbf F_s}{\partial\mathbf r}\right)=1
+$$
+
+构造新的 LLL-like 轨道。它**保持填满能带后的实空间电荷密度均匀**，Berry curvature 也保持恒定，但改变了轨道的空间梯度和 quantum metric。
+
+自旋极化单组分费米子的反对称波函数在两电子位置重合时为零，故接触相互作用的最低阶项被 Pauli 原理消去。在论文的短程屏蔽 Coulomb 极限，主文 Eq. (8) 的投影作用满足
+
+$$
+H(d)=d^3 H_{\rm 2e}+O(d^5),\qquad d=d_s/\ell_B.
+$$
+
+$\widehat{\mathbf D}$ 由两轨道的相对梯度 $\mathbf D_{ij}=\psi_j\nabla\psi_i-\psi_i\nabla\psi_j$ 构成。对 uniform shear，系数变为
+
+$$
+w(s)=\tfrac12\mathrm{tr}(J_s J_s^\mathsf T)=1+\tfrac{s^2}{2}.
+$$
+
+因而在此**单带短程极限**中 $H^s_{\rm 2e}=w(s)H^{\rm LLL}_{\rm 2e}$。该因子增长不是无限真实材料 gap 的保证：强 shear、有限带隙、带间混合和具体相互作用会限制外推。
+
+## Mechanism III — 为什么是 real-space quantum metric？
+
+令已填充带的各轨道在固定空间位置组成归一化向量
+
+$$
+|\omega(\mathbf r)\rangle
+=\frac{(\psi_1(\mathbf r),\psi_2(\mathbf r),\ldots)^\mathsf T}
+{\sqrt{n_{\rm fill}(\mathbf r)}} .
+$$
+
+论文 Supplement S-III.6 定义
+
+$$
+g^r_{\mu\nu}
+=\mathrm{Re}\langle\partial_\mu\omega|
+(1-|\omega\rangle\langle\omega|)
+|\partial_\nu\omega\rangle .
+$$
+
+填满能带后的短距离 **exchange hole** 展开为
+
+$$
+g_{\rm fill}^{(2)}(\mathbf r,\mathbf r+\boldsymbol\delta)
+=\delta_\mu\delta_\nu g^r_{\mu\nu}(\mathbf r)+O(|\boldsymbol\delta|^3).
+$$
+
+这建立了「Bloch orbitals 的空间变化率」与「两电子短程避免彼此的能量惩罚」之间的桥梁。它是作者提出的优化指标，不是证明动量空间 metric 对所有 FCI 不重要。
+
+## Key Figures — 请阅读原图
+
+所有原始 Figure 仅[链接至 arXiv v1 HTML 与图注](https://arxiv.org/html/2610.35934v1)，未复制、裁剪、改色或重画任何定量曲线。
+
+1. **Fig. 1：流程与裁判。** 先看 b 中理想母带和优化包络的对比，再看 c 中多个小集群的 ED 筛选，d 则是 **27-site/9-electron** 能隙。注意优化与最终展示并非同一个唯一系统。
+2. **Fig. 2：搜索空间。** 观察 amplitude 与 phase Fourier mode，以及优化前后的 filled-band density。较小密度变化不支持把全部 gap 增益仅归因于载流子堆积。
+3. **Fig. 3：多体谱与量子几何。** 在 a–d 寻找三重近简并低能态、箭头所示 gap；e–f 改变 screening 长度；g–h 比较 $\mathrm{tr}\,g$ 与 $F_{xy}$。不要只根据最大 gap 数字断言热力学稳定性。
+4. **Fig. 4：agent 协作机制。** 比较共享看板的探索策略、组合 amplitude/phase 参数的能力，以及真正获得增益的搜索轨迹；不是一个无对照的 AI 自称发现故事。
+5. **Fig. 5：最有教学价值的机制检验。** 区分 LLL、uniform shear 和 sinusoidal shear；关注保持均匀 filled-band density 的同时，short-range interaction weight、quantum metric 和 gap 如何变化。
+
+## Authors report
+
+- 指定的两个 $C=1$ 平带模型在 $\nu=1/3$、有限集群中支持 Laughlin-like 低能态；其 ED gap 显著高于相应理想几何母带和指定 LLL 归一化。
+- MOSAIC 多 agent 在比较过的任务/工具/预算设置中比 isolated agents 搜索得更充分；共享发现与参数组合是重要环节。
+- 面积保持 shear 和双电子短程作用提供了与较大 gap 相符的机制分析；局域 real-space metric 可作为不用逐次运行多体 ED 的单粒子诊断线索。
+
+## AI interpretation
+
+这是**AI 用可独立检查的 ED 工具参与开放式理论发现**的有意思示范，也把 FCI 的研究问题从「几何是否理想」推进到「几何如何重整化实际投影两体作用」。面对 twisted-TMD 器件，值得进一步问：能否用可控 strain、空间调制或电位移场产生同类轨道梯度改变？这属于未来实验设想，**本文未实现**。
+
+## Caveats / audit questions
+
+- Gap 是**特定相互作用、单组分单带和有限尺寸**的理论量，不是热激活能隙、量子霍尔实验平台宽度或室温 FCI 的证据。
+- 需要更系统的有限尺寸/热力学极限和带混合计算；极大 shear 因子不能不加控制地外推到物理材料。
+- 对比 isolated agents 依赖固定工具、预算与具体任务；不代表 agent swarm 对所有科研问题具有普适优势。
+- 人类挑选难题、提供理论背景、设定可验证的评价目标并参与理论解释；不能描述为完全没有人类介入的发现。
+- 本导读检查了 arXiv v1 主文相关段落、Fig. 1–5 的图注及关键 Supplement 公式，**未独立复算 ED 或重跑 agent 实验**。
+
+## Historical Reading Chain
+
+1. **先读：** [Neupert et al. (2011), *Fractional quantum Hall states at zero magnetic field*](https://doi.org/10.1103/PhysRevLett.106.236804) — 了解晶格 Chern band 中 FCI 的理论起点，再讨论为什么应比较多体 gap。
+2. [Wang et al. (2021), *Exact Landau Level Description of Geometry and Interaction in a Flatband*](https://doi.org/10.1103/PhysRevLett.127.246403) — 本文理想几何母带的 LLL 形式与投影作用的直接基础。
+3. [Ledwith et al. (2023), *Vortexability: A Unifying Criterion for Ideal Fractional Chern Insulators*](https://doi.org/10.1103/PhysRevB.108.205144) — 说明理想几何为何成为 FCI 构造原则。
+4. [Sarkar, Zhang & Sun (2026), *Moiré-enhanced gaps*](https://arxiv.org/abs/2606.07323) — 最直接的既有 **ideal-geometry + density modulation** gap 增强基准，可与 Fig. 3 对照。
+
+## Reading Checklist
+
+- [ ] 解释 Chern number 不变与 quantum metric 改变如何同时成立。
+- [ ] 指出 $\nu=1/3$ 的三重近简并谱和多体 gap 是何种数值证据、不是何种实验。
+- [ ] 精确区分 $28.75/21.37$ 倍 **LLL** 和 $11.5/15.8$ 倍 **各自母带**。
+- [ ] 推导 shear 的 Jacobian 和 $1+s^2/2$，并指出近似条件。
+- [ ] 说明反对称双电子波函数为什么使 leading interaction 随 $d_s^3$ 而非 $d_s$。
+- [ ] 找出 real-space metric 与交换空穴短距离展开的关系。
+- [ ] 判断哪些结果来自 AI 提议、agent 搜索、ED 裁判和研究者解释。
+- [ ] 阅读 Neupert 2011 后再回头理解 ideal-geometry 基准。
+
+## Sources & attribution
+
+[原始论文：Zhang et al., arXiv:2610.35934v1，2026-10-20 首次提交](https://arxiv.org/html/2610.35934v1)；包含主文及 Supplement S-I–S-VI。图 1–5 仅以链接和文字引导阅读，**未在本公开站点复制论文插图**。上方文本流程为 **AI-generated explanatory diagram**（教学示意、非论文 Figure、不含定量数据）。导读编写于 2026-10-29，核查范围如上，不代表独立数值复现。
