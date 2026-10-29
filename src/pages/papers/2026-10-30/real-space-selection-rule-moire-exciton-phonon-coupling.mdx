@@ -1,0 +1,146 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Real-Space Selection Rule for Moiré Exciton-Phonon Coupling"
+authors: "Yixuan Liu, Shiyu Peng, Yifan Wang, Peiyao Qin, Wang Yao, Chen Hu"
+date: "2026-10-30"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.36782"
+notionUrl: "https://app.notion.com/p/4087dd5567ec81ae98b1ec787d5654f2"
+summary: "电子/空穴的实空间分布如何与 moiré 声子势变化匹配，并通过相干干涉把激子—声子耦合增强或几乎抵消。"
+readingTime: "25–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**研究问题：**在同一个 WSe₂/WS₂ moiré 异质结里，为什么不同激子耦合同一低能声子模式时，强度可以相差一个数量级以上？作者将 **Bethe–Salpeter equation (BSE)** 的激子—声子耦合矩阵元，改写为电子和空穴密度与声子诱导势的**实空间重叠积分**。真正重要的不只是电子或空穴各自重叠得多强，而是两条耦合振幅的**相对符号**。论文报告一个指定的 A 声子模式下，charge-transfer (CT) exciton 的总耦合约 **0.49 meV**，而 Wannier-like exciton 约 **0.02 meV**；这是理论模型的矩阵元，不是直接测量的寿命。来源： [arXiv v1 全文 PDF](https://arxiv.org/pdf/2610.36782)。
+
+<ReadingPath
+  quick={['先看 Fig. 3(b)：比较 Wannier-like exciton I 与 CT exciton III 的电子/空穴位置。', '读 Eq. 4 与 Eq. 5：两条振幅相加，以及每条振幅的实空间积分。', '看 Fig. 3(e,f)：为什么几乎相等的两条贡献，最后可以相加或抵消。']}
+  standard={['读 Fig. 1–2：结构重构如何决定静态 moiré 势与动态声子扰动。', '看 Eq. 3：用 BSE 得到包含电子—空穴 Coulomb attraction 的激子波函数。', '逐项追踪 Fig. 3 的三条吸收峰与两类激子的内部结构。', '用 Eq. 5 检查 Fig. 4 的 mode A/B 空间匹配规则。', '最后读 Methods、局限与 Historical Reading Chain。']}
+  deep={['从 BSE exciton 的 e–h 配置空间出发，导出 Eq. 4 的 electron/hole phonon scattering channels。', '在局域势近似下推导 G(e/h) = ∫ρ(e/h)(r) δV(e/h)(r) dr；追踪空穴负号的约定。', '从连续弹性 + 堆垛势理解平衡位移、莫尔声子和标量形变势/压电势。', '比较 Fig. 3 与 Fig. 4，判断耦合相消究竟来自波函数位置还是声子诱导势的符号。', '再读 Jin et al. 2019 和 Onida et al. 2002，以实验谱学与 BSE 形式主义补全前置知识。']}
+/>
+
+## Big Picture：从结构重构到可选择的激子—声子耦合
+
+**Before → 本文 → 下一步。** 已知 TMD moiré 势能使激子局域于不同堆垛区，而低能 moiré 声子又来自堆垛重构结构的动态扰动。难点在于：如何把复杂的 BSE 矩阵元转换为直观的、可解释的实空间选择规则？本文给出 **density–potential overlap + electron–hole interference**，可以为将来的谱线宽度、弛豫和相干性调控提供机制假说，但没有直接完成这些实验。
+
+**AI-generated explanatory diagram（概念示意，非论文原图、非定量结果）：**
+
+~~~text
+Static lattice relaxation u0(r)          Phonon fluctuation δuμ(r)
+            |                                       |
+    equilibrium moiré potentials             potential changes
+        V0e(r), V0h(r)                     δVμe(r), δVμh(r)
+            |                                       |
+    BSE exciton state |S>                           |
+            |                                       |
+   electron density ρSe(r)     hole density ρSh(r) |
+            |                         |             |
+      overlap ∫ρSe δVμe        overlap ∫ρSh δVμh
+            \                         /
+             \__ coherent amplitude sum __/
+                            |
+               enhanced OR suppressed G(S,μ)
+~~~
+
+**不要将该流程理解为：**耦合大就一定已测得快的寿命，或所有声子模式都有相同的电子/空穴相位关系。相消是所研究激子与声子模式的计算结论。
+
+## Mechanism I — 两种激子为何有不同的实空间结构？
+
+作者研究晶格失配约 4%、moiré 周期约 8.3 nm 的近对齐 WSe₂/WS₂。弹性重构扩大能量较低的堆垛畴，平衡位移场同时产生两种静态电子/空穴 moiré 势：**scalar deformation potential** 与 **piezoelectric potential**（论文 Eq. 1–2、Fig. 2）。
+
+对平衡结构求得单粒子态后，作者解 BSE（论文 Eq. 3）：
+
+$$
+(E_{c\mathbf{k}}-E_{v\mathbf{k}})A^S_{vc\mathbf{k}}
++\sum_{v'c'\mathbf{k}'}
+K_{vc\mathbf{k},v'c'\mathbf{k}'}A^S_{v'c'\mathbf{k}'}
+=\Omega_S A^S_{vc\mathbf{k}}.
+$$
+
+核 $K$ 包含电子—空穴直接吸引与交换贡献。再从 exciton wavefunction 得到两个边缘分布 $\rho_S^e(\mathbf r)$ 与 $\rho_S^h(\mathbf r)$。**Fig. 3(b)** 的三条激子中：
+
+- **I：Wannier-like**，电子和空穴主要同处 **AA** 堆垛区域；
+- **III：intralayer charge-transfer（CT）**，电子偏向 **AA**，空穴偏向一个 Bernal 堆垛区域；
+- **II** 具有混合特征。
+
+“intralayer CT” 指电子和空穴在**同一 TMD 层内但不同 moiré 位置**，切勿把它误读成跨层激子。
+
+## Mechanism II — 用一个积分理解耦合选择规则
+
+论文 Eq. 4 把激子 $S$ 对声子 $\mu$ 的矩阵元写成两条相干通道：
+
+$$
+G_{S\mu}=G^{e}_{S\mu}+G^{h}_{S\mu}.
+$$
+
+而论文 Eq. 5 把各自的贡献近似呈现为：
+
+$$
+\boxed{
+G_{S\mu}^{e/h}=
+\int d\mathbf r\,\rho_S^{e/h}(\mathbf r)
+\,\delta V_\mu^{e/h}(\mathbf r)
+}
+$$
+
+其中 $\rho$ 表示该激子态的电子/空穴实空间概率密度，$\delta V_\mu$ 是指定声子位移造成的对应有效势扰动。**空间重叠**控制单独通道的大小与符号；两通道之间的**相干干涉**控制总和。
+
+作者指出在一个特定 **mode A**（低能模式能量约 2.54 meV）的计算中：
+
+- CT exciton 的两个贡献约 **0.28 和 0.21 meV**，相加为 **0.49 meV**；
+- Wannier-like exciton 的贡献幅度约 **0.24 和 0.22 meV**，相反符号，相消后为 **0.02 meV**。
+
+这些是在固定材料模型、激子、声子和归一化约定下的**矩阵元**，**不是**可直接映射的通用寿命、光谱线宽、总声子散射率，更不是两组实验数据。另一个主要声子 **mode B** 约 2.71 meV；其 spatial matching 不同，不能把 mode A 的精确数值平移过去。
+
+## Key Figures：直接阅读原论文图（不复制）
+
+原图均在 [arXiv v1 PDF 的 Fig. 1–4](https://arxiv.org/pdf/2610.36782)；图像权利未作为本仓库的复用授权核实，所以只提供官方原文链接。
+
+1. **Fig. 1 — 概念机制图。** 注意作者如何把平衡结构重构与动态 moiré phonon 放在同一位移场框架里：前者固定静态势，后者引入随声子变化的微扰势。
+2. **Fig. 2 — 结构到有效势。** 看 AA/Bernal 堆垛区域、应变场，以及 scalar/piezoelectric 项如何构成电子与空穴不同的势阱。检查为什么电子和空穴能选择不同的局部堆垛。
+3. **Fig. 3 — 重要定量证据。** (a) 是计算吸收谱中 I–III 激子；(b) 是电子/空穴位置；(c,d) 比较 CT/Wannier 的声子模式耦合；(e,f) 分解为电子、空穴通道。**注意 (c–f) 的局部放大显示**，避免错误读出图中的相对尺度。
+4. **Fig. 4 — 实空间选择规则。** (a,b) 对比声子 A、B 的不同位移和势变化；留意高对称路径 line cuts 上的电子/空穴所在位置，判断其感受到的势扰动符号何时同向、何时相反。
+
+## Authors report
+
+- 建立一个组合 **连续弹性重构 + moiré 单粒子模型 + BSE + phonon perturbation** 的理论计算流程。
+- 在指定 WSe₂/WS₂ 模型中，得到不同 exciton character 和 phonon mode 对应的强烈耦合差异；Eq. 5 提供了与完整矩阵元计算近乎一致的实空间解释。
+- 强耦合需要各自通道空间匹配良好且**构成性相干叠加**；相消或失配可以强烈抑制总耦合。
+
+## AI interpretation — 与实验和研究设计的联系
+
+对 moiré 激子而言，**电子/空穴的相对空间结构就是设计参数**，而不只是决定激子跃迁能量的副产物。若通过 twist/strain/gating 调节堆垛域与 e/h 分布，就可能在保持某些光学激子能级可见的同时，重新选择它们容易散射的声子通道。对多体态光学实验尤其值得注意：不能把“激子峰位置接近”当作“与晶格环境耦合相近”。
+
+在真实器件中可思考如何结合 PL linewidth、温度依赖和泵浦探测**独立测量**散射行为，再和给定激子/声子 mode 的计算相比较；这是本导读建议的下一步，**不是论文已经完成的实验**。
+
+## Caveats / What the paper does not establish
+
+- 本文是**理论计算**，不是直接观测到的 moiré 激子声子散射速率或绝对相干寿命。
+- 实空间积分解释基于作者的连续模型、电子/空穴势映射及 BSE 波函数；其他扭角、异质结、激子类型和声子模式需要重新计算。
+- 0.49/0.02 meV 是特定模式**矩阵元幅度**，不同于 phonon energy 2.54/2.71 meV；两者不能混淆。
+- 声子导致的动力学寿命还依赖占据数、最终态密度、温度和能量守恒；耦合矩阵元不是寿命本身。
+- 导读核查了 arXiv v1 的 18 页 PDF、正文 Eq. 2–5、Fig. 1–4、Methods 的相关段落；没有独立复算，也不声称逐项检查了外部补充资料的所有数值。
+
+## Historical Reading Chain
+
+1. **FIRST — [Jin et al. (2019), *Observation of moiré excitons in WSe₂/WS₂ heterostructure superlattices*](https://doi.org/10.1038/s41586-019-0976-y).** 直接的材料与实验谱学源头；先建立同一异质结构为什么有多个 moiré exciton 光谱峰的直觉。
+2. [Seyler et al. (2019), *Signatures of moiré-trapped valley excitons in MoSe₂/WSe₂ heterobilayers*](https://doi.org/10.1038/s41586-019-0957-1). 对照相近 moiré 平台的局域化、谷选择规则与激子光学响应。
+3. [Onida, Reining & Rubio (2002), *Electronic excitations: density-functional versus many-body Green's-function approaches*](https://doi.org/10.1103/RevModPhys.74.601). 理解 BSE 中电子—空穴相互作用、激子能级和振子的数学基础。
+
+## Reading Checklist
+
+- [ ] 对比 Fig. 3(b) 中 I 与 III 的电子/空穴位置并说明 intralayer CT 的含义。
+- [ ] 从 Eq. 4 写出两条通道，解释空穴通道的相对负号来自何处。
+- [ ] 从 Eq. 5 解释 density–potential overlap 为什么带有符号。
+- [ ] 解释 0.28 + 0.21 与 0.24 − 0.22 在物理上为什么不是相同耦合。
+- [ ] 辨别声子模式 A/B 的能量与 exciton–phonon coupling matrix element 的单位。
+- [ ] 对照 Fig. 4 找出不同 mode 的空间匹配何时导致相消。
+- [ ] 指出什么实验可以验证耦合差异，以及这些实验尚未被本论文完成。
+- [ ] 先读 Jin et al. 2019，再回到 Fig. 3 中的三类激子。
+
+## Sources & attribution
+
+原论文： [Liu et al., *Real-Space Selection Rule for Moiré Exciton-Phonon Coupling*, arXiv:2610.36782v1，首次提交 2026-10-27](https://arxiv.org/abs/2610.36782)；[官方 18 页 PDF（包含全部 Fig. 1–4）](https://arxiv.org/pdf/2610.36782)。本文所有原 Figure 只以链接引用，**未复制、裁剪、标注或改色**。上面的文字流程标注为 **AI-generated explanatory diagram**，只解释物理机制，不是原论文 Figure、也不包含任何重绘的定量数据。导读制作日期：2026-10-30。
