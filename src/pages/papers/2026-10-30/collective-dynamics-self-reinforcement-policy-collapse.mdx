@@ -1,0 +1,174 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Collective Dynamics of Self-Reinforcement: How Cross-Task Coupling Drives Policy Collapse in Unsupervised RLVR"
+authors: "Peize Ding"
+date: "2026-10-30"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2610.37553"
+notionUrl: "https://app.notion.com/p/4087dd5567ec81e0810fc0e0101bc44b"
+summary: "无标签多数投票自奖励为什么在问题数量增大时出现集体策略崩溃：局部 sharpening 与共享参数驱动的全局不稳定性竞赛。"
+readingTime: "30–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**反直觉现象：**没有真实答案标签时，模型可以通过“与自身采样多数票一致”来给自己奖励。训练开始时，答案可能更稳定；但数据集够大时，模型会逐渐对所有问题输出同一种答案，**伪奖励接近 100%，真实准确率却退化到基线**。作者用可解的 many-problem dynamical model 说明：每个问题的局部强化随训练问题数 $N$ **变慢（$\propto1/N$）**，而共享参数造成的统一答案偏置以约 **$\lambda^2$** 的速度放大，二者竞争决定一个临界训练集规模。模型与小型 Transformer 实验支持这个机制，但没有在大型已部署 LLM 上建立通用失效定律。来源：[arXiv v1 HTML](https://arxiv.org/html/2610.37553v1)。
+
+<ReadingPath
+  quick={['看 Fig. 1(b)：同样算法和超参数，仅 N 不同，为什么一组 accuracy 保留、另一组 collapse？', '读 Eq. 6–7 的 local-versus-shared 竞争，区分真值 accuracy 与自评 reward。', '看 Fig. 4(c)：移除统一共享方向是否真正阻断崩溃。']}
+  standard={['Section 3：先理解单任务 majority-vote self-reward 怎样让当前偏好变尖锐。', 'Section 4：将 N 个问题由共用参数耦合，读 F(z) 及 F-prime 为正的区间。', 'Section 5：读 Fig. 1–2，比较 critical N、coupling λ、initial confidence、batch-size 效应。', 'Section 6：Fig. 4 与 Transformer 控制实验，以及 kernel proxy 的 calibration failure。', 'Section 7：理解稳定化 uniform mode 与真实 accuracy 的区别。']}
+  deep={['从 Bernoulli majority-vote reward 推出单问题的漂移 F(z)，检查 F-prime 的正负与阈值。', '从共享参数模型推导 uniform-mode linearization 和 Eq. 6 的指数放大积分。', '推导 Eq. 7 中 N_c 对 λ 的逆平方依赖与 ln(1/δ) 项的物理意义。', '理解 NTK 的危险 shared coupling ku、保护性 prediction-aligned coupling ks 与 feature-learning kernel drift。', '检查 Appendix 中 batch-noise、group-size、surrogate calibration 与 entropy-bonus 的实际边界。']}
+/>
+
+## Big Picture — 没有外部真值时，自我一致可能替代正确性
+
+在 supervised RLVR 中，奖励来自可检查的答案；在**unsupervised / label-free RLVR** 中，系统只需要多数票回答作为内部伪标签。它会推动自身预测更确定，但**更确定不等于更正确**。
+
+这篇不是证明“所有自训练最终必然崩溃”，而是在明确的模型条件下解释一个更具体的现象：**为什么增加训练问题数，有时会从稳定 sharpening 变成集体 collapse？** 关键并非每个问题孤立做错，而是所有问题共享同一组参数，因此一个方向上的更新可以同时推动成千上万个预测。
+
+**AI-generated explanatory diagram（概念示意；非原论文图表、非数值模拟）：**
+
+~~~text
+Unlabeled problems 1 ... N
+         |
+model samples K answers per problem
+         |
+majority answer --> pseudo-reward --> gradient update
+         |
+         +----------------------+----------------------+
+         |                                             |
+local answer sharpening                       shared answer bias
+each task receives 1/N                       correlated across tasks
+         |                                             |
+takes longer as N grows                   grows while F'(z) > 0
+         |                                             |
+         +---------- which effect wins? ---------------+
+                            |
+                   stable sharpening
+                         OR
+                 policy mode collapse
+        (self-reward high; true accuracy can fall)
+~~~
+
+## Mechanism I — 单个问题为何只会 sharpening？
+
+简化为只有两个答案的任务，用 logit $z$ 表示选择其中一个答案的偏好，选择概率为 $p=\sigma(z)$。采用自采样多数票作“正确答案”，会强化**当前已经占优势的选项**，而不是提供外部正确性信号。
+
+作者在特定 group sampling / policy-gradient setting 下推导单任务平均漂移 $F(z)$。其重要不是漂移的绝对大小，而是**斜率**：
+
+$$
+F'(z)>0
+\quad\Longleftrightarrow\quad
+|z|<z^\star=\ln(2+\sqrt 3)\approx1.317.
+$$
+
+即大约 $0.21<p<0.79$ 的**不确定区间**。当模型本来就很偏向某一答案时，共享微小扰动倾向衰减；当预测仍模糊时，小的共同偏置可能被放大。
+
+注意：上述 $z^\star$ 来自论文指定的 drift 和参数化，不是任何 RLHF/GRPO/LLM 的普适数字。
+
+## Mechanism II — Many-body-like collective mode 的出现
+
+将第 $i$ 个问题的 logit 写为
+
+$$
+z_i = u_i + \lambda v ,
+$$
+
+其中 $u_i$ 是该题特有方向，$v$ 是跨题共享方向，$\lambda$ 控制耦合强度。每一轮只访问部分题目，所以局部强化的典型时间随 $N$ 增加：
+
+$$
+\dot a=\frac{\eta}{N}F(a).
+$$
+
+共享方向在不确定区间中的线性增长率却与 $\lambda^2$ 成正比，不被同一个 $1/N$ 因子削弱。因此，局部 sharpening 尚未将所有问题带出不稳定窗口之前，统一偏置可先行增大，使一部分题目的原始偏好被翻转——模型开始在不同任务中给同一答案。
+
+论文用累计指数放大
+
+$$
+\Lambda
+=\lambda^2 N G(a),
+\qquad
+G(a)=\ln\!\frac{F^\star}{F(a)}
+$$
+
+表示“共享方向在窗口中获得了多长时间”，推得（Eq. 7）
+
+$$
+\boxed{
+N_c\simeq
+\frac{\ln(1/\delta)}{\lambda^2 G(a)}
+}
+$$
+
+其中 $\delta$ 是采样噪声等因素产生的初始共享偏置。$\lambda$ 变小会抬高临界规模，初始模型越有把握，通常越不容易落入危险窗口。**不是说更多问题本身必然有害**：这依赖不确定度、共享方向、优化动态和对奖励的定义。
+
+## Mechanism III — NTK：有害和有益的共享并非同一回事
+
+真实神经网络中各样本之间的参数耦合可通过经验 Neural Tangent Kernel 度量：
+
+$$
+K_{ij}
+=\nabla_\theta z_i\cdot\nabla_\theta z_j .
+$$
+
+作者区分两种跨样本结构：
+
+- **Unaligned/shared coupling**（论文用 $k_u$ 描述）：把大量问题的答案一起向同一方向推动，形成危险的 collective mode。
+- **Prediction-aligned/protective coupling**（$k_s$）：与各题已有预测方向对齐，有利于局部 sharpening。
+
+论文给出一个 fixed-kernel 近似下的保护条件；但随着 feature learning，kernel 可以改变，因此只用初始 $K$ 计算的代理诊断**偏向低估崩溃风险**。即使校准过的初始 kernel proxy 有不错的排序能力，它也不是可靠的安全证明。
+
+## Key Figures — 原图链接与阅读方法
+
+阅读 [arXiv v1 HTML 正文及原图](https://arxiv.org/html/2610.37553v1)。下面只解释原图应该核查的论证；未复制、截取或重画任何图像或量化数据。
+
+1. **Fig. 1：mechanism / sharp transition。** (a) 关注 $F'$ 何时为正；(b) 同样 $\lambda$、初始条件下改变 $N$，分辨**pseudo-reward** 与**真实 accuracy**；(c) 相同参数不同随机种子在临界附近的分岔。
+2. **Fig. 2：critical data size scaling。** 检查对 $\lambda$、初始 confidence 的不同扫描能否被 $\Lambda=\lambda^2NG$ 整合；讨论拟合斜率与理想 $-2$ 的微小偏离（log noise seed correction），不要视为精确普适指数。
+3. **Fig. 3：entropy bonus。** 检查 marginal-entropy regularizer 为什么能压制 uniform answer bias；作者也明确说明在网络中可能转移到其他 collective modes。
+4. **Fig. 4：small Transformer causal control。** 尤其比较 antisymmetric readout 去掉 shared direction 后的零崩溃，与**添加受控 output bias**重新引入 shared direction 后的崩溃。还要注意模型只有小规模、人工构造的六位数字分类任务。
+
+## Authors report
+
+- 在明确定义的 many-problem 两答案模型中，找到了 $\langle F'\rangle>0$ 时 shared uniform mode 的集体不稳定性，并导出有训练问题数阈值的近似公式。
+- 模拟在不同 $\lambda$、初始 confidence 和 batch 设定中支持临界放大参数的缩放关系；置信度很高的模型可能不发生这种 collapse。
+- 在小 Transformer 中，通过移除和重新引入 shared direction，进行了**有因果指向的架构控制实验**。
+- 初始 kernel proxy 的风险排序有一定价值，但 calibration 不佳；论文报告某代理分类在其条件上约 71% agreement、AUC 约 0.87，同时容易低估崩溃风险。
+
+## AI interpretation — 这对长期科研 Agent 的意义
+
+这篇文章与科研自动化的实际关系是：一个 Agent 可以从许多“自我认可的成功案例”中越来越确信某个选项，但这种一致性可能是共享偏好累积，而不是真实反馈改善。对没有可靠 ground truth 的论文检索、假设选择或实验探索系统，仅仅**提高自评一致率**不足以判断系统是否越来越正确。
+
+它提出可考虑的诊断思路：分开记录 self-reward 与独立验证准确率；监测输出多样性、跨任务共同偏置，以及 kernel/shared-gradient 的风险指标。**这是基于理论的工程延伸建议，不是论文已经证明可在所有大模型中生效的修复方案。**
+
+## Caveats — 不应过度推广的结论
+
+- 主要理论是可解的**two-answer, many-problem, fixed-coupling** 模型，并非任意开放式语言任务。
+- Transformer 验证使用**小型、部分监督预热、六位数字二分类**架构；不是大规模预训练 LLM 的全面实测。
+- 虽然共享方向移除/恢复提供了机制证据，不意味着在真实模型中只冻结输出偏置就总能解决问题。
+- 增加 marginal-entropy bonus 可以抑制 uniform mode，但作者发现模型有时转向**另一个 collective mode**，真实准确率仍不能保证。
+- Kernel 在训练过程中会随参数变化；初始模型的 fixed-kernel 风险预测可用于筛查，不能提供可靠稳定性边界。
+- 本导读核查了 arXiv v1 HTML 的 Sections 3–7、Eqs. 3, 6–9、Fig. 1–4 与相关附录摘要；没有独立运行提供的代码、复现实验或验证数学证明的每一步。
+
+## Historical Reading Chain
+
+1. **FIRST — [He et al. (2026), *How Far Can Unsupervised RLVR Scale LLM Training?*](https://arxiv.org/abs/2603.08660).** 本论文直接解释的现象来源：label-free self-reward 在不同训练数据规模时的行为与失稳。
+2. [Huang et al. (2025), *Self-Improvement in Language Models: The Sharpening Mechanism*](https://arxiv.org/abs/2412.01951). 单任务中自我强化如何改变模型分布，是理解局部 sharpening 为什么不等于集体 collapse 的前置概念。
+3. [Jacot, Gabriel & Hongler (2018), *Neural Tangent Kernel*](https://arxiv.org/abs/1806.07572). 用网络样本之间的梯度相似度刻画跨任务参数耦合、以及固定 kernel 与 feature learning 的差别。
+
+## Reading Checklist
+
+- [ ] 区分 ground-truth accuracy 与 majority-vote pseudo-reward。
+- [ ] 推出为什么 $F'(z)$ 正值窗口意味着一个共用偏置可能被放大。
+- [ ] 解释固定问题学习进度时，$N$ 如何增加共享模式放大的时间。
+- [ ] 用 Eq. 7 说明 $\lambda$ 和 $\delta$ 各有什么作用，为什么 batch size 主要进入对数。
+- [ ] 看 Fig. 1–2，分辨模型预测与实际测量的拟合关系。
+- [ ] 用 Fig. 4 解释 shared direction 的移除/恢复为何比纯关联实验更强。
+- [ ] 指出初始 kernel predictor 在真实训练中低估风险的原因。
+- [ ] 解释 entropy bonus 稳定 uniform mode 不等于保住全部任务的正确性。
+- [ ] 先读 He et al. 的直接前作，再回来看本论文如何解释 dataset-size threshold。
+
+## Sources & attribution
+
+[Peize Ding, *Collective Dynamics of Self-Reinforcement: How Cross-Task Coupling Drives Policy Collapse in Unsupervised RLVR*, arXiv:2610.37553v1（2026-10-27 首次提交）](https://arxiv.org/abs/2610.37553)；[官方完整 HTML 与 Fig. 1–4](https://arxiv.org/html/2610.37553v1)；作者公开的 [实验代码](https://github.com/pd2714/RLVR_instability)。本文未复制第三方 Figure，未重画作者的实验曲线；上面的文字流程为标记清楚的 **AI-generated explanatory diagram**，不是原图、没有数字数据。本导读日期：2026-10-30。
