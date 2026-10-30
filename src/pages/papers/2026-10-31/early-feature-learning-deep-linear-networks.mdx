@@ -1,0 +1,158 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Investigating the Early Signatures of Feature Learning in Deep Linear Networks"
+authors: "Shaunak Bhandarkar, Boris Hanin"
+date: "2026-10-31"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2610.37834"
+notionUrl: "https://app.notion.com/p/4097dd5567ec813eaf63cad94a4fef59"
+summary: "One gradient step produces a rank-one label-aligned feature spike, but feature learning does not guarantee better generalization."
+readingTime: "25–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+即使网络所有层都是**线性映射**，层间参数的乘积仍使训练动力学非平凡。作者在无穷宽 mean-field 深线性网络中严格分析了**一次梯度更新**：中间层 feature Gram matrix 在初始输入核上获得一个与训练标签对齐的 **rank-one spike**。随后在学到的特征上做 kernel ridge regression (KRR)，其预测等价于把原输入特征的 ridge 预测**统一放大**，放大有用信号的同时也可能放大噪声。真正改善泛化需要输入协方差有强方向性、目标与该方向对齐、且信噪比足够高。来源：[原论文 arXiv:2610.37834v1（包括 92 页正文与附录）](https://arxiv.org/html/2610.37834v1)。
+
+<ReadingPath
+  quick={['Abstract + Fig. 1：一次 gradient step 对中间 feature kernel 做了什么？', 'Theorem 3.1：找到 rank-one correction 的精确结构。', 'Fig. 4–5 与 Theorem 4.7：为什么出现 feature learning 不代表一定泛化更好？']}
+  standard={['Section 2：理解深线性网络的 mean-field scaling、数据矩阵 X 与标签向量 y。', 'Section 3 + Theorem 3.1：追踪初始 input Gram matrix 与更新后 feature Gram matrix。', 'Proposition 3.2：将 learned-feature KRR 化简为原始 KRR prediction 的 scalar amplification。', 'Section 4：比较 isotropic 和 spiked covariance，以及 teacher alignment 的角色。', 'Figures 1–7：分别区分有限宽数值实验与相应定理的适用条件。', '回到 Ba et al. 2022 的浅层网络 one-step feature spike 做直接对照。']}
+  deep={['从链式法则与参数化写出一层更新对全部后续 feature 的影响，并推导 rank-one 项中的 d_ell 系数。', '验证 Theorem 3.1 的极限顺序、一次梯度更新与宽度/样本数范围，避免外推任意 SGD 轨迹。', '利用 Sherman–Morrison 公式理解 Proposition 3.2 为什么产生统一的 c_lambda amplification。', '分开计算 bias 与 variance；判断何时增大信号比放大噪声更有利。', '在 spiked covariance 中研究 spike strength gamma、teacher alignment rho 和 SNR 的可识别角色。', '研究 Theorem 4.7 的 gamma=0、rho=0 边界，并辨别“优于全部固定特征最优调参”与“优于某一基线超参数”。']}
+/>
+
+## Big Picture：能学习特征，不代表学到了泛化有效的特征
+
+无限宽网络经常用固定的 Neural Tangent Kernel (NTK) 近似；而 feature learning 研究强调隐藏表示如何随梯度更新而变化。深线性网络看起来没有 nonlinear activation，但**端到端输出参数对单层权重是多线性函数**，所以优化能重塑内部特征。作者用一次可计算的更新把“特征发生变化”与“学习任务真的受益”拆成两步。
+
+**AI-generated explanatory diagram — 仅解释信息流与概念机制，非论文 Figure、非定量结果：**
+
+~~~text
+initial features X  ->  input Gram K_x
+                              |
+                 1 gradient update, labels y
+                              |
+                 learned intermediate features
+                              |
+             K_feature = K_x + rank-one spike
+                              |
+                 learned-feature ridge readout
+                              |
+           prediction = c_lambda * baseline KRR
+                              |
+                  signal amplified  AND
+                  noise amplified
+                              |
+  generalization improves only for favorable input,
+    teacher alignment, SNR and regularization
+~~~
+
+将它当作“**representation change → estimator change → test risk**”的学习路线，而非所有神经网络训练的普适因果机制。
+
+## Mechanism I — 深线性网络如何在一次更新后出现特征结构？
+
+设训练样本为 $X=(x_1,\ldots,x_n)$，对应标签为列向量 $y$。初始 feature kernel 在作者归一化下记为 $K_x$；网络在 mean-field 设定下进行单次梯度下降后，第 $\ell$ 层的新 kernel 在相应无限宽极限满足：
+
+$$
+\boxed{
+K_{\mathrm{feat}}^{\ell}
+=
+K_x+\frac{\eta^2 d_\ell}{n^2}\,K_x yy^\top K_x
+}
+$$
+
+其中
+
+$$
+d_\ell=\frac{\ell(\ell+1)(2\ell+1)}{6}.
+$$
+
+这是论文 **Theorem 3.1** 的核心式。后项形如 $vv^\top$（其中 $v=K_xy$），所以最多只有 **rank one**；它朝着由输入几何与标签共同决定的方向增加了特征方差。
+
+三个关键细节需要记住：
+
+1. **更新时利用了标签。** 所以这不是仅靠无监督输入统计得到的特征变换。
+2. **只证明了指定 mean-field 极限中的一次更新。** 不能直接声称任意深度、任意训练时长都保持 rank-one。
+3. **特征核增长 ≠ 泛化误差下降。** 核谱变化是中间表征的事实，不是最终预测质量的充分条件。
+
+## Mechanism II — KRR 为何会把所有预测一起放大？
+
+对学习后的隐藏层特征再训练一个 ridge readout，论文 **Proposition 3.2** 表明，预测器可以归约为：
+
+$$
+\widehat f_{\mathrm{feature}}(x)
+=
+c_\lambda\,\widehat f_{\mathrm{input}}(x),
+\qquad c_\lambda\geq 1.
+$$
+
+这里 $c_\lambda$ 依赖样本、学习率、ridge 参数和模型设定；不能理解为某个独立于数据的普适常数。**它增强原始 ridge predictor 的全部输出**，并不能选择性地区分真正有用的信号和标签噪声。
+
+一个方便的偏差–方差直觉是：如果原始估计整体偏小，乘上 $c_\lambda>1$ 可能减小 bias；但如果已经拟合了噪声，则放大同样会增大 variance。正因为如此，本文强调泛化改进必须放在输入分布和 teacher model 的具体假设下评判，而不是从 rank-one 结构直接推出。
+
+## Mechanism III — 什么样的数据让 feature spike 有用？
+
+作者研究具有主导方向的 **spiked covariance** 输入模型，其中某个方向的方差高于各向同性背景。问题有两个彼此独立的参数：
+
+- **Spike strength：**输入分布中突出方向究竟有多强。
+- **Teacher alignment：**预测目标是否恰好依赖该突出方向。
+
+如果高方差方向和目标有关，放大沿该方向的估计可能有利；如果突出方向与目标正交，则表示变化可以主要追逐与预测无关的方差。
+
+论文给出了高维随机矩阵极限下的性能条件，并在 **Theorem 4.7** 中证明：当输入是各向同性（spike strength 为零），或者目标与 spike 方向正交时，所考察的 one-step feature learner 并不能在对应意义上胜过最优调节的 fixed-feature ridge baseline。
+
+**不要把这个结论反推到所有实际深度网络。** 它依赖深线性结构、特定训练步、Gaussian input/teacher 和指定极限；训练多步、非线性激活或非 Gaussian 数据可能出现其他机制。
+
+## Key Figures — 保留原文图，不复制到仓库
+
+图表请打开 [arXiv v1 HTML 正文](https://arxiv.org/html/2610.37834v1) 或 [官方 PDF](https://arxiv.org/pdf/2610.37834) 阅读。Figure 版权复用条件在本仓库没有独立核实；以下只链接原文并提示读图任务。
+
+1. **Fig. 1 — Kernel 发生了怎样的变化？** 比较初始 feature Gram matrix 与一步更新后的改变，观察 rank-one label alignment 对核谱的含义；对照 Theorem 3.1 的推导假设。
+2. **Fig. 2–3 — Depth、width 和更新的数值检验。** 着重辨别有限宽图像中的趋势与无限宽定理，不要把近似拟合误认为任意有限 $n$ 的严格恒等式。
+3. **Fig. 4–5 — Generalization 的条件性。** 对照 spiked covariance 方向、目标对齐与噪声，判断相同“kernel learned”现象为何能带来截然不同的测试风险。
+4. **Fig. 6–7 — 样本规模与高维 regime。** 阅读图例、横轴和参照基线，区分与某一固定 ridge penalty 的比较及与最优调参 baseline 的比较。
+
+这里的图序说明仅用于指向主要论证；任何图的精确数据值均以论文原 Figure 和作者 captions 为准，不在本站重绘曲线。
+
+## Authors report — 作者报告的证据
+
+- 对特定深线性 mean-field 网络的**一次梯度更新**，推导得到 label-aligned rank-one feature kernel correction。
+- 当在更新特征上再应用 KRR 时，得到可精确化简的 prediction amplification。
+- 在 spiked covariance teacher/student 模型中，证明可改善泛化的条件以及若干不能改善的边界情形。
+- 使用数值模拟将有限网络行为与渐近理论联系起来；图表不应被描述为真实 LLM 训练实验。
+
+## AI interpretation — 对 Physics of AI 的启发
+
+如果想比较两种模型有没有“真正学到更好的表征”，最好并行监控 **representation geometry**、**estimator calibration** 和 **out-of-sample risk**。一个 label-aligned spike 可能很容易在隐藏层测到，但对新数据是利是弊，需要单独分析信噪比和结构对齐。
+
+它也为比较近期 *Early learning in large residual networks* 提供了很好的桥梁：一篇关注高维 ResNet 早期非线性输入学习受限；这篇则强调连深线性网络也能更新特征，但泛化成功具有分布条件。二者不能简单合并为“深网络早期只学线性”。
+
+## Caveats — 不能推断的结论
+
+- 主要严格结果属于**一次梯度更新**和指定 mean-field/高维 Gaussian 模型，不是任意真实网络的长期训练定理。
+- Feature spike 的存在与 true test accuracy 没有无条件等价关系；标签噪声可被一同放大。
+- 作者的最优性比较需要明确 ridge 调参和 teacher/signal 设定；不同 baseline 得到的“提升”含义不同。
+- 论文长篇技术附录包含更完整的随机矩阵论证；本导读核对了 v1 HTML Main Sections 1–5、Theorem 3.1、Proposition 3.2、Theorem 4.7 与主要 Fig. 1–7 及附录定位，**没有逐行验算全部 92 页证明，也没有独立复现数值图**。
+
+## Historical Reading Chain
+
+1. **FIRST — [Ba et al. (2022), *High-dimensional Asymptotics of Feature Learning: How One Gradient Step Improves the Representation*](https://arxiv.org/abs/2205.01445)**：最直接的 one-step rank-one spike 前作，帮助辨别浅层非线性与这里深线性架构之间的联系。
+2. [Saxe, McClelland & Ganguli (2014), *Exact solutions to the nonlinear dynamics of learning in deep linear neural networks*](https://arxiv.org/abs/1312.6120)：说明输出线性不意味着参数训练动力学线性。
+3. [Jacot, Gabriel & Hongler (2018), *Neural Tangent Kernel*](https://arxiv.org/abs/1806.07572)：作为固定 kernel 极限的基准与对比。
+4. [Narovlansky & Hanin (2026), *Early learning in large residual networks*](https://arxiv.org/abs/2610.31783)：关联的高维早期学习研究，与今天的特征—泛化分离做对照。
+
+## Reading Checklist
+
+- [ ] 解释为什么深线性网络的**端到端函数线性**，但其参数更新仍可非平凡。
+- [ ] 从 Theorem 3.1 判断 kernel correction 为何是 rank one、为何依赖 $y$。
+- [ ] 计算 $d_\ell$ 对层数的增长，理解深度的影响但不外推未知宽度范围。
+- [ ] 证明 Proposition 3.2 中 $c_\lambda$ 是预测放大而非“只放大有用信号”。
+- [ ] 在自己的笔记中分别画出 bias、variance 和 test risk 的逻辑关系。
+- [ ] 分辨 spiked covariance strength 与 teacher alignment 两个独立因素。
+- [ ] 指出 Theorem 4.7 中至少一个不改善泛化的条件。
+- [ ] 阅读 FIRST 历史论文 Ba et al. 2022，再比较这篇新文的贡献。
+
+## Sources & attribution
+
+原论文：[Bhandarkar & Hanin, *Investigating the Early Signatures of Feature Learning in Deep Linear Networks*, arXiv:2610.37834v1，2026-10-27 首次公开](https://arxiv.org/abs/2610.37834)；[官方 HTML（含原 Figure 和参考文献）](https://arxiv.org/html/2610.37834v1)；[完整 PDF](https://arxiv.org/pdf/2610.37834)。本站**只链接原文 Figures**，没有复制或裁剪原始图像，也没有凭记忆制作实验曲线。文字流程明确标注为 **AI-generated explanatory diagram**，仅为教学概念图。制作于 2026-10-31。
