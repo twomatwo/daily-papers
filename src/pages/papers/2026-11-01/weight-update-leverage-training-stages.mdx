@@ -1,0 +1,167 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "What a Weight Update Buys: Leverage Across Training Stages"
+authors: "Shikhar Shiromani"
+date: "2026-11-01"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2610.37719"
+notionUrl: "https://app.notion.com/p/40a7dd5567ec81ca9c0df471ec93e386"
+summary: "A Fisher-based update leverage measure reveals that tiny post-training weight moves can have far more functional impact per unit norm than large pretraining moves."
+readingTime: "25–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+为什么 DPO/RLVR 把参数移动不到千分之一的相对范数，却可能显著改变 LLM 输出，而预训练期间看起来更大的权重变化，对选定语料的影响并不相称？作者提出 **leverage**：把更新方向造成的**局部输出分布 KL/Fisher 变化**与同样大小的随机方向作比。在论文评估的开放 checkpoint 与部分 prose prompt 中，pretraining 长窗口近随机基准，SFT 约 **5×**，RL-Zero/RLVR 约 **400–1,500×**，DPO 可到 **400–23,000×**。作者还发现没有 FP32 master weights 的 bf16 训练存在大量坐标量化停滞。**这些是指定权重 checkpoint 和输入分布上的几何度量，不是每个阶段对任务正确率的普适排名。** [arXiv:2610.37719v1](https://arxiv.org/html/2610.37719v1)。
+
+<ReadingPath
+  quick={['Abstract + Fig. 1：看不同训练阶段的 leverage 差几个数量级。', '方法段中的 Fisher quadratic form：理解量到底在测什么。', 'Fig. 4–5：看低精度和 DARE 控制实验如何改变可观测效果。']}
+  standard={['从局部 KL 展开推导为什么 Fisher 是一个参数更新方向的函数性距离。', '查看 matched random direction 的基线怎么计算，以及 checkpoint 上的 anchor prompts 是什么。', 'Fig. 1–3：比较 pretraining、SFT、RLVR/RL-Zero 与 DPO 的窗口与模型。', 'Precision 实验：bf16 without fp32 master 与完整 FP32 路径有什么差别？', 'DARE 实验：理解 sign-flip null、keep rate p 和相对损伤近似的适用范围。', '阅读作者对语料差异、训练时间窗与不等价任务质量测量的限制。']}
+  deep={['利用 softmax 的局部二阶 Taylor 展开得到 KL ≈ (1/2) Var_p(JΔ)。', '证明方向的欧氏长度一样时 Fisher quadratic form 仍能差许多数量级。', '审查每一个 stage 是否都在相同 anchor checkpoint、相同 prompts 和相同 precision 下比较。', '从参数量化网格分析 bf16 无 FP32 master 的小更新为何被舍入为零。', '推导 dropout-and-rescale 对均值和方差的影响、sign-flip baseline 与 (1-p)/(pρ_sign) 之间的条件关系。', '比较 natural gradient 的度量思想与本文使用 Fisher 测量 update 而不是直接优化的区别。']}
+/>
+
+## Big Picture — Euclidean distance 不等于行为距离
+
+传统的更新统计会报告参数范数变化 $\|\Delta\|/\|\theta_0\|$，但参数方向不同、神经网络的输出敏感度不同，可能让**同样大小的参数改变**产生截然不同的 next-token 概率变化。
+
+作者的目标不是给训练算法重新命名，而是提出一个可以跨不同阶段对照的**输出几何测量仪器**。
+
+**AI-generated explanatory diagram — 概念对比，不是作者的实验数据图：**
+
+~~~text
+                 same ||Delta theta||
+                 /                  \
+    random direction            trained update
+          |                           |
+   small projected Fisher      high-alignment Fisher
+          |                           |
+    small output KL              larger output KL
+                 \                  /
+                  normalize by size
+                         |
+               ratio = update leverage
+                         |
+       compare stages and precision controls
+~~~
+
+几何上“更有 leverage”的方向并不意味着对人类目标或科学事实“更好”；如果沿这个方向推动错误答案，也可能很有 leverage。
+
+## Mechanism I — 从局部 KL 到 Fisher Quadratic Form
+
+设基准 checkpoint 的 next-token 分布为 $p_t(y)=\pi_{\theta_0}(y\mid x_t)$，logit vector 的参数方向导数为 $J_t\Delta$。对小位移 $\alpha\Delta$，局部 KL 具有如下二阶展开：
+
+$$
+D_{\rm KL}(
+\pi_{\theta_0+\alpha\Delta}
+\Vert\pi_{\theta_0})
+\big|_t
+=
+\frac{\alpha^2}{2}
+\operatorname{Var}_{y\sim p_t}\!\left[(J_t\Delta)_y\right]
++O(\alpha^3).
+$$
+
+因此沿方向 $\Delta$ 的 Fisher response 正比于输出 logits 扰动的**概率加权方差**，而不是 logit 的任意统一平移：softmax 对所有类别增加相同常数不敏感。
+
+作者还按相对权重位移归一化：
+
+$$
+c(\Delta)=
+\frac{\frac12\mathbb E_t\operatorname{Var}_{p_t}(J_t\Delta)}
+{\left(\|\Delta\|_2/\|\theta_0\|_2\right)^2},
+\qquad
+\rho=\frac{c(\Delta_{\rm actual})}{c(\Delta_{\rm random})}.
+$$
+
+这里 $\rho$ 描述的是**单位欧氏更新的输出敏感性**相对随机方向提高多少；同一个真实更新在不同 checkpoint / 评价 prompt 分布下会得到不同结果。**二次型的“精确测量”指当前位置的方向曲率，不能把有限幅度的实际 KL 完全等同于二阶近似。**
+
+## Mechanism II — 为什么训练阶段差异巨大？
+
+作者分析公开的 OLMo-3、Tülu-3、Zephyr、OLMo-2 checkpoint 轨迹，控制更新方向、范数和参数快照，在 **部分 prose 评价分布**中报告：
+
+| 训练阶段 | 代表性的相对随机 leverage | 解读边界 |
+| --- | ---: | --- |
+| Pretraining 长窗口 | 约 1 | 指定窗口与 prose anchor；不等于「预训练没有用」 |
+| Supervised finetuning (SFT) | 约 5 | 与对应基准方向比较 |
+| RL-Zero / RLVR | 约 400–1,500 | 特定 checkpoint/数据与目标 |
+| Direct Preference Optimization (DPO) | 约 400–23,000 | 对 anchor 和训练配方非常敏感 |
+
+“预训练窗口接近随机”应理解为**该论文测量的函数空间局部敏感度指标**，不能推广为“预训练只是噪音”或“预训练能力无价值”。在 math/code 分布、不同窗口与 checkpoint 位置可能得到不同的结果。
+
+作者还对部分受控 SFT/DPO 训练轨迹进行重复实验，以区分对发布 checkpoint 的观察与训练配方的影响。高 leverage 也可能在训练持续进行时发生衰减，这提示局部更新的输出敏感度随位置变化。
+
+## Mechanism III — bf16、FP32 master 与量化冻结
+
+如果在 bf16 权重网格上直接累积很小的更新，而不保留 FP32 master copy，一次梯度步长可能低于权重舍入的分辨率，导致本该发生的移动被抹掉。
+
+作者在指定实验中观察到 **36–99% 的权重坐标不发生可辨识更新**，并报告 leverage 最多下降约 **7 倍**。这说明测量到的模型更新方向，不只受学习算法影响，还取决于训练系统的数值实现。
+
+不要把它误解为「bf16 训练一定不能收敛」。许多混合精度训练流程保留更高精度的主权重或优化器状态。论文警告的是**没有 FP32 master、直接舍入参数更新**的特定路径。
+
+## Mechanism IV — DARE 为什么能用几何预测？
+
+DARE (drop-and-rescale) 在模型差分向量中随机丢掉一部分坐标，并把保留的差分放大，以期复用训练成果。问题在于，**坐标随机掩蔽不一定沿着模型功能上无害的方向**。
+
+作者使用 sign-flip null 的相对 Fisher 几何量 $\rho_{\rm sign}$，在二次近似可用的条件下提出相对 projected KL damage：
+
+$$
+\frac{\mathrm{damage}_{\rm DARE}}
+{\mathrm{damage}_{\rm original}}
+\approx\frac{1-p}{p\,\rho_{\rm sign}},
+$$
+
+其中 $p$ 是保留概率。这个关系在 DARE **实际成功的范围内**可预测损伤量级；当大扰动使局部 Fisher 稳定性假设失效时，不能认为这是一条对任意模型差分都精确成立的损伤律。
+
+## Key Figures — 原文阅读指引
+
+所有 Figure 均只通过 [作者原始 arXiv HTML](https://arxiv.org/html/2610.37719v1) 访问；本站没有复制论文图，也不重绘量化结果：
+
+1. **Fig. 1 — Stage leverage**：比较 pretrained / SFT / RL 的 update norm 与 Fisher effect；寻找 matched random baseline，并注意报告中是否改变评价语料。
+2. **中间控制实验图 — Anchor、stage 和 checkpoint trajectory**：区别 release checkpoints 的横截面对照与相同训练脚本重复运行的受控轨迹。
+3. **低精度实验（Fig. 4）**：读坐标冻结的定义、bf16 网格和 fp32 master 的分组，明确百分比代表什么。
+4. **DARE 实验（Fig. 5）**：横轴 drop/keep rate 与实际 projected KL damage 如何比较；检查二次近似仍适用的点。
+
+阅读时以原网页的 Figure captions 和版本为准，不根据本导读重画曲线。
+
+## Authors report — 作者实际建立了什么？
+
+- 定义并测量以 Fisher quadratic form 归一化的训练更新 leverage。
+- 在若干公开 checkpoint 中观察不同训练阶段的强烈差异，提供受控复现实验检查。
+- 在指定的 bf16 无 FP32 master 情形中测得坐标冻结及变化的 leverage。
+- 给出关于 DARE 丢弃/缩放引起的局部功能损伤的近似预测，并对实验结果核验。
+
+## AI interpretation — 对 Physics of AI 的学习价值
+
+如果比较 SFT、RLVR、DPO 的效果，只记录 $\|\Delta\theta\|$ 很容易误导：参数变化应同时用**输出分布变化、实际任务质量、泛化与鲁棒性**来评价。这篇的 leverage 可以作为其中的一个几何诊断量，而不是替代 reward/accuracy 的通用效能分数。
+
+对模型合并与 agent skill updates，还应记录更新方向、anchor checkpoints、训练数值精度和实际评测 prompt 分布。一个很小的参数 patch 如果落在高 Fisher 方向，就可能明显改变输出。
+
+## Caveats — 不应由此推断的结论
+
+- Fisher 二次型衡量局部**函数变化**，不是奖励值、正确率或真实世界任务成功率。
+- 几个 stage 的数值范围依赖模型、checkpoint、测试 prompt 与更新窗口，不是任何 LLM 都遵守的固定倍数。
+- Pretraining 长窗口在 prose 上接近随机 baseline，不意味着其数学/代码能力或知识获取“来自噪声”。
+- bf16 与 DARE 的现象依赖数值精度和小扰动条件，不能外推所有 mixed precision 优化器。
+- 本导读核查 arXiv v1 HTML 的定义、主要图、实验控制与 limitations；没有独立复现全部训练或重算 Fisher 测量。
+
+## Historical Reading Chain
+
+1. **FIRST — [Amari (1998), Natural Gradient Works Efficiently in Learning](https://doi.org/10.1162/089976698300017746)**：Fisher metric 与参数空间几何的源头；最先读它，理解何以相同欧氏距离可以代表不同预测分布变化。
+2. [Martens, *New insights and perspectives on the natural gradient method*](https://arxiv.org/abs/1412.1193)：Fisher、KL、Hessian 和二阶优化之间的关系。
+3. [Rafailov et al. (2023), Direct Preference Optimization](https://arxiv.org/abs/2305.18290)：理解被比较的 DPO training stage 和偏好目标，避免将 leverage 与泛化效能混淆。
+
+## Reading Checklist
+
+- [ ] 从 softmax KL 的 Taylor 展开导出 $\operatorname{Var}_{p_t}(J_t\Delta)$。
+- [ ] 解释为什么随机方向和训练更新必须在**同一 checkpoint、同一范数和 prompts**下比较。
+- [ ] 把 Fig. 1 的 leverage 和 downstream accuracy 概念分开。
+- [ ] 识别 pretraining / SFT / RLVR / DPO 各组的数值范围及条件。
+- [ ] 用 bf16 舍入网格解释无 FP32 master 时的小更新丢失。
+- [ ] 说明 DARE law 的 $p$ 和 $\rho_{\rm sign}$ 指什么，为什么必须检查 quadratic regime。
+- [ ] 阅读 Amari 1998，再对照本文如何*测量* Fisher metric，而不是把它直接用作 natural-gradient update。
+
+## Sources & attribution
+
+主论文：[Shikhar Shiromani, *What a Weight Update Buys: Leverage Across Training Stages*, arXiv:2610.37719v1，2026-10-27 首次公开](https://arxiv.org/abs/2610.37719)；[作者 HTML（含原始 Figure）](https://arxiv.org/html/2610.37719v1)。本仓库没有复制任何论文 Figure，未据记忆绘制量化曲线。示意文字流程标注为 **AI-generated explanatory diagram**，仅用于教学。编制于 2026-11-01。
