@@ -1,0 +1,189 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Going deep, reaching further: What can Boltzmann machines efficiently represent?"
+authors: "Tobias Reinhart, Gemma De les Coves"
+date: "2026-11-02"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2610.39731"
+notionUrl: "https://app.notion.com/p/40b7dd5567ec81c5bfccfe3ad4681868"
+summary: "Universal approximation does not imply efficient representation: deep Boltzmann machines have maximal polynomial-resource reach, while shallow k-local models form a strict hierarchy."
+readingTime: "30–60 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**核心问题：**RBM、DBM 和带更高阶相互作用的浅层 Boltzmann machine 在资源无限时都能作 universal approximators。可是，**一个模型能以指数数量参数表示某个目标，和能以多项式资源表示它，是截然不同的能力**。
+
+**Authors report：**这篇把 *efficient reach* 定义为模型在适当 polynomial overhead/参数限制下能够有效模拟或表示的目标类。在文中规定的 spin-ML 框架下，Theorem 16 建立 universality、visible closure 与 maximality 之间的严格关系；Corollary 17 说明具有至少两个隐藏层（total depth ≥3）的 deep Boltzmann machine 达到 maximal efficient reach，而浅层 RBM 的 efficient reach 严格较小。浅层 $k$-body generalization 随交互阶数增加形成严格无穷层级。部分分离依赖 polynomial hierarchy 不坍缩等复杂性假设。
+
+**最重要的边界：**这是对 **representation/simulation expressivity** 的严谨讨论，不等于“深层模型在实际训练中一定更容易优化、更省数据或泛化更好”。本文核查了 [arXiv:2610.39731v1](https://arxiv.org/html/2610.39731v1) 的主文、关键 theorem 与部分附录 D；没有逐行独立复核所有证明。
+
+<ReadingPath
+  quick={[
+    'Introduction + Fig. 1：理解 ordinary universality 和 efficient reach 的区别。',
+    'Fig. 2 + Theorem 16：找到 visible closure 为什么是关键。',
+    'Conclusion：列出作者哪些结果依赖 complexity assumptions。'
+  ]}
+  standard={[
+    'Section 2：spin Hamiltonian、visible/hidden units、universal simulation 与 probability approximation。',
+    'Section 3 + Fig. 2：理解 maximality、visible closure、Theorem 16 与 Corollary 17。',
+    'Section 4 + Table 1：区分 simulation、unnormalized marginals、normalized marginals 三种分离任务。',
+    'Section 5 + Fig. 3：看浅层 $k$-local 模型如何形成严格层级。',
+    'Section 6：将 representation 结果与实际 learning efficiency 的问题严格分开。'
+  ]}
+  deep={[
+    '把一个 RBM 的 visible marginal 从 energy function 显式求和出来，区分 partition function 与 unnormalized marginal。',
+    '阅读 Definition 12（visible closure）、Definition 8（simulations）与 Theorem 16 的连接。',
+    '核对 Corollary 17 中如何把 visible unit 移入 hidden layer 保持 DBM class 封闭。',
+    'Section 4：追踪 NP-hard ground-state energy 和 #P-hard partition functions 分离的额外计算复杂性假设。',
+    'Section 5：通过 $k$-party number-on-forehead communication complexity 了解为何 higher-order interactions 产生严格层级。',
+    'Appendix D：检查有限小规模的训练例子与严格 asymptotic theorem 不是同一个证据层级。'
+  ]}
+/>
+
+## Big Picture — 为什么「万能逼近」几乎无法告诉我们哪个架构好？
+
+给定可见变量 $v$ 和隐藏变量 $h$，Boltzmann machine 定义能量 $E(v,h)$，通过温度为单位的 Gibbs 权重表示：
+
+$$
+p(v)=\frac{1}{Z}\sum_h \exp[-E(v,h)],
+\qquad
+Z=\sum_{v,h}\exp[-E(v,h)].
+$$
+
+对于最简单的二体 RBM，可理解为 $v$ 与 $h$ 两侧全连接，但同侧没有连接：
+
+$$
+E_{\rm RBM}(v,h)
+=-\sum_i a_i v_i-\sum_j b_jh_j-\sum_{ij}W_{ij}v_i h_j.
+$$
+
+深 DBM 可以包含 hidden–hidden 的相邻层相互作用；浅层 $k$-body generalization 允许一个能量项涉及 $k$ 个单位，但仍不引入同类的深层 hidden–hidden composition。
+
+**关键区分：**若 RBM 需要 $2^{n}$ 个隐藏单元才能表达某些 $n$ 比特函数，它仍是 universal approximator；但这个表示对大 $n$ 完全不可扩展。论文的问题是：**限制为 polynomial resources 后，模型间是否还等价？**
+
+**AI-generated explanatory diagram — 概念层级而非论文的定量 Figure：**
+
+~~~text
+unlimited capacity
+  RBM / k-local shallow / deep DBM -> all universal
+                         |
+                   impose polynomial
+                 representation resources
+                         |
+            compare efficient target classes
+                         |
+      shallow RBM < shallow 3-body < 4-body < ...
+                         |                (strict)
+                 strictly below maximal class
+                         |
+              deep DBM (>=2 hidden layers)
+                    maximal reach
+~~~
+
+该概念图只说明本文证明的**类包含关系**，不表达某一个模型的真实准确率、样本效率或训练时间。严格关系的定义与限制以原文的 simulations、small weights、complexity assumptions 为准。
+
+## Core mechanism I — 资源敏感的表达能力
+
+传统 universal approximation 的命题大致是“对于任意目标 $f$，存在足够大的参数化模型 $\theta$ 使得误差小于任意 $\varepsilon$”。它并没有说明参数数量如何随输入规模 $n$ 变化。
+
+在本文中，effective reach 不是一个简单标量分数，而是可以高效实现的**函数类/分布类**。两个模型均可 universal，仍可能满足：
+
+$$
+\mathcal R_{\rm shallow}\subsetneq\mathcal R_{\rm deep},
+$$
+
+这里 $\mathcal R$ 是论文指定模拟/表示约束下的 *efficient-reach set*。$ \subsetneq $ 是**严格包含**，不是“准确率大 5%”或“收敛快 5 倍”。
+
+图 1 的高度表示 ordinal inclusion（序关系）；**不能把图的纵轴当作可读取的量化表达能力分值。**
+
+## Core mechanism II — Visible closure 使隐变量真正能够「组合」
+
+一个容易忽略的问题是：若要把某个模型内部处理过的可见变量，交给下一段模拟作为隐藏变量，会不会迫使模型产生原先架构不允许的 hidden–hidden 连接？
+
+**Visible closure** 正是对这一 compositional property 的结构要求。直观地说，把某些 visible spins 内化成 hidden spins 后，仍能在相同的模型族中实现恰当的模拟。
+
+对具有两层或更多隐层的 DBM，把原先 visible 层中的部分状态转换为隐藏状态，可以在已有 hidden-layer 结构中重排；对普通 shallow RBM，新增 hidden–hidden interaction 往往破坏其图结构。
+
+论文的核心 **Theorem 16** 断言（在其 spin ML definitions 中）：
+
+$$
+\text{(universality + visible closure)}
+\Longleftrightarrow
+\text{(universality + maximality)}
+\Longleftrightarrow
+\text{(maximality + visible closure)}.
+$$
+
+此处 $\Longleftrightarrow$ 是三个**性质组合的逻辑等价**，并非某两个神经网络有相同函数输出。由此作者证明 **Corollary 17**：总深度至少三层（visible + 两个 hidden layers）的 DBM 达到本文定义的 maximal efficient reach。
+
+## Core mechanism III — 三种「浅层做不到」的不同问题
+
+Section 4 不只是建立某种高层次直觉，而是使用三个不同的复杂性任务给出分离：
+
+1. **Theorem 20 — 低能态模拟：**某些 NP-hard ground-state energy functions 能被 maximal spin models 高效模拟，但在 polynomial hierarchy 不发生指定坍缩的条件下，shallow models 不能以同等资源完成。
+2. **Theorem 24 — 未归一化边缘分布：**在加强的 visible-closure 等条件下，对某些 #P-hard partition-function 型目标，深类可在 polynomial resource 下保持相应比例结构，而 shallow 类受限。
+3. **Theorem 26 — 归一化概率分布：**进一步讨论同一 #P-hard family 的概率比/归一化 marginals 的高效表示分离。
+
+不要把三条证明看成一个不加条件的“深度万能性定律”。特别是复杂性下界对**有限维、特定训练算法与实际推理成本**没有自动保证。
+
+Section 5 另从 **$k$-party communication complexity** 证明：即使保持模型浅层不变，提高每项可交互的变量数 $k$，仍然得到严格递增的高效表示类（Theorem 31、Corollary 33 与后续构造）。因此，**深度与局域交互阶数**是不同的结构资源。
+
+## Key Figures / Table — 原论文链接与读图问题
+
+所有图片均链接至 [作者 arXiv HTML v1](https://arxiv.org/html/2610.39731v1)，不复制或修改原 Figure。该原稿标注 CC BY 4.0，但本导读仍选择仅给原图链接，避免无价值重复图面。
+
+1. **[Fig. 1 — efficient reach vs depth and interaction order](https://arxiv.org/html/2610.39731v1)**：先明确纵轴是**序数层级**，不是可量测的连续性能指标。区分 depth=2 的 RBM/k-local 和 depth≥3 的 DBM。
+2. **[Fig. 2 — universality, maximality, visible closure](https://arxiv.org/html/2610.39731v1)**：对照 Theorem 16，检查“任意两项推第三项”的组合逻辑。
+3. **[Table 1 — three representation separations](https://arxiv.org/html/2610.39731v1)**：逐行区别 NP-hard ground-state、#P-hard unnormalized marginals 和 normalized marginals；明确 maximal model 还需满足的额外条件。
+4. **[Fig. 3 — strict shallow k-body hierarchy](https://arxiv.org/html/2610.39731v1)**：关注 $k$ 与 $k+1$ 类之间的严格包含，不要将其误读为有限数据训练实验。
+5. **[Appendix D — limited learning experiments](https://arxiv.org/html/2610.39731v1)**：留意作者展示的小规模 $n=6,8,12,16$ 的优化实验（部分配置不成功）与主文 asymptotic theorems 证据等级不同。
+
+## Authors report — 作者的定理与数值补充
+
+作者报告两层结论。严格理论上，visible closure 使 universal spin ML model 的多项式模拟能力达到 maximality，并通过复杂性与通信复杂性证明浅层模型的严格限制。有限数值实验则探索了某些三体浅层模型相对 RBM 的任务优势，但也有一些对照任务二者接近，不能理解为“有高阶交互就总会赢”。
+
+## AI interpretation — 对 Physics of AI 和科学机器学习意味着什么？
+
+此文最值得学习的是**评价函数表示能力必须指定资源尺度与目标类**。把 transformer、能量模型、graph neural network 或 Agent 都叫作 universal approximators，往往无法比较它们的实际计算优势；需要追问：参数数目、局域交互数、计算图深度、实现目标的数值精度是否随规模以多项式增长？
+
+它也展示了一种把统计物理 Hamiltonian 与理论计算机科学连接的好方法：使用可复用的低能模拟作为“编译”，再用可组合性和复杂性假设判断哪些表达能被某类模型高效执行。
+
+**这是对理论方法的延伸理解，不是作者已证明现代大型 LLM 的层数存在相同阈值。**
+
+## Caveats — 不能从论文推出的结论
+
+- **Expressivity ≠ learnability。** 存在 polynomial-size representation 不保证能使用梯度下降或采样在 polynomial time 学到它。
+- 部分严格 separation 依赖 polynomial hierarchy 不坍缩或参数界等复杂性假设；不能把所有条件省略为“深度必胜”。
+- Visible closure 是严格的模型族性质，不等价于在任意编码器中人为增加一层。
+- 有限实验数据依赖样本、目标和训练预算，仅为补充例证，无法替代 asymptotic complexity proof。
+- $k$-body 交互所需的物理硬件与数值实现成本可能随 $k$ 显著上升；表达层级不直接估算制造或运算能耗。
+- 核查范围是主文 Sections 1–6、关键定理/图表及附录 D 部分，没有独立逐行复算数十页证明。
+
+## Historical Reading Chain
+
+1. **FIRST — [Reinhart & De les Coves (2026), Universal spin models are universal approximators in machine learning](https://doi.org/10.1103/b3xp-wtwx)**：本文直接的上一阶段理论：连接 universal spin simulations 与 RBM/DBM 的 universal approximation。本篇把关注点从存在性改为 polynomial efficiency。
+2. [Montúfar (2015), Deep Narrow Boltzmann Machines are Universal Approximators](https://arxiv.org/abs/1411.3784)：先理解“深层与浅层都 universal”，才能看清本篇区分的不是普通普适逼近。
+3. [Martens et al. (2013), On the representational efficiency of restricted Boltzmann machines](https://proceedings.neurips.cc/paper/2013)：学习早期如何用复杂性工具考察浅层 Boltzmann machine；会议索引需按题名定位。
+4. [De las Cuevas & Cubitt (2016), Simple universal models capture all classical spin physics](https://doi.org/10.1126/science.aab4208)：从物理模型模拟出发理解 universality 与可组合模拟的源头。
+
+## Reading Checklist
+
+- [ ] 写出 RBM 的 energy、partition function 与 visible marginal。
+- [ ] 解释为什么“universal”容许指数参数，而“efficient reach”不能。
+- [ ] 在 Fig. 1 解释 ordinal inclusion 与准确率曲线的区别。
+- [ ] 复述 visible closure 及 Theorem 16 的三性质联系。
+- [ ] 画出 RBM、3-body shallow、DBM 三者不同的连接结构。
+- [ ] 读 Table 1 并指出每条 complexity separation 的额外假设。
+- [ ] 解释浅层 $k$-body 模型与 $k+1$-body 模型的表达层级为什么严格。
+- [ ] 说清“存在高效表示”为什么不等于“高效可训练”。
+- [ ] 先读作者 2026 PRE 前作，再返回定理 16 和 20。
+
+## Sources, media and attribution
+
+- **Primary:** [Reinhart & De les Coves, *Going deep, reaching further*, arXiv:2610.39731v1, 2026-10-29](https://arxiv.org/html/2610.39731v1). [Abstract](https://arxiv.org/abs/2610.39731).
+- **Scope:** full main-text targeted review, key theorem statements and selected Appendix D; no independent reproof.
+- **Figure policy:** original preprint lists **CC BY 4.0**, but all figures are **linked**, not copied. The textual concept tree above is explicitly **AI-generated explanatory diagram**, not an original Figure; no numerical data or curves redrawn.
+- **Compilation date:** 2026-11-02.
