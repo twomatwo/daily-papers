@@ -1,0 +1,180 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "MoireKP: An Automated Workflow for Symmetry-Constrained Moiré Continuum Models"
+authors: "Yan Zhang, Hanqi Pi, Wangqian Miao, Zhong Fang, Hongming Weng, Xi Dai, B. Andrei Bernevig, Quansheng Wu"
+date: "2026-11-02"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2610.37760"
+notionUrl: "https://app.notion.com/p/40b7dd5567ec81839245f767da81fe48"
+summary: "MoireKP turns localized-orbital first-principles Hamiltonians into symmetry-constrained, valley-resolved continuum models, with wavefunctions and quantum geometry retained in tested low-energy windows."
+readingTime: "25–55 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**问题：**一个真实 twisted TMD 的 moiré supercell 可能包含海量局域轨道。我们可以用 DFT / OpenMX 得到巨大的原子 Hamiltonian，却很难在其上直接计算强关联多体态、Berry curvature 与 projected interaction。传统 continuum model 通常先猜一个形式，再用能带拟合参数；可是**能带本征值吻合不保证本征态、拓扑和量子几何吻合**。
+
+**作者报告：**MoireKP 将局域轨道 Hamiltonian 与 overlap matrix 投影至 valley-resolved truncated atomic plane waves (TAPW)，自动选择低能基底及其晶体对称性表示，生成所有允许的 continuum operators，并从有效 Hamiltonian 提取系数。在 AA-stacked twisted MoTe₂、AB-stacked twisted ZrS₂、A–AB twisted trilayer MoTe₂ 的选定谷和目标能带窗口，沿高对称 k 路径相对 TAPW 的 RMS band-energy error 均小于 3 meV；还比较了 eigenstate overlap、Berry curvature、quantum metric 与 Wilson loops。
+
+**边界：**这不是任意扭角/任意材料的普适 3 meV 保证，也不是对实验相图的直接验证。全文核对范围为 [arXiv:2610.37760v1 的 Results、Methods、主要 Fig. captions 和相关附录](https://arxiv.org/html/2610.37760v1)；没有独立重算第一性原理或运行软件。
+
+<ReadingPath
+  quick={[
+    'Abstract + Fig. 1：识别输入是 H、S、晶体结构和对称信息，而不仅是能带图。',
+    'Fig. 2：看 MoTe₂ K 谷 0.8 meV band RMS、态重叠与几何的不同检查。',
+    'Discussion：哪些超参数与截断影响可靠性？'
+  ]}
+  standard={[
+    'Section I：解释为什么 band-only fitting 不足以固定 topology/quantum geometry。',
+    'Fig. 1 + Section II.1：拆解 TAPW、low-energy projection、symmetry representation、operator extraction。',
+    'Fig. 2：检查 AA MoTe₂ 的选谷 K、基底与 C₃z / C₂T 对称性。',
+    'Fig. 3：看 AB ZrS₂ M 与 Γ 谷为何必须用不同的参考态选择策略。',
+    'Fig. 4：比较 A–AB trilayer MoTe₂ 的 K_A、K_B 与 Γ 子空间。',
+    'Section III：分清 benchmark input error、projection error 与 operator truncation error。'
+  ]}
+  deep={[
+    'Methods IV.1–IV.3：从非正交局域轨道 H/S 出发推导 TAPW 与 Löwdin 正交化。',
+    'Methods IV.4–IV.5：研究晶体对称性在低能子空间的投影与允许算符的实向量空间。',
+    'Appendix C/D：具体追踪 Hermitian、(anti)unitary symmetry、momentum polynomial、moiré harmonic shells。',
+    '对比 band energy error、eigenstate overlap、Berry curvature/quantum metric 的独立诊断。',
+    '用 Zhang et al. 2024 的无拟合 continuum theory 对照理解 MoireKP 自动化的新环节。'
+  ]}
+/>
+
+## Big Picture：微观 DFT 与可研究多体态的连续模型之间，缺的是什么？
+
+对于 twisted TMD，实验关心的是低能 valley band、拓扑、关联绝缘体和超导；而第一性原理首先给出完整结构的巨大非正交局域轨道矩阵。直接以带宽和少数 hopping 数字来拟合 continuum model，无法唯一地重建 Bloch eigenvector。后者却决定 Berry curvature、quantum metric 和相互作用 form factors。
+
+**AI-generated explanatory diagram — 仅为教学流程，并非论文 Figure，也不包含重绘的数值点：**
+
+~~~text
+relaxed moiré supercell + localized orbital H_loc, S_loc
+                        |
+           symmetry-consistent TAPW basis
+                        |
+       orthogonalize S_TAPW and select valley
+                        |
+     effective low-energy H_eff + symmetry matrices
+                        |
+    generate Hermitian symmetry-allowed operator basis
+                        |
+             trace-project coefficients
+                        |
+            compact continuum H_cont(k)
+                        |
+       verify: bands | overlaps | geometry | Wilson loops
+                        |
+      then apply many-body / topology calculations
+~~~
+
+核心是**两路信息在同一个低能空间内会合**：一条来自微观 Hamiltonian；另一条来自空间群操作的 representation。它避免出现“拟合看起来很好，但候选模型违反了应有对称性”的隐患。
+
+## Core mechanism I — 为什么 overlap matrix 不能忽略？
+
+在 PAO 或 Wannier-like 非正交局域基中，电子的广义本征值问题为：
+
+$$
+H_{\mathrm{loc}}|\psi\rangle=E\,S_{\mathrm{loc}}|\psi\rangle.
+$$
+
+引入经过谷与动量截断的 atomic-plane-wave 投影 $X$，教学上可写作：
+
+$$
+H_{\mathrm{TAPW}}=X^\dagger H_{\mathrm{loc}}X,\qquad
+S_{\mathrm{TAPW}}=X^\dagger S_{\mathrm{loc}}X.
+$$
+
+对于正定 $S_{\mathrm{TAPW}}$，Löwdin 正交化得到：
+
+$$
+\widetilde H_{\mathrm{TAPW}}
+=S_{\mathrm{TAPW}}^{-1/2}
+H_{\mathrm{TAPW}}
+S_{\mathrm{TAPW}}^{-1/2}.
+$$
+
+这一变换确保后续有效态空间的内积具有一致的规范。忽略 $S$ 可能改变本征态、对称矩阵投影和 quantum geometry。随后通过由参考态与能量窗口确定的低能子空间 $U_L$ 构造 $H_{\mathrm{eff}}$；实际算法还有 energy-linearized reduction 与正交规范选择，不能简单将每一步都当作未经处理的矩阵删行。
+
+**检查题：**如果只得到两套模型的本征能量 $E_n(k)$，是否有足够信息保证它们的 Berry curvature 相同？答案是没有——需要比较由本征态确定的几何与连接结构。
+
+## Core mechanism II — 对称性不是额外惩罚项，而是生成算符的规则
+
+MoireKP 将 moiré scattering、动量多项式和层/轨道/谷内部态混合写成候选矩阵算符。一个典型基元的结构可理解为：
+
+$$
+Y_{ab,\mathbf p}^{mn}
+\propto
+\delta_{\mathbf Q_1,\mathbf Q_2+\mathbf p}
+z_{\mathbf Q_1}^m\bar z_{\mathbf Q_1}^{\,n},
+\quad
+z_{\mathbf Q}=(k_x-Q_x)+i(k_y-Q_y).
+$$
+
+这里 $(a,b)$ 标记内部态，$\mathbf p$ 是允许的 moiré momentum transfer；候选项随后必须经过 Hermiticity 与晶体群（含 antiunitary 情形）的对称性筛选，才能进入 **real linear space of allowed operators**：
+
+$$
+H_{\mathrm{cont}}(\mathbf k)
+=\sum_j\theta_j\widetilde Y_j(\mathbf k).
+$$
+
+系数使用 $H_{\mathrm{eff}}$ 与允许算符基的矩阵内积进行 trace projection（对于非正交算符基需要相应的线性求解/正交化）。这是**矩阵层面的重建**，不能简化成“拿几条 band 曲线用最小二乘套参”。
+
+从研究者的角度，这是一个可以反复检查的 contract：结构输入、电子态、空间对称性、能带和量子几何应互相一致。
+
+## Key Figures — 只链接原论文并指明读图问题
+
+图像来源是 [作者 arXiv HTML v1](https://arxiv.org/html/2610.37760v1)，**没有**在本仓库中嵌入、裁剪、标注或改色第三方 Figure，避免 arXiv perpetual non-exclusive license 下的复制权限歧义。
+
+1. **[Fig. 1 — First-principles → continuum pipeline](https://arxiv.org/html/2610.37760v1)**：找出局域轨道 $H,S$ 进入 TAPW 的步骤、symmetry matrices 进入低能子空间的位置，以及最后如何取允许算符的系数。不要把它当作“直接拟合能带”。
+2. **[Fig. 2 — AA-stacked 3.89° twisted bilayer MoTe₂](https://arxiv.org/html/2610.37760v1)**：比较 TAPW 与 continuum 的目标带色散；作者报告最高八条目标带 RMS 0.8 meV；另外单独看 eigenstate overlap 和 Berry-curvature/metric 检验。问：**某些 k 点曲线吻合，是否意味着所有几何量都精确吻合？**
+3. **[Fig. 3 — AB-twisted ZrS₂ 的 M/Γ 谷](https://arxiv.org/html/2610.37760v1)**：M 谷与 Γ 谷使用不同参考态策略；尤其留意 Γ 谷 Wilson-loop eigenphases 与 metric trace 和模型比较。问：**为什么仅用 K-valley TMD recipe 不够？**
+4. **[Fig. 4 — A–AB trilayer MoTe₂ 的三个 valley sectors](https://arxiv.org/html/2610.37760v1)**：检查不同层数/轨道内容下 K_A、K_B、Γ 的有效态维数与量子几何；作者分别报告 1.0、1.1、0.6 meV 的对应高对称路径 RMS。问：**一个 valley 可行是否保证其余谷同样可行？**
+
+以上具体数值仅为作者给出的**目标窗口和相应选取带**的 benchmark，不是整个材料所有能带的全局误差上限。
+
+## Authors report — 作者实际给出的证据
+
+- 提出从 first-principles localized Hamiltonian 自动构造 valley-resolved symmetry-constrained continuum Hamiltonian 的完整流程。
+- 针对 AA MoTe₂ K 谷、AB ZrS₂ M/Γ 谷和 A–AB MoTe₂ 的 K_A/K_B/Γ 谷给出模型构造及对照；选定窗口中 band RMS error <3 meV。
+- 同时检查本征态重叠、Berry curvature、quantum metric 或 Wilson loop 等，不局限于色散。
+- 方法可自动选择部分参考态、低能维度和 harmonic shell，也保留用户调节的自由度。
+
+## AI interpretation — 对莫尔强关联实验与计算的价值
+
+真正有用的自动化并非只是一键生成数值参数，而是把**低能态识别、对称性与可验证指标**变成机器可重复执行的步骤。今后研究 twisted WSe₂、MoTe₂ 或扩展到多谷/多层时，可在 continuum 层面进一步计算 Coulomb form factors、Hartree–Fock/ED、Berry curvature 与 transport 等，但这些**是应用前景，不是本文已经完成的全部多体计算或实验验证**。
+
+把该论文与自动化研究流程比较时，应问：它定义了什么输入接口、什么正确性检查，以及哪些错误仍可能由人工选择的 cutoff 或参考能量引入？
+
+## Caveats / uncertainty
+
+- 能量误差是相对选定 TAPW 基准，**不直接等于与实验之间的误差**；DFT exchange-correlation、结构松弛与超胞尺寸仍有误差。
+- 低能基、参考态、谷/自旋扇区、TAPW cutoff、动量多项式与 moiré harmonic 截断影响可转移性。
+- 大小相近的 band RMS 不保证量子几何逐点一致，需要独立的态重叠、Berry curvature 与 Wilson loop 检查。
+- 若低能空间与被排除态接近或交叉，energy-linearized reduction 的精度需要重新评估。
+- 本导读按 v1 主文与相关附录定向核查，未独立执行代码、重算结构和所有例子的数值稳定性。
+
+## Historical Reading Chain
+
+1. **FIRST — [Zhang et al. (2024), Universal moiré-model-building method without fitting: application to twisted MoTe₂ and WSe₂](https://arxiv.org/abs/2411.08108)**：最直接的无拟合 Hamiltonian-projection 前作；先理解其 microscopic input 和低能模型映射，再辨认 MoireKP 的自动化新增步骤。
+2. [Bistritzer & MacDonald (2011), Moiré bands in twisted double-layer graphene](https://doi.org/10.1073/pnas.1108174108)：经典动量空间连续模型与 interlayer tunneling harmonics 的起点。
+3. [Wu et al. (2019), Topological Insulators in Twisted Transition Metal Dichalcogenide Homobilayers](https://doi.org/10.1103/PhysRevLett.122.086402)：TMD 谷自由度与莫尔拓扑的经典连续模型。
+4. [Jia et al. (2024), Moiré Fractional Chern Insulators: First-principles calculations and continuum models](https://doi.org/10.1103/PhysRevB.109.205121)：对照具体 FCI 问题为什么要求可靠 wavefunctions 而不只是几条平带。
+
+## Reading Checklist
+
+- [ ] 能解释 TAPW 为什么优于直接在数万局域轨道上做每一步多体计算。
+- [ ] 写出 $H_{\mathrm{TAPW}}$ 和 $S_{\mathrm{TAPW}}$ 的投影以及 Löwdin 正交化。
+- [ ] 解释如何在**同一低能子空间**投影 Hamiltonian 与 crystal symmetry matrices。
+- [ ] 说明 symmetry-allowed operator basis 与普通 band-only fitting 的区别。
+- [ ] 对 Fig. 2–4 列出 energy error、eigenstate overlap、quantum geometry 三种不同质量指标。
+- [ ] 分清 K、M、Γ 谷与三层参考态的差别。
+- [ ] 先读 Zhang et al. 2024，再选一个谷独立复核本文的构模思路。
+
+## Sources, figure policy and attribution
+
+- **Primary:** [Zhang et al., *MoireKP*, arXiv:2610.37760v1, 2026-10-27](https://arxiv.org/html/2610.37760v1). [Preprint abstract](https://arxiv.org/abs/2610.37760).
+- **Scope:** Read Results, Methods, Figure captions, selected appendices; no independent numerical replication.
+- **Rights:** arXiv v1 displays an arXiv perpetual non-exclusive license; third-party original Figures are linked but **not copied**. No numerical curves are recreated. The plain-text concept flow above is explicitly an **AI-generated explanatory diagram**, not a paper Figure.
+- **Compilation date:** 2026-11-02.
