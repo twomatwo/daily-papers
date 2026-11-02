@@ -1,0 +1,199 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Evaluating Instrument-Centered AI Agents for Table-Top Science Experiments"
+authors: "Jiaqi Cai, Siyu Cheng, William S. Huxter, et al."
+date: "2026-11-03"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2610.41717"
+notionUrl: "https://app.notion.com/p/40c7dd5567ec8137b86ee66cffbbcd8c"
+summary: "instrMCP and q-devBench reveal a large measurement-versus-scientific-analysis gap in coding agents operating virtual condensed-matter instruments."
+readingTime: "25–60 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**核心问题：**coding agent 可能已经能通过工具搜索仪器、编写扫描脚本、画图，却未必能根据真正取得的输运或显微数据算出正确的物理量。如何在不损坏真实仪器、又不把 benchmark 简化为静态 CSV 问答的情况下评价它？
+
+**Authors report：**论文构建 instrMCP（以 MCP 协议连接 QCoDeS、JupyterLab、数据采集和安全授权）与 q-devBench（来自真实凝聚态任务的 **37 个虚拟仪器任务**）。在 10 种商业 coding-agent 配置、共 **1,850 次**模拟实验运行中，测量相关 rubric 达标 **70–83%**，科学分析相关 rubric 仅 **28–46%**。给 agent 直接提供干净 reference CSV、同时删掉测量会话的 analysis-only 消融将分析子分数平均提高 **0.26**；不过这一设计同时改变了测量质量、上下文与工具负担，不能把改善单独归因于某一因素。
+
+**重要限制：**这是基于真实测量数据的**虚拟仪器回放**，而不是在 1,850 次真实硬件实验中检验 Agent 安全性。主文、Fig. 1–6、主要 Tables 与 Appendix B/C 的虚拟设备和评分方式已定向核查；没有独立运行开源 harness。
+
+<ReadingPath
+  quick={[
+    'Abstract + Fig. 1：认清 instrMCP 是 instrument harness，q-devBench 是 eval benchmark。',
+    'Fig. 2：从 BKT、Landau fan 和扫描探针等例子分辨获取数据与解释物理。',
+    'Fig. 4–5：只比较 rubric 子项；了解为什么 analysis-only 消融不是干净的单因素因果分离。'
+  ]}
+  standard={[
+    'Section 2.1：MCP、QCoDeS、JupyterLab、QMeasure、SQLite 和人工许可如何连接。',
+    'Section 2.2 + Table 1：37 项任务的 18 transport、17 imaging、2 calibration 组成。',
+    'Fig. 2：选择 BKT 临界指数、Landau fan、原子台阶其中一项重建整个任务。',
+    'Section 2.3：理解虚拟仪器的参数映射和 data-exfiltration guard。',
+    'Fig. 3：0–4 总分与误差条；不能从整套不同 harness 的 leaderboard 判断底层模型的纯能力。',
+    'Fig. 4–5 + Section 3.3：分析 measurement/analysis gap 与 reference-CSV ablation 的混杂。'
+  ]}
+  deep={[
+    'Section 2、Appendix A：检查 consent-gated writes、safe/unsafe/dangerous privilege 和静态代码扫描的不同作用。',
+    'Appendix B：把真实 CSV 转为 virtual QCoDeS getter/interpolator，定位采样网格外推、迟滞、漂移的局限。',
+    'Appendix C/S3：读 LLM-as-judge 两阶段评分、second-judge agreement 与匿名评分。',
+    'Section 3.3：列出 ablation 同时改变的变量，尝试设计只缩短上下文而保持 acquired CSV 的更干净实验。',
+    '选择真实凝聚态任务做一个自己的 instrument MCP 原型：先隔离 virtual device，后加入 human-in-the-loop 审批。',
+    '与 ScienceAgentBench 2024 对比：静态科研代码和有状态仪器 Agent 对 evaluator 的要求有何不同？'
+  ]}
+/>
+
+## Big Picture — 做了测量，不等于完成了科学实验
+
+一个传统 coding benchmark 经常只问：是否写出了能运行的程序？但真实实验的任务至少有两层：**正确控制仪器取得合格数据**，以及**从该数据确定有物理意义的参数或机制**。将这两种能力混在一个总分里，既可能掩盖真正的故障，也不利于选择正确的改进方式。
+
+**AI-generated explanatory diagram（教学流程图，不是论文 Figure）：**
+
+~~~text
+scientific goal (e.g. BKT exponent / Hall Chern number)
+                  |
+          coding agent / notebook
+                  |
+             instrMCP tools
+                  |
+     discover instrument and parameters
+                  |
+    [sandboxed virtual QCoDeS device]
+                  |
+      sweep -> acquire -> store -> plot
+                  |
+      extract physical quantities and fit
+                  |
+        check model / units / uncertainty
+                  |
+        rubric: measurement | analysis
+~~~ 
+
+在真实硬件模式，还必须加入**人工审批危险写入、权限分层与静态代码扫描**；benchmark 的危险模式仅用于隔离的虚拟仪器，不应照搬到真实显微镜和低温设备。
+
+## Mechanism I — instrMCP 让仪器成为 Agent 可控的有状态工具
+
+instrMCP 不是一个替代物理实验思考的基础模型，而是将实验仪器通过 Model Context Protocol 暴露给编码代理的**harness**。系统涉及 QCoDeS instrument/parameter abstractions、QMeasure 扫描控制、JupyterLab 共享 notebook 和 SQLite 结果存储。
+
+对实际实验，可以用如下工程状态机理解（**概念化框架，非原文定量图**）：
+
+~~~text
+IDLE -> CONFIGURED -> MEASURING -> SAVED -> ANALYZED
+            |           |
+          validate     monitor
+            |           |
+       consent for     emergency
+       unsafe writes     stop
+~~~
+
+不要把这一图当作原论文已实现的全部仪器状态；它说明为什么适用外部工具 Agent 时需要显式权限、监控和人工干预。作者具体实现提供 safe/unsafe/dangerous 模式，并对真实实验写入设置 consent gating。
+
+## Mechanism II — q-devBench 如何拥有真实任务但又可重复运行？
+
+论文从实验专家提供的 prompt、rubric、CSV 观测和参数元数据中重建虚拟 QCoDeS 仪器。插值驱动在已有测量采样点复现观测值；Agent 无法直接读取隐藏原始 CSV，而需要通过设置参数、调用测量，再从数据库获得结果。
+
+这维持了**实验顺序与状态**的部分性质，并使不同 Agent 运行能复现相同信号。但虚拟器件通常通过数据插值回放，不能全面模拟真实设备的长期漂移、复杂 hysteresis、不规则故障和硬件损坏风险。
+
+**Task mix：**18 项量子电子输运、17 项扫描探针图像、2 项校准/模型选择，共 37 项。举例：BKT $I$–$V$ 临界幂律、Landau fan 相关 Chern 数和栅电容、原子台阶识别、探头位移估计。所有这些任务都要求数据收集与物理分析的某种组合。
+
+## Mechanism III — 正确的评分分母与差距
+
+本研究采用 rubric 为每个任务拆分需要满足的条件。Fig. 4 中的数字不是「任务成功率」：
+
+$$
+s_{\rm measure}=
+\frac{\#\text{满足的测量类要求}}
+{\#\text{测量类要求总数}},
+\qquad
+s_{\rm analysis}=
+\frac{\#\text{满足的分析类要求}}
+{\#\text{分析类要求总数}}.
+$$
+
+作者发现测量类满足率为 **70–83%**，分析类只有 **28–46%**。例如 agent 能设置磁场、扫 gate、出图，却可能在拟合、物理公式选择、数值参数/误差输出上失败。总体平均 rubric 分数为 **1.89/4**；该分数和上面两个百分比不能混为一谈。
+
+对不同模型 leaderboard，论文尤其提醒：**commercial model 与其不同的 coding harness 同时变化**，头部差异在多重比较后大多缺乏统计显著性，因此不能将小分差解释为某个底层模型本身更强。
+
+## Mechanism IV — Analysis-only 消融揭示了什么、没有揭示什么？
+
+作者对 37 个任务、9 个 shared agent 配置进行单独的 analysis-only 条件，每组直接得到清洁的 reference CSV，不连接虚拟仪器也不执行测量。
+
+定义配对改善：
+
+$$
+\Delta_{\rm analysis}
+=s_{\rm analysis-only}-s_{\rm full}.
+$$
+
+跨 **333 个 task-configuration 配对单元**，均值：
+
+$$
+\overline\Delta=+0.26,
+\qquad
+95\%\ {\rm task\ clustered\ CI}=[0.24,0.28].
+$$
+
+作者报告 Opus 4.6 的分析项由 **0.46** 提升至 **0.79**，GPT-5.3-codex-xhigh 由 **0.44** 提升至 **0.81**。这说明完整实验会话中有相当大一部分分析差距，可能不只是「科学推理能力完全不足」。
+
+**因果混杂要点：**此时既缩短了历史工具/执行上下文，又提供了干净 reference data，改变了数据获取误差和任务提示，可能还改变了 Agent 的思考策略。因此本实验**无法单独证明**“上下文变短造成了 +0.26”，也无法单独证明“只要换数据就解决科学推理”。有意义的下一步是 factorial ablation：保持 acquired data 而压缩 context；保持 context 长度却替换为 reference data。
+
+## Key Figures / Tables — 只链接论文原文，不复制原图
+
+原论文使用 arXiv perpetual non-exclusive license，本站不复制、重绘、裁剪、标注原 Figure，不重建 benchmark bar charts 或数据点。
+
+1. **[Fig. 1 — instrMCP + two-sandbox evaluation stack](https://arxiv.org/html/2610.41717v1)**：弄清 Agent、虚拟仪器、notebook 及两阶段 judge 各自的位置。尤其注意对真实硬件写入有 approval，而 benchmark 中自动授权仅是沙箱。
+2. **[Fig. 2 + Table 1 — Representative condensed-matter tasks](https://arxiv.org/html/2610.41717v1)**：对应 BKT、Landau fan、atomic steps、sensor motion。尝试分别写出最小可行 measurement protocol 和 analysis protocol。
+3. **[Fig. 3 — Overall score distribution](https://arxiv.org/html/2610.41717v1)**：纵轴 0–4 rubric，查看 task-clustered SEM，不要把不同 harness 的名次当模型本体严格排名。
+4. **[Fig. 4 — Measurement vs analysis rubric fractions](https://arxiv.org/html/2610.41717v1)**：数字 70–83% vs 28–46% 的分母是 criteria，不能读成全部任务完成比例。
+5. **[Fig. 5 — Analysis-only comparison](https://arxiv.org/html/2610.41717v1)**：检查 paired delta 的定义；同时列出被改变的数据质量和会话过程两类因素。
+6. **[Fig. 6 — 47 semi-synthetic additional tasks](https://arxiv.org/html/2610.41717v1)**：合成补充任务容易得分，不能直接与 37 expert-curated cases 当作同难度 benchmark 拼接。
+
+## Authors report — 作者实际支持的发现
+
+- 创建 instrMCP 实验仪器 MCP 访问/ notebook 控制接口，配合 q-devBench 将 37 个真实凝聚态任务重建为受控、可复现的虚拟实验。
+- 在 10 种商业编码代理配置、共 1850 次运行中测得明显 measurement–analysis 差距，并分析评测 rubric 失败类型。
+- 进行了 reference-data、无仪器测量会话的 analysis-only ablation，九组共享配置均改善，均值 $+0.26$；明确仍有残余分析差距。
+- 另生成 47 项半合成任务作为规模扩展实验；作者没有把该数据集当成与专家任务难度等价。
+
+## AI interpretation — 对显微镜自动扫描与 AutoLab 的实际启发
+
+本篇最值得借鉴的是**把“仪器操作”和“科学判断”作为不同模块分别验收**。例如显微镜扫描 Agent 可以正确移动 XY/Z、完成拼接，但仍然可能将污点错判为二维材料、以错误 calibration 将像素换算为长度，或因为 autofocus 漂移输出错误厚度。运行成功不等于科学结果可靠。
+
+若构建自己的 AutoLab，建议仿照 instrument abstraction，将**虚拟设备/数据回放**作为可复现训练场，再定义每个任务的 measurement / analysis 两份独立 rubric；对真实电机、激光、低温和高压操作保持授权门禁。上述属于对工作的系统设计延伸，**不是本文已验证的通用部署方案**。
+
+## Caveats and open questions
+
+- 虚拟仪器通过 CSV 插值复现真实样本，但对漂移、迟滞、样品不可逆变化的覆盖不完全；尚未完成大规模真实硬件安全评估。
+- LLM-as-judge 的 rubric 可能存在主观偏差；作者做过 second-judge audit，但无法证明所有评分绝对无偏。
+- 37 项真实任务来自若干贡献者和子领域，并非所有 table-top science 的随机代表样本。
+- 10 种设置同时改变 foundation model、agent harness、推理强度和工具运行方式，排行榜不能作为纯模型能力排行榜。
+- Analysis-only ablation 同时替换为 clean reference CSV 和移除长测量会话；不能单因素归因。
+- 47 个 semi-synthetic cases 更易；不要把规模扩展当作更严苛的相同分布验证。
+- 本导读核对 arXiv v1、关键 Figures/Appendix、工具协议说明；未 independently execute benchmark 或 audit underlying raw datasets。
+
+## Historical Reading Chain
+
+1. **FIRST — [ScienceAgentBench (2024), Toward Rigorous Assessment of Language Agents for Data-Driven Scientific Discovery](https://arxiv.org/abs/2410.05080)**：先理解专家真实任务、可执行代码与可验证评分；本文进一步要求有状态实验仪器操作。
+2. [The AI Scientist (2024), Towards Fully Automated Open-Ended Scientific Discovery](https://arxiv.org/abs/2408.06292)：作为完整自主科研范式的背景，反思为何不能只看端到端成功叙事。
+3. [LAB-Bench (2024), Measuring Capabilities of Language Models for Biology Research](https://arxiv.org/abs/2407.10362)：比较不同科学领域的专家任务评价与分解式 rubric。
+4. [QCoDeS open-source quantum instrumentation framework](https://github.com/microsoft/Qcodes)：理解论文 virtual QCoDeS instrument driver 的直接工程基础。
+
+## Reading Checklist
+
+- [ ] 画出 agent、MCP、QCoDeS、notebook、SQLite、rubric judge 的互连图。
+- [ ] 解释为什么 37 项来自真实凝聚态数据，但 1850 次评测不是实机运行。
+- [ ] 说出 transport、imaging 和 calibration 的 18/17/2 组成。
+- [ ] 区分 Fig. 3 的 0–4 整体评分与 Fig. 4 的两个百分比。
+- [ ] 从 Fig. 2 选一项写下仪器控制步骤和科学分析步骤。
+- [ ] 解释 why 0.26 paired gain 不等于解决所有 physics reasoning。
+- [ ] 为 context length 与 reference data quality 各设计单独对照实验。
+- [ ] 检查真实仪器 dangerous writes 和 sandbox 自动授权的差别。
+- [ ] 先读 ScienceAgentBench，再研究 q-devBench 的评价新增挑战。
+
+## Sources, media and attribution
+
+- **Primary:** [Cai et al., *Evaluating Instrument-Centered AI Agents for Table-Top Science Experiments*, arXiv:2610.41717v1, first published 2026-10-30](https://arxiv.org/html/2610.41717v1). [Abstract](https://arxiv.org/abs/2610.41717).
+- **Verification scope:** core sections, Fig.1–6 captions, Tables 1–2, Appendix A–C selected details, paired ablation; no independent benchmark execution.
+- **Figure rights:** arXiv perpetual non-exclusive license; all original figures linked but never reproduced or modified. Both text flows are clearly **AI-generated explanatory diagrams**, not source figures; no numerical curves reconstructed.
+- **Compiled:** 2026-11-03.
