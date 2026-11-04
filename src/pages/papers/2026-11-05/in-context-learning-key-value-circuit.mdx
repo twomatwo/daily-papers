@@ -1,0 +1,188 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "A Circuit for In-Context Learning"
+authors: "Andrew Gao, William Gao"
+date: "2026-11-05"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/html/2611.05344v1"
+notionUrl: "https://app.notion.com/p/40e7dd5567ec817dbd4fc5f4cf500155"
+summary: "在三个 3–4B Transformer 的任意标签少样本分类中，作者因果识别了由 writer、reader、gate、brake 与 copier heads 组成的门控 key–value ICL 电路。"
+readingTime: "25–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**核心问题：**给语言模型看几条「句子 → 任意标签」示例，模型为什么能在**一次 forward pass、零权重更新**的情况下，为新的句子选择对应标签？「attention 关联示例」只是描述，不能回答数据存在何处、谁读取、什么时候启用以及怎样产生最终 logit。
+
+**Authors report：**在 Qwen3-4B、SmolLM3-3B、Llama-3.2-3B 的受控二分类任务里，中层 writer heads 将示例句子的类别写到其后**标签 token** 的 residual stream，作为 key；标签 token 的身份是 value。上层 reader heads 根据 query 的类别匹配 key、读取 value；检测重复标签的信号降低 position-0 attention sink 的 logit，从而开启检索；brake heads 修正 recency 偏置，末层 copier heads 把读出内容变成答案 logits。Activation patching、head ablation 和路径干预支持这条工作机制。
+
+**AI interpretation：**这将 ICL 具体化为**prompt 内可门控的 associative memory**。相比此前精读的可解 ICL 预训练动力学（arXiv:2611.00921），今天关注的是固定权重的模型**推理时执行哪一种算法**。**关键限制：**受控 prompt、二分类、长度和模型家族有限，不是所有开放式 ICL 的通用电路解释。
+
+**核查范围：**arXiv v1 Sec. 1–14、主要 figure captions、Eq. (1) 与 Proposition 1/3、population-level knockout 和跨条件失败结果；未独立运行公开代码。
+
+<ReadingPath
+  quick={[
+    '读 Sec. 1–2 和 Fig. 1–3，辨别示例、标签 token 和 query 箭头。',
+    '看 Fig. 6 的 key/value 分离激活干预，以及 Sec. 5 的 repeat gate。',
+    '记住 writer → label-slot → reader → copier，并注意 brakes 的修正。'
+  ]}
+  standard={[
+    'Sec. 2：为什么采用模型未见过的 arbitrary labels，而不只是自然词义标签？',
+    'Sec. 3：对比交换示例句子（key）与交换标签（value）的两种 patching。',
+    'Sec. 4 + Eq. (1)：由 QK softmax 导出 matching-slot 的总注意力质量。',
+    'Sec. 5：repeat detector 与 position-zero sink，理解重复为何打开 lookup。',
+    'Sec. 7–8：reader/brake populations 的因果作用、margin 分解与 connection cuts。',
+    'Sec. 9–11：跨模型、自然标签、模型规模的迁移与失败案例。'
+  ]}
+  deep={[
+    '自行构造二分类 prompt：用发明词 foo/bar 故意反转自然词语先验。',
+    '推导 Proposition 1 的 matching mass law，列出成立的简化假设。',
+    '细读 Fig. 6/9/10/14，区分 observational correlation 和 causal intervention。',
+    '追踪 class-flipped twin patching、random-head controls 和 reader/brake ablations。',
+    '解释为什么 attention sink position 0 是 null action，gate 的符号如何影响 reader。',
+    '审查 Sec. 8 的 completeness/minimality 主张，以及 18-demo 外推测试失败。',
+    '阅读 Olsson 的 induction heads 与 Todd 的 function vectors，对照本文分工。'
+  ]}
+/>
+
+## Big Picture — Prompt 是一次性的可检索记忆
+
+每条示例包含句子 $x_i$ 和后接的标签 token $y_i$。当标签是发明的任意字符串时，模型无法依赖先验记忆的「foo = 正面」映射，只能在本次 prompt 内建立映射。
+
+**AI-generated explanatory diagram（教学概念图，非论文 Figure 或任何数据曲线）：**
+
+~~~text
+Demonstrations                         Query
+sentence 1 -> label token 1            new sentence ->
+sentence 2 -> label token 2                  |
+     |             |                         |
+mid-layer writers: encode class             |
+as KEY on each label token                   |
+     |             |                         |
+     +------- KEY + VALUE slots -------+     |
+                                      |     |
+repeat-label detector -------------> gate   |
+                                      |     |
+                                 reader heads
+                                      |
+                           matched VALUE retrieval
+                                      |
+                          brakes and late copiers
+                                      |
+                                 answer logits
+~~~
+
+**区别：**slot 的 value 是标签 token 身份，key 是由前面的示例句子经 writer 写到标签位置的类别信息。Query 通过相似性定位 slot，而不是直接先生成一个新标签含义字典。
+
+## Mechanism I — 为什么要区分 key 和 value？
+
+同样的两类句子，使用两个任意标签。例如为两类句子分别指派 foo 和 bar。交换句子与交换标签是不同的干预：
+
+- **交换句子**改变 class 到哪个 label slot 的映射，主要触发 key 路径；
+- **交换标签**改变 value 路径，即使句子本身不变也改变最终应输出的 token；
+- 在中层标签 token 上 patch/steer 可转移相应的信息；跨层分布式写入比在单层集中写入更符合部分实验结果。
+
+论文基于 twin prompts、activation patching、ablation 和 layerwise controls 对这些信息的因果流向进行分析。这里的方向向量是通过任务干预识别的**功能表征**，不意味着 residual stream 的全部信息只剩两维。
+
+## Mechanism II — Reader 的 softmax law
+
+设 reader head 看到 $N$ 个 label slots，其中 $n_m$ 个类别与 query 匹配；匹配 slots 的 attention logit 简化为 $L$、非匹配的设为零。position 0 的 sink logit 为 $L_{\mathrm{sink}}$，其他 token 的未归一化质量总和为 $n_{\mathrm{rest}}$。
+
+那么匹配 slots 的**总 attention mass**：
+
+$$
+m=\frac{n_m e^{L}}
+{n_m e^{L}+(N-n_m)+n_{\mathrm{rest}}+e^{L_{\mathrm{sink}}}}.
+$$
+
+这是论文 Proposition 1，本质为 softmax 分母的分组求和。关键实证主张不是公式数学上复杂，而是：**使用极少拟合参数能否跨 prompt 预测真实 reader head 的注意力分布？**
+
+在固定十二组示例而变更每个类别的出现次数的测试中，Qwen 140 个被检查的 reader 中，127 个达到论文指定的预测误差阈值；Llama 的 125 个中有 124 个符合。不过**外推到 18 个示例的 regime 失败**，说明这是局部工作机制而不是任意长度的精确规律。
+
+## Mechanism III — 重复标签为什么能够打开检索？
+
+如果模型没有足够重复的示例，盲目 copy 某个标签会误判普通文本。作者发现一个 gate 方向 $g$：
+
+- 它在 query 的 residual stream 上区分任意标签是否出现重复；
+- 打开时，主要**降低 reader 对 position-zero sink 的 logit**；
+- 匹配标签 slots 相对 sink 获得更多 attention mass，lookup 因而变强。
+
+这不等于直接提高 query 与正确标签的语义相似度。作者在 Fig. 10 中分开检验 sink-minus-match 与 match-minus-other logits 的变化；前者更直接受到 gate 干预影响。直观地，position-0 sink 相当于一个**允许 reader 不读任何示例的 null action**。
+
+## Mechanism IV — 多头协作与反向 brakes
+
+一个 reader head 往往不足以决定输出。论文通过 layerwise direct logit attribution 和 knockout 发现，class-flip 所需的 margin 分散在许多 heads 上；在一个 Qwen 配置里，约十四个 heads 才承担一半 direct swing，四十六个 heads 才承担八成。
+
+此外，**brake heads** 为特定 recency/prior 施加反向作用。去掉 brake 会改变输出的类别偏差，但它们并非一定有害：在自然词标签和 instruction tuning 条件下，prior 可能参与最终结果。
+
+最终 residual stream 的直接贡献可按输出投影分解：
+
+$$
+x=e+\sum_i a_i+\sum_l m_l,
+\qquad
+\Delta \mathrm{logit}\propto
+w^{\mathsf T}e+
+\sum_i w^{\mathsf T}a_i+
+\sum_l w^{\mathsf T}m_l.
+$$
+
+注意作者正文的 Proposition 3 还包含 RMS normalization，不能只把这段概念公式当作完整精确重现。更重要的是，**某层的 direct logit contribution 不等于它在中途传播时的 causal contribution**；所以作者还执行了 connection cuts 和 hold interventions。
+
+## Key Figures — 链接原文，不复制图片
+
+1. **[Fig. 1–3：prompt、circuit sketch、layer layout](https://arxiv.org/html/2611.05344v1)**：先把 writer、label slot、gate、reader、brake、copier 定位到不同层。
+2. **[Fig. 6：label-token key/value patching](https://arxiv.org/html/2611.05344v1)**：用 class-exchanged twins 对照 value-exchanged twins；看不同路径在什么层最显著。
+3. **[Fig. 9：read-law 拟合与外推失效](https://arxiv.org/html/2611.05344v1)**：辨别 in-regime 与更长 prompt 的 out-of-regime。
+4. **[Fig. 10–11：repeat gate 和 attention sink](https://arxiv.org/html/2611.05344v1)**：判断 gate 主要影响的是哪一个 logit 对比。
+5. **[Fig. 14：reader 与 brake 的群体干预](https://arxiv.org/html/2611.05344v1)**：看正负号、random heads control 和 recency effect 的变化。
+
+## Authors report — 论文支持的证据
+
+- 在三个 3–4B 模型的指定 few-shot 任务中，发现相似的 key–value label slot 及中层 writers、上层 readers、重复检测 gate 和 brakes/copers。
+- 激活 patching、单头/多头 knockout 和连接路径干预支持这些角色与输出答案的因果关系。
+- 有效 read law 可用很少的参数预测指定 prompt 变化，但外推到更长的 demonstrations 数量后失效。
+- 在更宽的 0.6B–8B 模型系列及 instruction-tuned 配置中，一些组件保留；不同模型和自然标签任务上的效果仍有差异。
+
+## AI interpretation — 与最近 ICL 理论的连续性
+
+昨天的 Bai & Huang 论文将**预训练动力学**化为受控可解的矩阵梯度流，研究「为什么权重会学到支持 ICL 的结构」。今天的 Gao & Gao 则在**推理阶段权重固定**时，把「如何用 prompt 中的示例完成映射」拆分为可因果干预的内部电路。
+
+两篇合在一起，产生值得继续研究的新问题：什么预训练分布或后训练约束最容易形成稳健的 writer/gate/reader？已有电路何时会受 label prior、prompt 长度或冲突示例影响？**这是本导读的延伸问题，不是作者已经证明的通用答案。**
+
+## Caveats — 不应过度外推
+
+- 实验主要是**受控二分类句子分类**、有限数量示例和特定预训练模型，不等于任意开放式推理任务。
+- Eq. (1) 的经验预测在论文测试的长 prompt regime 中失败。
+- 部分特定 head 或 path 干预跨模型并不稳定；不能声称「完整 ICL 电路已被穷尽」。
+- head 组的直接贡献与其在前层改变下游表示的因果作用不同。
+- Position-zero sink 在这些受控设置中充当 null action，不代表所有 Transformer 都有同一机制。
+- 作者提供开源代码，但本导读未独立运行或复现干预。
+
+## Historical Reading Chain
+
+1. **FIRST — [Olsson et al. (2022), In-context Learning and Induction Heads](https://arxiv.org/abs/2209.11895)**：ICL induction/copy head 的核心前作，为理解独立头到组合电路提供基础。
+2. [Elhage et al. (2021), A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html)： residual stream、QK/OV circuits 和路径分解的语言。
+3. [Todd et al. (2023), Function Vectors in Large Language Models](https://arxiv.org/abs/2310.15213)：少数 function-vector heads 与本文多头协作机制的对照。
+4. [Bai & Huang (2026), Solvable dynamics model of in-context learning](https://arxiv.org/abs/2611.00921)：区分预训练阶段的参数学习与推理时的固定参数电路。
+
+## Reading Checklist
+
+- [ ] 给出 arbitrary-label prompt，说明为什么不能仅凭词语语义回答。
+- [ ] 分清 slot key 和 value 的来源，画出中层 writer 和上层 reader 信息流。
+- [ ] 推导 matching-mass softmax law，说明每一个分母项代表什么。
+- [ ] 看 Fig. 6：解释为何交换句子与交换标签导致不同的影响。
+- [ ] 说明为何 repeat gate 改变 sink logit 而非单纯加强 match score。
+- [ ] 对比 reader、brake 和 copier heads 的作用，勿混淆 attribution 和 causality。
+- [ ] 找出 Fig. 9 的外推失效区域，提出一个可能原因。
+- [ ] 结合昨天 ICL 梯度流精读，区分 pretraining 与 inference。
+- [ ] 明确论文适用的任务、模型和 prompt 长度，提出外部验证建议。
+
+## Sources and attribution
+
+- [Gao & Gao, arXiv:2611.05344v1](https://arxiv.org/html/2611.05344v1)，首次公开 2026-11-03。
+- 作者公开的 [code, batteries and walkthrough](https://github.com/andrewgcodes/in-context-learning-circuit) 未被本导读独立运行。
+- 核查：main Sec. 1–14、主要 Figures captions、Eq. (1)、跨头干预与局限。没有重新跑模型测试。
+- 原论文 Figure 均只链接源页，没有复制或修改。文字流程图明确标注为 **AI-generated explanatory diagram**，不包含任何未经核实的定量曲线。
+- 本页面编写日期 2026-11-05；Authors report 与 AI interpretation 已分离。
