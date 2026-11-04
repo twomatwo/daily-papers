@@ -1,0 +1,194 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Repulsion-Driven Topological Superconductivity in Twisted MoTe₂"
+authors: "Tianle Wang, Tomohiro Soejima, Norman Y. Yao, Ashvin Vishwanath, Michael P. Zaletel, Taige Wang, Daniel E. Parker"
+date: "2026-11-05"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/html/2611.03833v1"
+notionUrl: "https://app.notion.com/p/40e7dd5567ec81f5bf12df0b9cb38bae"
+summary: "无限长圆柱 DMRG 指出：仅靠屏蔽库仑斥力，twisted MoTe₂ 的部分填充 Chern band 可产生 f-wave 拓扑超导关联，数值拓扑诊断预测奇数 Majorana 边界模。"
+readingTime: "25–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**问题：**传统 BCS 理论依赖有效吸引形成 Cooper pairs。那么在 twisted MoTe₂ 的窄 Chern band 中，仅靠屏蔽 Coulomb 排斥，能否产生**拓扑超导**，而不是普通电荷序或 FCI？
+
+**Authors report：**作者把 MoTe₂ 的 valley-polarized Chern band 投影成微观多体 Hamiltonian，用无限长圆柱 DMRG 搜索相图。在零位移场、填充数约 $-0.78$ 至 $-0.72$ 发现随圆柱周长增强的配对关联；得到绕谷中心三圈的 **chiral f-wave** 配对结构，并以 number-conserving 非局域 string-order 关联独立支持奇数手性 Majorana 模的拓扑判断。其模拟还给出邻近 FCI、拓扑 CDW、金属和 charge order。
+
+**AI interpretation：**这为「掺杂拓扑莫尔关联绝缘体可以生成手性超导」建立了更具体的材料级数值可能性，适合和 twisted WSe₂/MoTe₂ 的近期超导、FCI 输运实验对照。**Caveat：不是实测的 MoTe₂ 超导或 Majorana 信号；从有限宽圆柱到二维热力学极限仍需外推，微观 pairing mechanism 尚未唯一确定。**
+
+**核查范围：**arXiv v1 HTML 主文、Fig. 1–4 captions、Eq. (4)–(8)、相关 Methods 和有限周长拓扑诊断；未独立运行 DMRG。
+
+<ReadingPath
+  quick={[
+    '看 Abstract + Fig. 1(c)：标记金属、FCI、CDW、CO 和 SC 的关系。',
+    '看 Fig. 2(a)：为何有限圆柱只有代数衰减也能支持二维超导的推断？',
+    '看 Fig. 3(a,b)：f-wave 绕转与 string order 为什么是两个互补指标。'
+  ]}
+  standard={[
+    '理解单 valley Chern band 的投影和屏蔽 Coulomb 相互作用。',
+    '对照 Fig. 1(c) 的 filling、电位移场和 Fig. 4 的屏蔽长度相图。',
+    '推导配对关联幂律及其随 circumference 的变化：Fig. 2(a)。',
+    '从能量对边界条件 twist 的二阶响应理解 superfluid stiffness：Eq. (5)。',
+    '追踪 Fig. 3 中 proxy pair wavefunction、Chern-BdG 公式和非局域 string order。',
+    '分清数值支持的拓扑判据与尚未直接观察的 Majorana edge/vortex 激发。'
+  ]}
+  deep={[
+    '在 Methods 中核查连续模型、屏蔽势、谷极化假设与投影近似。',
+    '理解 iDMRG 的 N_y=4–7 圆柱与 PBC/APBC，考虑截断动量和 MPS bond dimension。',
+    '推导环绕相位 twist 引入的能量曲率如何得到 ρ_s，并与 BKT 上界比较。',
+    '推导 f-wave pairing 中相位绕转 ℓ=-3；评估 weak-pairing C_BdG=2C+ℓ 的适用条件。',
+    '读非局域 fermion parity string 诊断：偶数与奇数 Majorana edge mode 对应指数/幂律区别。',
+    '阅读历史文献，思考与 Kohn–Luttinger 或 anyon superconductivity 的机制区分实验。'
+  ]}
+/>
+
+## Big Picture — 多体拓扑能带里「排斥」不必禁止超导
+
+通常库仑斥力倾向于避免两电子靠近，直觉上阻碍 pairing。但部分填充的狭窄 Chern band 具有特殊的 Bloch 波函数和 form factors。**「无吸引」不等于「所有配对通道的有效相互作用都无利于不稳定性」。** 它也并不保证自动进入超导——FCI、金属与电荷有序同样参与竞争。
+
+**AI-generated explanatory diagram（仅概念图，非论文 Figure、非真实数据曲线）：**
+
+~~~text
+Twisted MoTe2 + isolated valley Chern band
+                    |
+        project screened repulsive V(q)
+                    |
+             iDMRG on cylinders
+                    |
+   +----------------+-----------------+
+   |                |                 |
+FCI / CDW       metal / CO      pairing correlations
+                                      |
+                            circumference scaling
+                                      |
+                                 f-wave phase
+                                      |
+                         BdG winding + string order
+                                      |
+                        predicted chiral TSC / Majoranas
+~~~
+
+最关键的证据不是图中最后一个方框，而是**每条箭头依赖的具体计算与假设**。
+
+## Mechanism I — 怎样在圆柱数值中定义「配对」？
+
+作者在圆柱上分析一个局域 Cooper-pair 算符 $\Delta$ 的关联函数。无限长但横向有限的圆柱不能简单当作完整二维体：配对关联通常以幂律衰减，
+
+$$
+C_{\Delta}(x)\sim |x|^{-\eta_{\mathrm{SC}}}.
+$$
+
+作者报告在圆柱周长增加时，指数 $\eta_{\mathrm{SC}}$ 减小，配对关联趋于增强，和二维长程序的外推相容。但**有限周长上测得的代数衰减并非直接证明二维、有限温度的超导**；这是有限几何和标度理论结合的判断。论文讨论了不同边界条件和 $N_y$ 的效果。
+
+在零位移场的指定参数下，所确定的 SC dome 覆盖大约 $\nu$ 从 $-0.78$ 到 $-0.72$；在邻近 $\nu=-2/3$ 处可进入 FCI、topological CDW 或 CO。改变屏蔽长度、介电常数或 displacement field 会移动竞争相边界。
+
+## Mechanism II — 刚度和电子能隙决定不同的温度尺度
+
+用穿过圆柱的边界扭转 $\delta\Phi_y$，基态能量密度的曲率定义二维超流刚度：
+
+$$
+\Delta {\cal E}(\delta\Phi_y)
+=\frac{\rho_s}{2}
+\left(\frac{2\delta\Phi_y}{N_y L_M}\right)^2.
+$$
+
+这里 $L_M$ 是莫尔周期，$N_y$ 是横向莫尔晶胞数。**曲率是对相位扭转的响应，不是一个由任意常规电阻值直接读出的实验量。** Authors report 在代表性模拟参数下 $\rho_s$ 为几十 $\mu\mathrm{eV}$，单电子激发能隙 $\Delta_{1e}$ 小于约 $0.5\,\mathrm{meV}$，而 charge-$2e$ gap 与零相容。
+
+对于二维体系，相位刚度限制 BKT 温度：
+
+$$
+k_{\mathrm B}T_{\mathrm{BKT}}=
+\frac{\pi}{2}\rho_s(T_{\mathrm{BKT}}).
+$$
+
+作者以典型 $\rho_s\sim 30\,\mu\mathrm{eV}$ 估计相位相干限制的 $T_c$ 上界约 $500\,\mathrm{mK}$。这**不是实验测到的转变温度**，也不是所有扭角/器件条件下的普适预测。注意 $\rho_s(T)$ 和零温数值并不必然相同。
+
+## Mechanism III — 从 f-wave 配对到拓扑，为什么要两个诊断？
+
+**配对对称性。** Fig. 3(a) 的 proxy pair wavefunction 在谷中心附近具有
+
+$$
+\widetilde{\Delta}(\mathbf{k})\propto (k_x-i k_y)^3.
+$$
+
+绕费米面一圈，相位变化 $-6\pi$，因此 pairing angular momentum $\ell=-3$，可称 chiral $f-if$ wave。注意「f 波」是角动量/拓扑结构，不意味着直观实空间呈现 3 个可拍摄的花瓣。
+
+**弱配对近似的指标。** 对单粒子 band 的 Chern 数 $C=1$，论文给出
+
+$$
+C_{\mathrm{BdG}}=2C+\ell=2-3=-1.
+$$
+
+奇数 $C_{\mathrm{BdG}}$ 意味着奇数手性 Majorana 边界模和可能的 non-Abelian 涡旋。但该公式属于**weak pairing** 分析；仅有相位绕转不严格决定任意强耦合多体体系的拓扑。
+
+**独立的数值检验。** 作者在 number-conserving DMRG 中定义非局域 string operator，
+
+$$
+b_x=\left[\prod_{x'<x}(-1)^{N_{x'}}\right]c_{x,k_y=0}.
+$$
+
+它把奇偶性串附着于费米子。在论文研究的 cylinder/bosonization 判据中，非拓扑情形相关衰减为指数形式，而奇数 Majorana 情形为幂律：
+
+$$
+| \langle b^\dagger_x b_0 \rangle | \propto |x|^{-\eta_b},
+\qquad \eta_b=\eta_{\mathrm{SC}}/4.
+$$
+
+Fig. 3(b) 中作者报告的两个幂律指数与此关系相容。这样的第二种拓扑诊断增强了解释力度，但仍依赖受控圆柱几何与判据前提，不能替代真实边缘/涡旋成像。
+
+## Key Figures — 原文链接与阅读任务
+
+原图均仅链接，不复制、不裁剪，不重新绘制任何定量曲线。
+
+1. **[Fig. 1 — band structure + filling / displacement-field phase diagram](https://arxiv.org/html/2611.03833v1)**：先辨别哪个参数是 filling、哪个是 displacement field；分辨 SC、FCI、CDW、CO 与金属，注意图注标记的未确定区域。
+2. **[Fig. 2 — pairing correlations, gaps and stiffness](https://arxiv.org/html/2611.03833v1)**：重点读幂律拟合与不同 $N_y$。明确电子 gap、pair gap、stiffness 的物理角色，勿把几种量当作同一 Tc。
+3. **[Fig. 3 — proxy-pair winding and number-conserving string order](https://arxiv.org/html/2611.03833v1)**：先识别图 (a) 的相位绕转方向，再看 (b) 中两个指数为何要满足约四倍关系；它不是直接 Majorana 成像。
+4. **[Fig. 4 — Coulomb screening controlled phase diagram](https://arxiv.org/html/2611.03833v1)**：判断短程/长程筛选和相互作用强度怎样改变 SC 与电荷序的竞争；注意数值收敛极限。
+
+## Authors report — 已呈现的数值证据
+
+- 屏蔽 Coulomb 斥力的 microscopic twisted MoTe₂ 模型在所研究参数窗口存在 SC-like pairing correlations。
+- 相关随着圆柱周长增加变强；指定区间内与二维 superconductivity 相容。
+- 电子 gap、相位 stiffness、f-wave pairing winding 与 string-order 相关提供多个不同的物理诊断。
+- 相图存在 FCI、topological CDW、金属及 charge order 的竞争；不同 screening 和电位移场能调节相界。
+
+## AI interpretation — 为什么值得读？
+
+本文同时用**静态相图、长距离相关函数、flux-stiffness 响应、配对相位以及非局域 string order**分析同一候选相，而不是只根据一个电阻下降或能谱 gap 就宣称拓扑超导。对 twisted TMD 研究的最大启发，是把「电子间斥力可诱导拓扑配对」转化为可验证的实验问题：是否能通过位移场与 filling 同时追踪超导刚度、隧穿 gap、边缘热输运与可能的 Majorana 迹象？
+
+## Caveats / 开放问题
+
+- DMRG **无限长圆柱不等于无限宽的二维系统**；可获得的周长有限，二维外推存在模型依赖。
+- 模型忽略或简化了无序、谷混合、可能的声子与带间混合效应；实际样品参数不必与计算相同。
+- 不知道哪个 microscopic mechanism 占主导：Kohn–Luttinger？掺杂 anyon superconductivity？或其他相关机制？作者明确保持开放。
+- 预测 Majorana 与 non-Abelian 涡旋**不是实验验证**；真实器件的接触效应和混合边缘态也可能复杂化诊断。
+- 超流刚度与 gap 用不同方法估计；不能把数值 $T_c$ 上限说成已实测的临界温度。
+
+## Historical Reading Chain
+
+1. **FIRST — [Wang & Zaletel (2025), Chiral superconductivity near a fractional Chern insulator](https://arxiv.org/abs/2507.07921)**：最直接的前作；先学习从 FCI 邻域进入手性超导的理论逻辑。
+2. [Wu et al. (2019), Topological Insulators in Twisted Transition Metal Dichalcogenide Homobilayers](https://doi.org/10.1103/PhysRevLett.122.086402)：理解 twisted TMD Chern band 的基本低能结构。
+3. [Kohn & Luttinger (1965), New Mechanism for Superconductivity](https://doi.org/10.1103/PhysRevLett.15.524)：纯斥力产生非平凡角动量配对的经典思想，勿误读成本文已确定这一微观机制。
+4. [Wang et al. (2023), Diverse magnetic orders and quantum anomalous Hall effect in twisted bilayer MoTe2 and WSe2](https://arxiv.org/abs/2306.02501)：同类模型中相邻磁性与 charge order 的竞争。
+
+## Reading Checklist
+
+- [ ] 能解释为何 $\nu=-2/3$ 附近的 FCI 与 SC 之间可能存在 CO 区域。
+- [ ] 从 pairing exponent 随圆柱周长的变化理解二维 extrapolation 的证据及不足。
+- [ ] 推导能量对 twist 的二阶项，区分 $\rho_s$ 和 $\Delta_{1e}$。
+- [ ] 解释为什么 $T_c$ 同时受 pair-breaking scale 和 BKT stiffness 约束。
+- [ ] 画出 f-wave 相位绕转，算出 $C_{\mathrm{BdG}}=2C+\ell$。
+- [ ] 解释为什么作者还需要 parity-string correlation，而非仅用 pair winding。
+- [ ] 对 Fig. 4 提出一个能在 gate-screened 实验器件中检测的预测。
+- [ ] 阅读 FIRST 历史论文后，列出至少两种竞争的配对机制及其可区分测量。
+
+## Sources and attribution
+
+- 原始论文：[Wang et al., arXiv:2611.03833v1](https://arxiv.org/html/2611.03833v1)，首次公开 2026-11-02；正文与 Appendix 均在原文链接内。
+- 本导读阅读范围：主文、Fig. 1–4 图注、主要模型/拓扑公式和相关 Methods；未执行任何独立 DMRG。
+- 所有论文 Figure **只链接原网页，不复制或改造**。上述文字流程图明确标记 **AI-generated explanatory diagram**，不是原论文数据图。
+- 页面编写日期：2026-11-05；作者的数值发现与本页面的 AI interpretation 已分别标识。
