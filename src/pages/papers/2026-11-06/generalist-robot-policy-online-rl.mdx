@@ -1,0 +1,207 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Reinforcement Learning Enables Scaling Generalist Robot Policy Improvement"
+authors: "Michal Korniak, Marco Bagatella, Ralf Römer, Michal Nauman et al."
+date: "2026-11-06"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/html/2611.06905v1"
+notionUrl: "https://app.notion.com/p/40f7dd5567ec81649e49d3cfdb3a7be0"
+summary: "在模拟机器人多任务在线学习中，critic-guided BoN/OGPO 能随任务多样性扩展改善未见场景和物体，而直接监督微调可能遗忘。"
+readingTime: "25–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30-second takeaway
+
+**研究问题：**一个预训练的 VLA/generalist robot policy 能够同时在上百项在线任务中持续改进，并把收益传递给训练期间未见过的物体和场景吗？
+
+**Authors report：**使用 $\pi_{0.5}$ 基础策略，作者在**模拟**的 MolmoSpaces 中构建由 1、4、16、64、144 项任务组成的嵌套训练集，系统比较 filtered supervised fine-tuning (FSFT)、冻结策略并由 critic 重排动作的 Best-of-N (BoN)、以及 critic 引导策略权重更新的 OGPO。在某些未见场景/物体评估下，critic-guided 方法较基策略最高增益分别为 **+58/+39 个百分点**；FSFT 不呈现同等级泛化。但在更困难的 LIBERO 未见任务上仍会遗忘。
+
+**AI interpretation：**关键不只是 rollout 更多，而是训练中是否出现了能迁移到新对象上的**操作策略多样性**，以及 critic 能否正确排序不熟悉状态下的候选动作。这是研究 VLA 安全泛化的一个有价值的评估范式。
+
+**核查范围：**读 arXiv v1 HTML 正文 Sections 1–5、Fig.1–8 descriptions、MolmoSpaces 与 LIBERO 的有关附录和实验细节；没有运行代码，没有真实机械臂实验。
+
+<ReadingPath
+  quick={[
+    'Fig. 1–2：理解 1 个 pretrained VLA → 多任务 rollout → critic/policy → 测试的闭环。',
+    'Fig. 4：分清 training、unseen scenes、unseen objects 三列，不要只记住训练成功率。',
+    'Fig. 6 + LIBERO appendix：为什么增加相似场景不等于掌握新物体抓取策略？'
+  ]}
+  standard={[
+    'Sec. 3.1：写清任务 context c、state s、action chunk a 与训练/测试任务分布。',
+    'Sec. 3.2：依次解释 FSFT、BoN、OGPO 哪个改变策略参数、哪个使用 Q critic。',
+    'Sec. 3.3：检查初始成功率 ~30% 的任务选择，以及 1/4/16/64/144 嵌套训练集。',
+    'Fig. 4：看 critic-guided 方法何时从 forgetting 变成相对于 base policy 的 generalization。',
+    'Fig. 6：scene variety 与 object variety 拆开，注意两种 transfer 方向不对称。',
+    'Sec. 4.4：critical ablations — critic training 和 policy extraction 各改变什么。',
+    'Appendix C.1：为什么 LIBERO 的 unseen tasks 是重要反例。'
+  ]}
+  deep={[
+    '推导 critic 的 temporal-difference target，写出 value estimation 的训练损失。',
+    '比较 BoN 的在线计算成本与 OGPO 的权重更新成本。',
+    '用 held-out object/scene split 检查训练集与测试集是否真的避免泄漏。',
+    '研究 3 seeds 的 confidence intervals、bootstrap 和任务间相关性。',
+    '把 Fig. 4 的 +58/+39 pp 与训练后绝对 success rate 区分开。',
+    '检查 task-diversity vs data-budget vs compute-budget 三种缩放实验。',
+    '设计一个安全 VLA evaluation：加入危险指令、failure recovery、OOD object shift 与 replay seeds。',
+    '讨论真实机械臂安全审批与模拟 benchmark 哪些指标无法等价。'
+  ]}
+/>
+
+## Big Picture — 从会做很多任务到能在部署时持续改善
+
+预训练 generalist policy 能根据语言条件完成许多任务，但单任务上线后训练容易过拟合该任务。本文的核心改变，是把**多个部署任务的在线反馈放入同一个训练/评估流程**，比较不同 RL/模仿策略能否保留或增强跨任务泛化。
+
+**AI-generated explanatory diagram（概念机制示意，非原论文 Figure，也非定量曲线）：**
+
+~~~text
+          pretrained generalist VLA (pi_0.5)
+                         |
+                  online rollouts
+                across many tasks
+                         |
+                    pooled replay
+                         |
+             +-----------+--------------+
+             |           |              |
+        FSFT policy    learn Q        learn Q
+        success-only     critic         critic
+        imitation         |              |
+             |          BoN            OGPO
+        update policy  freeze policy  update policy
+                          |              |
+                        choose          critic-guided
+                        best of N       policy actions
+             |            |              |
+             +------------+--------------+
+                         |
+            train / unseen-scene /
+               unseen-object tests
+~~~
+
+若只是让每个对象在不同房间出现，可能学到的是视觉/背景鲁棒性；若训练中有不同形状和抓取方式，才可能迁移新的 manipulation strategy。论文实验把这两种 task diversity 分开测量。
+
+## Mechanism I — MDP 与 generalist evaluation
+
+令 context $c$ 表示语言任务或特定操作目标，$s$ 为机器人观测/状态，$a$ 为 action chunk。基础模型对应条件动作分布 $\pi_\theta(a|s,c)$。
+
+我们要优化的不只是训练 context 的期望回报，还包括具有结构相关性的 held-out tasks：
+
+$$
+J(\pi;\rho_{\mathrm{test}})
+=\mathbb{E}_{c\sim\rho_{\mathrm{test}},\;s_0}
+[V^\pi(s_0,c)].
+$$
+
+训练环境和测试环境的 context 可能在 scene、object、操作策略上变化。**generalization** 的声明必须说明到底是哪一种 shift。
+
+## Mechanism II — FSFT / BoN / OGPO 三种不同策略
+
+一个 action-value critic 估计从给定动作开始的期望折扣回报：
+
+$$
+Q^\pi(s,a,c)
+=\mathbb E\left[\sum_{t=0}^{\infty}\gamma^t r_t
+\mid s_0=s,a_0=a,c\right].
+$$
+
+可通过近似 temporal-difference regression 学习：
+
+$$
+\mathcal L_Q(\psi)
+=\mathbb E\left[
+\left(Q_\psi(s,a,c)-\{r+\gamma V_{\bar\psi}(s',c)\}\right)^2\right].
+$$
+
+这一式是**教学化的 TD 结构摘要**，不是声称作者的具体实现中所有 target、clip 和 regularization 都与此完全一致。
+
+- **FSFT**：过滤出成功的 episodes 后，用监督 likelihood 把原策略往成功动作拟合。若成功样本覆盖很窄，可能遗忘其他物体动作。
+- **BoN**：保留 base policy 的**权重冻结**，由 critic 对采样的 N 个动作候选排序，在线执行分数最高的动作。
+
+$$
+a^*(s,c)=\operatorname{argmax}_{i\in\{1,\ldots,N\}}
+Q_\psi(s,a_i,c).
+$$
+
+- **OGPO**：不只是重新排序，进一步通过 critic 指导**策略参数本身**的更新。其训练方法与 BoN 不同，推理时也可以避免每一步始终大量采样与筛选。
+
+不能把 BoN 的改进写成「policy 已经学会新的技能」；当 BoN 的 policy 参数冻结时，它学到的是**critic 评价与动作选择**。
+
+## Mechanism III — 怎样设计有效的 generalization test？
+
+MolmoSpaces 在作者实验中为模拟 pick-and-lift 类型任务。作者设计嵌套的 1/4/16/64/144 个训练任务集，初始 pretrained policy 的平均成功率选择为约 30%，避免增加任务时只简单增加容易题目。
+
+评估拆成三个组：
+1. **训练任务本身**，看在线适应是否有效；
+2. **未见场景、同种物体**，测试视觉/空间重排；
+3. **未见物体及其场景**，测试新操作对象（可能需要新抓取模式）。
+
+**Authors report：**在规模变大后，critic-based 方法在相应实验中对 unseen scenes 达到最高 +58 pp、unseen objects 达到最高 +39 pp（相对于 base policy 的**绝对成功率百分点差异**，而非相对百分比提高）；对未见对象只增加 scenes 的训练并不能复制增加 objects 带来的泛化收益。
+
+三次独立训练 seeds 和 stratified bootstrap intervals 是针对指定模拟 task distribution 的不确定度估计。**不是对现实世界全部任务类别的覆盖证明。**
+
+## Mechanism IV — 为什么 LIBERO 是最重要的反例？
+
+作者在 LIBERO 中同样研究任务学习，但目标之间差异更大，未见 tasks 上观察到的主要是 forgetting，而非 MolmoSpaces 的正向迁移。这给出一种有价值的边界：
+
+**critic-guided RL + 很多任务** 并不必然使策略对**任意不同的新任务**泛化。
+
+对于 VLA-Arena 类安全评测，这意味着不能只看同任务不同视觉扰动的提升；还应显式检查 object identity、动作轨迹约束、接触风险与任务关系的变化。
+
+## Key Figures — 原图链接及读图任务
+
+1. **[Fig. 1–2：整体框架与在线数据收集](https://arxiv.org/html/2611.06905v1)**：分清策略、buffer、critic、训练与评估阶段。
+2. **[Fig. 3–4：不同任务量下 train vs held-out curves](https://arxiv.org/html/2611.06905v1)**：读三个 panel 的 success-rate 轴和 95% 置信区间，检查 overfit 变 generalization 的阶段。
+3. **[Fig. 5：multi-task 与 single-task compute 对比](https://arxiv.org/html/2611.06905v1)**：作者报告在匹配数据量的 16-task BoN 比较里约 2.9 倍较少梯度步，但不能当成全流程能耗加速。
+4. **[Fig. 6：scene variety vs object variety](https://arxiv.org/html/2611.06905v1)**：两种多样性带来的转移并不对称。
+5. **[Fig. 7–8：按未见物体和相似形状分析的转移](https://arxiv.org/html/2611.06905v1)**：与相似形状的训练物体更可能迁移，检查为什么物体语义标签并不足够。
+6. **[Appendix C：LIBERO 和 scaling ablations](https://arxiv.org/html/2611.06905v1)**：寻找完全新任务上的负面结果。
+
+## Authors report — 本文真正测到了什么？
+
+- 在指定模拟环境内，multi-task critic-based recipes 能随训练任务多样性增加逐步改善未见物体与场景上的 success rate。
+- 直接 FSFT 通常比 BoN/OGPO 更易在未见物体上发生遗忘。
+- 在匹配计算或数据预算的比较里，multi-task 改进有资源利用优势，但依赖具体配方和目标。
+- 在 LIBERO 的结构不相近 unseen tasks 上，训练并未出现对应的正向迁移结论。
+
+## AI interpretation — 对 VLA 安全科研的启发
+
+对安全评测而言，建议把**训练后能力提高**与**安全边界保持**分开。能够抓起更多物体的 policy，仍可能在禁区接触、违背指令、虚拟危险物体等情形中更激进。可以在同一模型上分别设置 performance、OOD robustness 与 safety scenario，避免把增强的任务成功率误读为总体更安全。
+
+对团队实践：simulator 便于大规模 rollout，value critic 可能改善 policy extraction，但如果 reward 或 critic 在分布外被 exploit，现有数据不能保证安全。以上属于**AI 提出的应用建议**，非本文已有安全实验结论。
+
+## Caveats
+
+- **实验在模拟器中进行**，不是多台真实机器人安全部署的验证。
+- π₀.₅ 是特定基础策略；训练集任务经过筛选，初始成功率约 30%。
+- 最佳增益来自不同 training-task sizes 的最大值，不能直接当作 144 tasks 的所有 held-out 条件统一增益。
+- 有相关性任务上迁移优于高度不相似的任务；LIBERO 是关键负面对照。
+- Critic-based success 依赖价值估计精度与 action proposal 的覆盖；OOD action/risk 需要另行验证。
+- 成功率指标主要衡量完成任务，不包含对所有危险交互、禁止任务的评估。
+- 本导读没有复现原代码或重新训练 VLA。
+
+## Historical Reading Chain
+
+1. **FIRST — [Octo Model Team (2024), Octo: An Open-Source Generalist Robot Policy](https://arxiv.org/abs/2405.12213)**：先认识 generalist robot policy 与多任务预训练，再理解为什么部署后还需要跨任务 RL。
+2. [Brohan et al. (2023), RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control](https://arxiv.org/abs/2307.15818)：认识预训练视觉语言知识与动作生成一体化的早期路线。
+3. [Chi et al. (2023), Diffusion Policy: Visuomotor Policy Learning via Action Diffusion](https://arxiv.org/abs/2303.04137)：理解 action chunk / 生成式策略和传统模仿策略局限。
+4. [Patil et al. (2026), OGPO: Sample Efficient Full-Finetuning of Generative Control Policies](https://arxiv.org/abs/2605.03065)：本文直接借用的 critic-guided policy extraction 机制前作。
+
+## Reading Checklist
+
+- [ ] 明确什么是 online RL collection，不要与使用固定离线数据集混淆。
+- [ ] 按算法写清 FSFT、BoN、OGPO 谁更新 policy、谁只更新 critic。
+- [ ] 推导 BoN $a^*$ 选择式，并说明 critic 在 OOD 时可能失准。
+- [ ] 看 Fig. 4 用百分点而非相对百分比表述 unseen transfer。
+- [ ] 看 Fig. 6 区分 scene diversity 和 manipulation-strategy diversity。
+- [ ] 解释为何大任务数仍不等于跨 LIBERO 任意任务迁移。
+- [ ] 用一个 VLA safety benchmark 举出成功率增加而安全性可能下降的反例。
+- [ ] 检查作者的 3 seeds、bootstrap CI 和训练集选择条件。
+- [ ] 阅读 Octo、OGPO 两个前作，并说明本文的新证据在哪里。
+
+## Sources and attribution
+
+- [Korniak et al., arXiv:2611.06905v1 (2026-11-04)](https://arxiv.org/html/2611.06905v1)；图文描述、任务分割和作者报告数字以原文为准。
+- 核查论文 Sec.1–5、主要 Fig.1–8 及 LIBERO 附录；未执行训练、代码和独立机器人实验。
+- 原论文 Figure 只提供原文链接，不复制、裁剪或改色；本导读文本概念图标注为 **AI-generated explanatory diagram**，不是原始实验曲线。
