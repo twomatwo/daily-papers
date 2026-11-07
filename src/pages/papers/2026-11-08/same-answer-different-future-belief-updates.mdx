@@ -1,0 +1,188 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Same Answer, Different Future: Matched Predictions Do Not Imply Matched Belief Updating in Language Models"
+authors: "Weihan Li, Junhao Wu, Xinlei Chen, Tianshi Zheng"
+date: "2026-11-08"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/html/2611.07913v1"
+notionUrl: "https://app.notion.com/p/4107dd5567ec813ba695dbf9c063103d"
+summary: "即使 LLM 当前给出相同的概率预测，过去证据的呈现形式和读取方式也会使其面对未来相同证据时产生截然不同的更新。"
+readingTime: "25–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**问题：**如果两个语言模型状态现在都预测下一次抛硬币正面概率为 0.55，能否据此认定它们持有“等价的信念”？
+
+**Authors report：**不能。在 Llama-3.1-8B-Instruct、Qwen3-8B、Gemma-3-12B-it 的受控 Bernoulli 推断中，作者分别使用观测序列、计数摘要、明确告知比例、指令、activation steering 和隐状态移植建立初始状态。即使其**当前**概率估计接近，再追加同样的新证据，不同状态的预测可能以很不一样的速度改变。数据展示方式还能决定这一影响主要出现在后续 token continuation，还是出现在明确报出的数字概率。
+
+**AI interpretation：**Agent memory 不能只用“摘要后能否回答当前问题”评价；还应问它面对新证据是否具有与原始证据相近的更新权重。本文不是大型开放式 Agent 的通用记忆定理。
+
+**核查范围：**阅读 arXiv v1 主文 Sections 1–6 的概念、有效权重定义、Fig.1–4 及重要控制实验设计，并对照附录中的 matched-current-estimate 与 model-noise checks；没有运行三个模型或复现 bootstrap。
+
+<ReadingPath
+  quick={[
+    "Fig.1：解释 content（当前估计）与 weight（对新证据的抵抗力）为何是两种不同信息。",
+    "Fig.2：比较 outcome continuation 与 numeric estimate 两个读取通道。",
+    "Fig.3–4：观察当前答案相同后，分叉的新证据与 activation steering 怎样揭露差异。"
+  ]}
+  standard={[
+    "用 Beta–Bernoulli 模型理解相同均值但样本量不同的两个 posterior。",
+    "读 Section 2：作者如何操作化定义 effective evidence weight，而不是声称发现神经元里存在一个标量。",
+    "读 Section 3：四种文字准备方式、两种 activation intervention、两个 readout。",
+    "读 Section 4–5 和 Fig.2–3：为什么完整记录与摘要在两个通道中的影响不同。",
+    "读 Section 6 和 Fig.4：one-shot steering 与 persistent steering 为什么不等价。",
+    "阅读附录 J 的 matched current estimates 与附录 H 的措辞噪声控制。"
+  ]}
+  deep={[
+    "推导相同后验均值但不同证据数量的 Beta–Bernoulli 更新曲线。",
+    "在相同初始预测下，把新证据长度、正面比例和呈现形式分别作为控制变量。",
+    "区分直接 continuation 概率和用整数估计抽取的 report channel。",
+    "尝试复现 effective weight 的拟合定义，并解释它为什么会依赖读取提问方式。",
+    "研究只在最初加入 activation offset 与每步持续 steering 的差别。",
+    "阅读模型和 paraphrase/noise-floor 检验，避免把不同提问随机波动当作结构性结论。",
+    "为科研 Agent 设计一个不暴露真实答案的 forked-futures memory regression benchmark。"
+  ]}
+/>
+
+## Big Picture：一个预测不等于一个可以更新的信念
+
+一个好的概率推断系统不仅应该给出合理的当前估计，还应该随着更多证据按可信程度更新。
+
+**AI-generated explanatory diagram（概念示意，非原论文 Figure 或数据重绘）：**
+
+> 相同当前预测 p = 0.55  
+> ↙︎ 8 条真实观测序列　↘︎ 64 条观测的摘要陈述  
+> 当前可输出相同答案，但潜在 evidence weight 不同  
+> ↓（追加完全相同的新抛硬币结果）  
+> 分叉后的输出变化速度不同  
+> ↓  
+> 对照真正的 Beta–Bernoulli posterior 与两个 readout  
+> → 用 forked futures 评价“记忆/信念”是否等价。
+
+这里的关键不是在模型内部找到一个命名为“belief”的变量，而是使用**同一未来输入下的可观察行为**定义操作性的信念状态。
+
+## 机制一：为什么相同概率不意味着相同证据量？
+
+先考虑一个教学用的标准 Bayesian reference。令硬币正面概率为 p，先验为
+
+$$
+p\sim\mathrm{Beta}(a,b).
+$$
+
+观察到 h 次正面和 t 次反面后：
+
+$$
+p\mid D\sim\mathrm{Beta}(a+h,b+t),
+$$
+
+预测下一次正面的均值为
+
+$$
+\mathbb E[p\mid D]=\frac{a+h}{a+b+h+t}.
+$$
+
+如果两个历史记录具有相同的 h:t 比例，则当前预测可能非常接近。但其浓度参数
+
+$$
+w_{\mathrm{Bayes}}=a+b+h+t
+$$
+
+不同，表示它们面对额外观察时有不同的更新惯性。
+
+**教学例子，不是论文测得数据：**采用均匀先验 Beta(1,1)，观察到 1H/1T 或 20H/20T 后，预测均为 0.5；若再观察到 4H/0T，两者的 posterior mean 分别为 6/8=0.75 和 25/46≈0.543。**当前答案相同，未来却完全不同。**
+
+本文用相同的逻辑对真实 LLM 施加受控新证据，并将历史信息的抵抗力转换为**等效新观察数量**，称为 effective evidence weight。它是*行为拟合指标*，不是被直接观测到的神经元计数器。
+
+## 机制二：输入格式与输出通道不对称
+
+四类文字状态准备方式包括：逐条抛币记录、相应计数摘要、直接告知概率、显式给出指令。作者还尝试 activation steering 和 hidden-state transplantation。
+
+模型有两个输出读数：
+
+1. **Continuation channel**：提示接在一串 H/T 后，读取下一 token 是 H 还是 T 的相对概率。
+2. **Report channel**：询问下 100 次预期多少次 H，从生成整数分布得到明确数字估计。
+
+**Authors report：**完整观测序列主要影响 continuation，统计摘要和口头概率主要影响 report。相同统计量在不同输入格式和输出提问方式中未必产生一致行为。
+
+**AI interpretation：**在长期 Agent 系统中，一份 “过去有 64 次观测、55% 为正面” 的摘要，并不一定相当于把原来的 64 条证据真正交给模型。
+
+## 机制三：effective weight 由“怎么问”改变
+
+作者通过追加相同的 m 次新观察（在文中取 m=8、16、32 等）比较旧状态的保留程度。
+
+若新证据中的正面比例为 q，新观察越多，规范 Bayesian 后验均值就越受 q 影响：
+
+$$
+\hat p_{\mathrm{after}}
+=
+\frac{w p_0+m q}{w+m}.
+$$
+
+这是一种**用于解释有效权重的简化混合形式**；论文的拟合流程根据指定 readout 和实验协议求解 effective weight，请以原论文定义为准。
+
+**Authors report：**即使文本摘要声明包含 8 次或 64 次观察，模型 report channel 赋予摘要的权重增长远小于八倍。某些问法改变了反推权重的数量级。
+
+**Caveat：**不能从这一合成硬币任务直接推断某个真实 Agent 对科学论文或实验数据的所有可信度表现。
+
+## 机制四：Activation steering 装入了概率，还是装入了证据？
+
+在 activation steering 对照中，研究者选择干预强度，让模型立即产生与自然观测历史近似相同的当前预测。
+
+**Authors report：**当只在初始状态做一次 steering，追加少量新证据后，最初偏置很快消失；如果每一步持续施加同方向 steering，更多体现为持续叠加在 readout 上的偏移，而非真正经历过的历史观察。
+
+**AI interpretation：**用隐藏状态干预“写入一个答案”，并不自动等于保存了能够随新证据自然更新的“理由与权重”。需要用分叉未来的行为，而不是单点输出，检验持久性。
+
+## Key Figures 阅读导航（仅链接原文）
+
+1. **[Fig.1 — matched content / unmatched weight](https://arxiv.org/html/2611.07913v1)**：四类文字 route、两类 activation 测试、两种 readout 与 forked futures 的整体研究设计。
+2. **[Fig.2 — representation channel dependence](https://arxiv.org/html/2611.07913v1)**：先看横轴是内容呈现形式还是新证据量；比较 continuation 与 report 的不对称。
+3. **[Fig.3 — evidence retention and Bayesian reference](https://arxiv.org/html/2611.07913v1)**：检查未来证据相同的情况下，不同初始 route 的差异以及偏离 Bayes 的方向。
+4. **[Fig.4 — steering intervention](https://arxiv.org/html/2611.07913v1)**：重点分辨一次性状态改变、持续 offset 与真正观察历史的长期效果。
+5. **[Appendix J — matched current estimates](https://arxiv.org/html/2611.07913v1)**：这个补充实验正面排除“初始预测没有真正匹配”这一最直接的竞争解释。
+
+不要把示意的 Beta–Bernoulli 数字误当成 Fig.3 的真实定量曲线。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+- 三种 open-weight LLM 的即时概率预测不充分确定它们对于后续相同数据的更新。
+- 完整序列与口头摘要主要影响的输出渠道不同，且摘要自称的样本数与实际 inferred effective weight 不成比例。
+- 一次性 activation steering 即使模仿了某条真实记录的当前概率，也未复制其面对未来证据时的持久性。
+
+### AI interpretation
+- Agent 记忆质量应当同时测试“当前事实回忆”和“新证据出现时的信念修订”。
+- 可以基于 forked futures 做安全回归测试：给两个具有相同当前答案、但不同历史来源的状态追加同样证据，观察是否出现无根据的僵化或突变。
+
+### Caveats
+- Bernoulli 抛硬币是可解析、可控的推断任务，不能直接推断开放域科研推理的普适模式。
+- 不同 readout 的结果是行为测量，不等于模型内部严格存储了 Bayesian posterior。
+- 动态等价的严格条件比单点预测更强，但在有限数量的分叉未来下也不能证明所有未来都等价。
+- 模型版本、提示格式与少量 paraphrase 变动都可能影响输出；需要对照作者的措辞噪声与 bootstrap 设置。
+- 本导读未独立运行 Llama/Qwen/Gemma 或复核全部附录数值。
+
+## Historical Reading Chain
+
+1. **FIRST — [Falck, Wang & Holmes (2024), Is In-Context Learning in Large Language Models Bayesian? A Martingale Perspective](https://arxiv.org/abs/2406.00793)**：提供 Bayesian 信念更新与 LLM in-context behavior 之间的严格检验条件。
+2. [Schubert et al. (2024), In-context learning agents are asymmetric belief updaters](https://arxiv.org/abs/2402.03969)：研究同一批证据在不同顺序、形式下为何具有不对称影响，是本文最贴近的实证前作。
+3. [Shinn et al. (2023), Reflexion: Language Agents with Verbal Reinforcement Learning](https://arxiv.org/abs/2303.11366)：理解将文字反思作为持久记忆时，为什么需要独立验证它保留的证据权重。
+4. [Ma et al. (2026), Hidden APIs in Language Models: Discovering Reusable Causal Interfaces from Forked Futures](https://arxiv.org/abs/2607.27617)：从相同内部状态出发对未来输入进行分叉，提供相关操作性状态检验范式。
+
+## Reading Checklist
+
+- [ ] 用 Beta(1,1) 实际算出 1H/1T 与 20H/20T 的未来更新区别。
+- [ ] 清楚区分当前预测 content、其有效 weight 和提问 readout。
+- [ ] 对比 outcomes、summary、statement、instruction 四种状态准备方式。
+- [ ] 解释为何显式报出的数字概率与下一 token continuation 可以不同。
+- [ ] 从 Fig.3 理解“样本数量宣称”与“行为等效样本数”的区别。
+- [ ] 指出一次性 steering 与持续 steering 哪个效应可持久。
+- [ ] 检查作者是否通过 matched-content、模型和措辞噪声控制排除浅层解释。
+- [ ] 为长期 Agent 的摘要记忆提出一个 forked-futures 测试任务。
+
+## Sources and attribution
+
+- 原始论文 [arXiv:2611.07913v1 HTML](https://arxiv.org/html/2611.07913v1)，作者 Weihan Li、Junhao Wu、Xinlei Chen、Tianshi Zheng。具体数字、Figure 及论点归原论文作者。
+- 原论文 Figure 全部只链接，**未复制、裁剪、修改或复绘论文定量曲线**。
+- 上述文字结构图是 **AI-generated explanatory diagram**；Beta–Bernoulli 的数字例子是明确标注的教学计算，非原论文实测数据。
