@@ -1,0 +1,180 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Stability and Relaxation of Electron-Phonon Systems at Strong Coupling"
+authors: "Noga Bashan, Erez Berg"
+date: "2026-11-08"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.07014"
+notionUrl: "https://app.notion.com/p/4107dd5567ec810eaa33e3cc9e1cdfa4"
+summary: "在 Migdal–Eliashberg 框架中，原先 Markov 量子 Boltzmann 方程预测的强电子–声子耦合失稳，是忽略记忆效应导致的近似伪影；Kadanoff–Baym 分析发现稳定且可能振荡的弛豫。"
+readingTime: "25–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**研究问题：**强电子–声子耦合会让金属在超导出现前发生不可避免的动力学失稳吗？
+
+**Authors report：**作者从 quasiclassical Kadanoff–Baym equation（KBE）出发，检查 Migdal–Eliashberg theory（MET）在强耦合下的线性稳定性。此前 Markovian quantum Boltzmann equation（QBE）给出的不稳定模，出现在梯度展开本就不成立的高频；完整非 Markovian KBE 未发现同样的零动量、各向同性失稳。作者还识别出中间温度下近乎 Planckian 的衰减率和强烈振荡的长时模式。
+
+**AI interpretation：**这是一篇很好的“近似方法的适用条件必须随结论一起检验”案例。它改变的是特定 MET 动力学的理论判断，**并非证明真实材料在任意强电子–声子耦合下都稳定**。
+
+**正文核查范围：**核对 arXiv:2611.07014v1 主文的模型、Moyal 梯度展开、Fig.1–2、稳定算符、Kramers–Kronig 响应及 supplement 的结构。没有重新求解 KBE 的本征谱或独立复现作者的数值。
+
+<ReadingPath
+  quick={[
+    "读 Abstract 与 Fig.1 图注：一图对照 QBE 预测的不稳定和 KBE 的稳定。",
+    "读 Fig.2：辨别单调衰减与复特征值导致的振荡衰减。",
+    "读 Discussion：理解局部动力学稳定性与真实材料其他相变的区别。"
+  ]}
+  standard={[
+    "先读模型的两种能标 g、Omega_0 以及 lambda=g^2/Omega_0^2。",
+    "读 KBE 与 QBE 的关系，明确梯度展开要求动力学频率远小于温度。",
+    "检查 Fig.1 top 的 collision operator 最小本征值，以及 bottom 的响应函数因果性检验。",
+    "阅读 Fig.2 的低温、温度中段、高温三种弛豫分支。",
+    "读 Discussion，区分无空间结构的线性不稳定和有限动量/CDW/多极化子问题。"
+  ]}
+  deep={[
+    "从两时间 Keldysh Green function 推导 Wigner 中心时间与相对时间。",
+    "展开 Moyal product，检验丢弃高阶梯度项的受控频率范围。",
+    "写出 Laplace 极点 gamma 与 e^{gamma t} 的稳定性条件。",
+    "对照 KBE 与 QBE 的本征谱、Kramers–Kronig 关系，说明错误极点从何而来。",
+    "对照 Fig.2 推导高温 gamma=-pi*g^2/(4T) 的物理尺度，并解释复 gamma 的振荡。",
+    "阅读 supplement 中有限 Omega_0/T、复杂 gamma 和粒子–空穴奇偶两个扇区的检验。",
+    "设计一个包含 phonon softening 或有限带宽效应的超出 MET 的独立测试。"
+  ]}
+/>
+
+## Big Picture：近似先于结论，还是结论超出近似？
+
+一个看起来合理的强耦合不稳定结论，可能不是真正的物理不稳定，而是**低频方程被用于高频极点**时产生的数学伪影。
+
+**AI-generated explanatory diagram（概念流程，非论文原 Figure、非定量曲线）：**
+
+> 两时间 Kadanoff–Baym 动力学（带记忆）  
+> → Wigner 变换 / Moyal product  
+> → 只有频率充分低时才可作梯度截断  
+> → Markov QBE（只在低频受控）  
+> → 旧 QBE 的“强耦合不稳定”发生在其控制范围之外  
+> → 返回 KBE 本征谱与 causal response 重新判定稳定性。
+
+这里的最重要逻辑不是“QBE 永远不对”，而是 **QBE 在低频可以准确、在寻找高频不稳定极点时不可靠**。
+
+## 机制一：两个时间变量与记忆效应
+
+作者以 Holstein 型电子–Einstein 声子为代表性模型，定义有能量量纲的耦合强度 g，和无量纲量
+
+$$
+\lambda=\frac{g^2}{\Omega_0^2}.
+$$
+
+在 MET 的 quasiclassical 描述中，非平衡电子分布与两时间 Keldysh 传播子相关。对任意两时间函数，Wigner 变换定义为
+
+$$
+A(t,E)=\int d\tau\;A\left(t+\frac{\tau}{2},t-\frac{\tau}{2}\right)e^{iE\tau}.
+$$
+
+其中中心时间 t 描述真实动力学，相对时间的共轭量 E 则是频率/能量变量。精确的时间卷积在 Wigner 表示下是 Moyal product，不是简单的逐点乘法：
+
+$$
+A\circ B=AB+\frac{i}{2}
+\left(\partial_E A\,\partial_t B-\partial_t A\,\partial_E B\right)+\cdots .
+$$
+
+**Authors report：**MET 的相关能量导数尺度约为 1/T，因此截断到一阶时间导数需满足动力学频率远低于 T。旧 QBE 的不稳定极点却出现在接近或超过这个能标的位置。
+
+**AI interpretation：**如果要研究微扰的长时间稳定性，应检查不稳定增长率是否还在方程的有效区间内；反之就是将低频有效理论错误外推。
+
+## 机制二：线性稳定性究竟检验什么？
+
+设某个偏离平衡的模式随时间变化为
+
+$$
+\delta f(t)\propto e^{\gamma t}.
+$$
+
+若存在实部为正的 gamma，线性系统就有增长的模式；若实部为负，扰动衰减；复数 gamma 的虚部对应振荡频率。
+
+论文写成关于频率的碰撞算符本征方程。在特定约定下，零模条件可以形式化为
+
+$$
+\gamma=-\frac{g^2}{T}\lambda_{\mathrm{coll}}(\gamma).
+$$
+
+注意这里的 lambda_coll 是**碰撞算符本征值**，不能与电子–声子耦合常数 lambda 混淆。
+
+**Authors report：**QBE 的截断碰撞算符会出现能够导致增长模的负本征值，但非 Markovian KBE 对应的谱不出现该特征。独立的 retarded response 检查还发现：KBE 满足相应 Kramers–Kronig 因果性关系，而 QBE 的高频响应出现偏离。
+
+## 机制三：为什么衰减可以带有振荡？
+
+作者发现三段典型弛豫行为。在高温且温度超过声子与耦合能标时，电子能量弛豫分支满足
+
+$$
+-\gamma=\frac{\pi g^2}{4T}.
+$$
+
+在很低温度，声子热占据不足使某些能量弛豫过程指数抑制。中间温度，当耦合足够强时，新的复本征值分支可成为最慢模式：
+
+$$
+-\operatorname{Re}\gamma\simeq\pi T,\qquad
+\operatorname{Im}\gamma\propto \pm g.
+$$
+
+因此同一个扰动的长时尾巴可以近似表示为
+
+$$
+\delta f(t)\sim e^{-\Gamma t}\cos(\omega_{\mathrm{osc}}t+\phi).
+$$
+
+**Authors report：**中间分支主要在 lambda 约不低于 2.5、温度处于 Omega_0 与 g 所设定的中间窗口时显著。
+
+**Caveat：**这里的衰减是指定理论模型的线性近平衡弛豫，并不是已测得的材料电阻率或超导临界温度。
+
+## 关键 Figure 阅读导航（原图仅链接）
+
+1. **[Fig.1 Top — KBE 与 QBE 碰撞算符最小本征值](https://arxiv.org/abs/2611.07014)**：关注正 gamma 区间是否出现负本征值，以及为什么 QBE 的风险发生在梯度展开失控的位置。
+2. **[Fig.1 Bottom — kinetic response 与 Kramers–Kronig 测试](https://arxiv.org/abs/2611.07014)**：比较高频响应和由实部重建虚部的一致性；这是一条独立于单纯特征值图的因果性证据。
+3. **[Fig.2 — relaxation regimes](https://arxiv.org/abs/2611.07014)**：看标为叉号的复模式怎样替换纯实衰减分支；先解释横纵轴和 lambda 再比较速率。
+4. **[Supplement Fig.S4 和 Fig.S7](https://arxiv.org/abs/2611.07014)**：追踪粒子–空穴另一扇区以及有限声子频率修正，辨别主文推导的限制。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+- 在强耦合 Migdal–Eliashberg 理论中，零动量、角动量零通道的非 Markovian KBE 没有旧 QBE 所预言的不稳定极点。
+- 高频响应的 KK 因果性检验与碰撞算符谱判据互相支持。
+- 强耦合中间温区存在近乎 pi*T 衰减率、同时振荡频率与 g 相关的长时模式。
+
+### AI interpretation
+- 这项工作提示：针对超导强耦合上限的“不可避免不稳定”判断需要先检验所用动力学近似的频率范围。
+- 对科研自动化的类比：数值求解器收敛不等于有效理论在该解的尺度上适用。诊断量应同时监测结果和近似前提。
+
+### Caveats
+- 作者讨论 MET 自身的动力学，不代表真实 Holstein 材料忽略声子软化、极化子、双极化子或密度波等机制后仍必然稳定。
+- 主要结论在均匀、各向同性线性响应通道中建立，不能自动推广到有限动量和非线性演化。
+- 所报告的 pi*T 是模型长时衰减率尺度，不是所有物理体系的通用 Planckian 散射定律。
+- 本导读只做已核查的正文与原理阐释，没有独立复算论文数值曲线。
+
+## Historical Reading Chain
+
+1. **FIRST — [Yuzbashyan, Altshuler & Patra (2025), Instability of Metals with Respect to Strong Electron-Phonon Interaction](https://doi.org/10.1103/sf5p-2g5l)**：本文直接回应的 QBE 不稳定结论；先看旧结论适用的频率假设。
+2. [Migdal (1958), Interaction between electrons and lattice vibrations in a normal metal](https://doi.org/10.1143/JPSJ.13.267)：建立电子–声子顶角修正和强耦合理论背景。
+3. [Carbotte (1990), Properties of boson-exchange superconductors](https://doi.org/10.1103/RevModPhys.62.1027)：经典 Migdal–Eliashberg 综述，建立理论内部和真实材料之间的距离。
+4. [Allen (1987), Theory of thermal relaxation of electrons in metals](https://doi.org/10.1103/PhysRevLett.59.1460)：和本文高温能量弛豫尺度进行对照。
+
+## Reading Checklist
+
+- [ ] 解释 KBE 与 QBE 差别来自什么近似，而非简单“哪一个公式更复杂”。
+- [ ] 从 Wigner 变换写出 Moyal 梯度展开的第一项。
+- [ ] 说明旧 QBE 的危险极点为什么不在受控频率范围。
+- [ ] 从 Fig.1 指出本征谱与 KK 关系各自排除什么。
+- [ ] 分清耦合强度 lambda 与 collision-operator eigenvalue lambda_coll。
+- [ ] 用复 gamma 给出振荡衰减的实时间表达。
+- [ ] 区分 MET 内稳定性与真实材料的声子软化等相变。
+- [ ] 阅读 FIRST 历史论文并指出本篇与其关键差别。
+
+## 来源与归属
+
+- 原论文：[arXiv:2611.07014v1](https://arxiv.org/abs/2611.07014)，作者 Noga Bashan、Erez Berg。正文及附录版权归原作者。
+- 所有 Figure 均通过原始论文链接引导阅读，**未复制、裁剪、修改或凭记忆重绘任何定量图像**。
+- 上述文字流程是 **AI-generated explanatory diagram**，只解释概念，非原论文 Figure、非实验数据。
