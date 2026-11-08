@@ -1,0 +1,162 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Compositional Unalignment: Auditing Safety in Large Vision-Language Models"
+authors: "Hong kyu Lee, Kai Shu, Li Xiong"
+date: "2026-11-09"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.07216"
+notionUrl: "https://app.notion.com/p/4117dd5567ec81ebb6a9fea9e8e96f4a"
+summary: "多模态模型能识别危险图文组合，仍未必通过同一内部机制拒绝不安全请求；高 AUC 的探针并不自动等于有效的因果解释。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**图像和文本提示可能单独看起来无害，但合在一起却指向危险行为。作者比较了不同方式对两种 7B 视觉语言模型的安全对齐，并区分内部“识别存在风险”与外部“实际拒绝”。一些表示方向能够非常准确识别 compositional harm（论文报告的 AUC 接近 1），但对这些方向做消融并不必然削弱模型的拒绝行为。作者进一步以因果干预方式审计安全机制的稳定性。
+
+**AI interpretation：**“我在模型内部找到一个能分类危险输入的信号”远远不等于“我找到了模型拒绝危险请求的因果机制”。对 VLA 安全评测，这提示需要同时检验 **输入组合风险、行为安全、内部表征与干预鲁棒性**。
+
+**核查范围：**阅读 arXiv:2611.07216v1 原始正文的研究问题、两种对齐方式、Table 2–3、Fig. 1–4 和相关附录；未运行干预代码，亦未独立复现安全分数。本文导读仅讨论防御性评测与因果证据，不提供绕过模型安全机制的操作说明。
+
+<ReadingPath
+  quick={[
+    "看 Abstract、Table 2 与 Table 3：比较行为评分、内部可分性和真正的因果干预。",
+    "理解 compositional harm：图文单独无害，组合后才显露风险。",
+    "读 Limitations，注意实验是特定 7B 模型、指定 benchmark，而非所有 VLA。"
+  ]}
+  standard={[
+    "Section 1–3：理解风险判定为何不能逐个模态独立进行。",
+    "Table 2：比较 SFT 与 RL 对齐的安全率、over-refusal，以及数据与训练预算不一致的局限。",
+    "Section 4 / Table 3：理解分类 AUC 与干预后拒绝行为变化之间的错位。",
+    "Fig.1：以高层次结构理解作者的因果审计思路；不把干预实现当作通用安全结论。",
+    "Fig.2–4：检查安全评分、生成连贯性和模型/任务迁移的评估条件。",
+    "讨论怎样建立 VLA-Arena 跨模态安全评测中的联合指标。"
+  ]}
+  deep={[
+    "形式化识别变量 H：图文联合有害 vs 单模态有害、模型拒绝事件 R。",
+    "分析为何线性可分性 P(H|z) 高，不足以证明某个表示 z 是 R 的因果必要条件。",
+    "以 causal mediation 的语言区分特征定位、随机对照、消融副作用与可解释的定向干预。",
+    "审查 SIUO/VLGuard 的标注、判分者、数据分割和生成连贯性指标。",
+    "检查本文的模型覆盖、对齐数据量和统计置信度；避免将不同训练制度结果视为公平 SFT-RL 对照。",
+    "设计不需要削弱模型安全机制的防御性 benchmark：内容组合类型 × 安全拒绝率 × 良性请求误拒率 × 任务成功率。",
+    "结合 FIRST 历史文献，讨论文本 LLM 的拒绝方向能否跨模态直接迁移。"
+  ]}
+/>
+
+## Big Picture：识别风险与拒绝危险不是同一件事
+
+考虑一个图像 x_img 和一句文本指令 x_text。在单独审查时两者都可能看起来安全，但联合语境中的风险才是核心变量：
+
+$$
+H = h(x_{\mathrm{image}},x_{\mathrm{text}}).
+$$
+
+**AI-generated explanatory diagram（用于解释概念，非作者原图或数据）：**
+
+> 单看图像 → 可能没有可见的危险指令  \n
+> 单看文本 → 可能没有危险对象/环境  \n
+> **联合理解 (image, text) → 才能判定危险性 H**  \n
+> ↓  \n
+> 内部可探测的风险表示 Z  \n
+> ↓（不一定是唯一或必要的因果路径）  \n
+> 安全判定与拒绝行为 R  \n
+> ↓  \n
+> 最终回答：既要规避危险，也不要无故拒绝良性请求。
+
+**关键辨析：**存在可读出的内部特征 Z，并不代表修改 Z 就能可预测地改变行为 R。网络内部可能存在多条冗余通路，而且扰动还可能损害语言连贯性。
+
+## 核心机制：从预测相关到因果证据
+
+定义一个内部风险探针 \(p_\phi(H=1\mid Z)\)。在 held-out 样本上得到高 AUC，说明该表征中**包含**足以分离风险类别的信息：
+
+$$
+\mathrm{AUC}=\Pr\left[s(Z^+)>s(Z^-)\right].
+$$
+
+其中 \(Z^+\) 和 \(Z^-\) 分别是危险与非危险输入的内部特征。这里的 AUC 是辨别能力，而不是安全行为本身。
+
+实际安全行为要评估模型是否给出正确拒绝或安全替代：
+
+$$
+S_{\mathrm{safe}}
+=
+\frac{\#\text{安全响应}}{\#\text{测试危险组合}}.
+$$
+
+同时还需评估良性请求的错误拒绝：
+
+$$
+S_{\mathrm{overrefusal}}
+=
+\frac{\#\text{误拒绝}}{\#\text{良性请求}}.
+$$
+
+**Authors report：**某些表示方向的风险检出能力接近完美，但将其从表示中消除后，拒绝机制没有同步失效。还有一些改变确实降低了拒绝，但同时损害回答的连贯性。论文的 Table 3 是这种“相关性 ≠ 因果性”的直接证据。
+
+**AI interpretation：**对于安全研究，更强的要求是：在严格对照下，干预对目标行为造成特异、可重复、且没有大规模无关副作用的变化。单独一个线性 probe 的分数无法达到这一标准。
+
+### 行为安全率不能单独排序训练方法
+
+论文的 Table 2 比较相同 Qwen2.5-VL-7B 骨干上的两类安全对齐，作者报告：
+
+- 其特定组合安全 SFT：SIUO 安全率约 69.5%，良性样本 over-refusal 约 7.0%。
+- 作为比较的一种 Pragma-VL GRPO 设置：SIUO 安全率约 61.1%，over-refusal 约 42.3%。
+
+但是**对齐训练数据规模、样本设计与训练目标都不同**。这不能证明一般而言 SFT 优于 GRPO，最多表明同一 benchmark 的一次安全评分不足以评价内部防御鲁棒性。
+
+## 关键 Figure / Table 导览（只链接原文，不复制）
+
+1. **[Table 2 — 安全率与过拒率的两轴对照](https://arxiv.org/html/2611.07216v1)**。查看两个 7B 模型在不同训练条件下的 SIUO safe rate、over-refusal；思考为何训练资源差异妨碍直接判定方法优劣。
+2. **[Table 3 — Detection versus intervention](https://arxiv.org/html/2611.07216v1)**。核心是比较风险辨认 AUC、文本连贯性与对最终安全率的影响；高 AUC 并不自动对应大幅行为变化。
+3. **[Fig.1 — 作者的内部安全审计框架](https://arxiv.org/html/2611.07216v1)**。只用于理解作者的因果实验在何处施加受控变动，不将其转化为绕过防护的操作流程。
+4. **[Fig.2–4 — 安全与连贯性、迁移性比较](https://arxiv.org/html/2611.07216v1)**。分清不同测试集、风险类型和模型的结果；评估作者是否成功排除输出退化导致评分变化的替代解释。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- 图文风险需要联合理解，单模态安全评分不充分。
+- 多种内部探针的风险识别能力强，但检测最优的方向不必是安全拒绝的因果关键方向。
+- 研究中的内部干预测试揭示某些模型在组合风险下对安全机制扰动的脆弱性。
+- 对文本显式风险和图文组合风险的内部安全行为存在一定共享或迁移迹象。
+
+### AI interpretation
+
+这篇可以作为 VLA-Arena 安全模块的评测方法学阅读。建议把“能否识别危险物体”“能否识别危险指令”“联合理解是否发现危险”“是否安全拒绝”“安全时是否仍能执行良性任务”拆成独立指标。
+
+关注 **安全效果和能力保留之间的 trade-off**，不把降低回答连贯性、提高保守拒绝率误当作“更安全”。
+
+### Caveats
+
+- 是在 Qwen2.5-VL-7B、LLaVA-1.5-7B 等特定模型和受控样本上报告的结果，并非实际机械臂/VLA 的物理安全实验。
+- SIUO 相关结果依赖数据构成和判分系统，不自动等价于真实世界风险。
+- 两种对齐范式的训练数据和成本不匹配；不能据 Table 2 得出一般的 SFT/RL 排名。
+- 内部因果干预既可能影响安全拒绝，也可能有无关表征与连贯性副作用。
+- 论文作者报告的脆弱性未被本导读独立复现；本文不提供规避安全防护的实用步骤。
+
+## Historical Reading Chain
+
+1. **FIRST — [Arditi et al. (2024), Refusal in Language Models Is Mediated by a Single Direction](https://arxiv.org/abs/2406.11763)**：从文本 LLM 的拒绝方向出发，理解为何跨模态不能假设相同结构。
+2. [Lee et al. (2025), HoliSafe: Holistic Safety Benchmarking and Modeling](https://arxiv.org/abs/2506.04704)：图文联合危险性和多模态安全度量的直接背景。
+3. [Wang et al. (2025), MMSafeAware: Benchmarking Multimodal Safety Awareness](https://arxiv.org/abs/2502.11184)：比较行为级安全认知指标与内部机制证据的差异。
+
+## Reading Checklist
+
+- [ ] 举出不涉及真实危险细节的图文组合风险的抽象例子。
+- [ ] 分清风险是否被识别，以及模型是否选择正确拒绝。
+- [ ] 在 Table 2 中找出安全率与过拒率的权衡。
+- [ ] 从 Table 3 解释 AUC 高为什么不保证干预有因果效果。
+- [ ] 写出合格因果干预需要考虑的随机对照和生成连贯性检查。
+- [ ] 识别 SFT 和 RL 对照中的数据不等量问题。
+- [ ] 说明 SIUO 不是完整的 VLA 真实机器人安全评测。
+- [ ] 设计一个安全、可执行的联合图文输入风险 benchmark 评分表。
+- [ ] 读 FIRST 历史论文并比较文本拒绝与多模态拒绝。
+
+## 来源、许可与归属
+
+- 原论文：[arXiv:2611.07216v1](https://arxiv.org/html/2611.07216v1)（2026-11-04 首次公开），作者 Hong kyu Lee、Kai Shu、Li Xiong。
+- [Notion 同一研究原记录](https://app.notion.com/p/4117dd5567ec81ebb6a9fea9e8e96f4a)，2026-11-08 速览、2026-11-09 升级精读；未创建重复条目。
+- 原论文 Figure 只链接，不复制、裁剪、修改或凭记忆重绘定量图表。
+- 本页的概念流程明确标注 **AI-generated explanatory diagram**，不包含源论文数据点、原图或攻击实施指引。
