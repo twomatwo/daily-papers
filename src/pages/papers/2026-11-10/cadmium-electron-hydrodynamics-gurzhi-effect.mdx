@@ -1,0 +1,162 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Hydrodynamics of the Viscous Electron Fluid in Cadmium"
+authors: "Xiaodong Guo, Xiaokang Li, Benoît Fauqué, Alaska Subedi, Lingxiao Zhao, Zengwei Zhu, Kamran Behnia"
+date: "2026-11-10"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://doi.org/10.1103/g32f-j6q2"
+notionUrl: "https://app.notion.com/p/4137dd5567ec81a6abe0c7200367953d"
+summary: "在三维元素金属 Cd 中发现与样品宽度平方、温度平方共同缩放的电子黏性输运窗口，并在更小尺度重新进入弹道区。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**作者用聚焦离子束逐步缩小单晶 Cd 微结构，测得一个夹在传统扩散与弹道输运之间的低温尺寸敏感窗口。此时电导的流体部分随有效横截面尺寸的平方及温度平方变化，可以据此估计电子黏度和动量守恒碰撞时间。这是经典 **Gurzhi effect** 在三维元素金属中的重要实验实现。
+
+**AI interpretation：**把“电阻随降温上升”与“电导的 s²T² 标度”和“极窄样品恢复弹道区”合在一起看，比单独寻找电阻反常更能区分电子流体机制。
+
+**Caveat：**实验依赖有限温区、几何简化及多费米面样品；微小 Fermi-energy / inter-valley bottleneck 是结合 DFT 的解释，而非对全部微观散射路径的直接逐一测量。
+
+**核查范围：**正式 PRL 2026-11-09 摘要、arXiv:2604.19416（2026-04-21 首发）主文公式、Fig.1–4 的图注、主要实验和 DFT 分析；未独立复算原始数据或补充材料全部内容。
+
+<ReadingPath
+  quick={[
+    "看 Abstract 与 Fig.1：温度反常为什么在缩小样品时出现？",
+    "看 Fig.2：除了低温上翘，真正的流体标度证据是什么？",
+    "看 Fig.3：为什么把样品缩到更小后反常反而消失？"
+  ]}
+  standard={[
+    "区分动量守恒 e–e 碰撞与动量弛豫的杂质、声子、边界散射。",
+    "读 Fig.1 的有效尺寸 s = sqrt(w t) 与 5 K 基线扣除。",
+    "读 Eq.(1)、Fig.2：为何 Δσ 对 s² 和 T² 同时呈线性响应？",
+    "读 Fig.3：微米级尺寸下的 hydrodynamic → ballistic crossover。",
+    "读 Fig.4：多 Fermi pocket 小能标与动量守恒散射的解释边界。"
+  ]}
+  deep={[
+    "从稳态 Stokes / Poiseuille 方程推导边界受限的电流与 s²/ν 标度。",
+    "比较 l_mc、s、l_mr 的大小关系，说明相邻不同输运极限。",
+    "检查基线 ρ(0,s) = ρ(0,∞) + a/s 的 Fuchs–Sondheimer 假设。",
+    "把 Δσ 公式换算成 τ_mc 与运动学黏度 ν，追踪几何系数和样品参数。",
+    "将从 bulk T² 电阻提取的 τ_mr 与流体窗口提取的 τ_mc 区分。",
+    "研究 Cd 的 lens/cap/monster 费米面和带间微小能标能否解释异常散射率。",
+    "读 FIRST 历史文献，提出一个可以排除接触和加工损伤的控制实验。"
+  ]}
+/>
+
+## Big Picture：为什么电子之间碰撞反而可能降低电阻？
+
+普通 Drude 输运中，载流子碰撞主要意味着动量丢失，因此升温往往增加电阻。但电子–电子碰撞在没有 Umklapp、杂质等耗散机制时，可以**重新分配**总动量而不把它交给晶格。若电子在到达器件边缘前已经多次碰撞，它们的集体漂移速度就形成类似流体的横向分布。
+
+**AI-generated explanatory diagram（概念流程，非原论文 Figure、非数值曲线）：**
+
+> Diffusive：动量弛豫碰撞过多，流体模式未显现
+>
+> → Hydrodynamic：动量守恒碰撞最快；边界剪切耗散；电导随 s² 增长
+>
+> → Ballistic：尺寸小于可建立局域流体的碰撞长度，粒子直接触壁
+>
+> 关键：冷却与缩小尺寸并不是同一个参数扫描，因此会看到不同 crossover。
+
+用长度关系表达流体窗口：
+
+$$
+\ell_{\mathrm{mc}}\ll s\ll \ell_{\mathrm{mr}},
+$$
+
+这里 mc 表示 momentum conserving，mr 表示 momentum relaxing。它是判断相区的**指导性尺度关系**，并非这篇多带材料的全部输运公式。
+
+## 核心机制 / 公式
+
+作者用横截面宽度 w 与厚度 t 构造有效长度：
+
+$$
+s=\sqrt{w\,t}.
+$$
+
+主文 Eq.(1) 给出的电子流体电导贡献为：
+
+$$
+\boxed{
+\Delta\sigma=
+\frac{1}{3}\frac{ne^{2}}{m^{*}}
+\frac{s^{2}}{v_F^{2}\tau_{\mathrm{mc}}}
+}
+$$
+
+如果在实验温度窗，费米液体的动量守恒散射率近似满足
+
+$$
+\tau_{\mathrm{mc}}^{-1}\propto T^{2},
+$$
+
+就得到流体部分的双重标度：
+
+$$
+\Delta\sigma\propto s^{2}T^{2}.
+$$
+
+**理解关键：**这里不是说总电导在所有温区都是 s²T²，也不是将常见的 bulk ρ(T) ∼ ρ₀ + AT² 直接倒数得到流体输运。流体修正需与动量弛豫、边界散射分开。
+
+作者另用 5 K 的几何基线：
+
+$$
+\rho(5\,\mathrm K,s)=\rho(5\,\mathrm K,\infty)+a/s.
+$$
+
+减去几何相关的零温基线后，特定流体窗口的电阻修正对温度的对数导数趋近负二（Fig.2）。最薄约 2 μm 的样品在更低温下反而恢复近乎常数的电阻（Fig.3），与进入弹道区的解释一致。
+
+最后比较动量守恒和动量弛豫散射时间的尺度：主文从 bulk 电阻给出的 τ_mr T² 约 2.4×10³ ps·K²，明显长于流体分析估计的 τ_mc T²。作者将这一反差与 Cd 多口袋及极小能标联系起来；这仍涉及模型和参数估算。
+
+## 关键 Figure：带着问题看原图（不复制图像）
+
+1. [Fig.1：Cd Fermi surface、FIB 器件与尺寸依赖电阻](https://arxiv.org/abs/2604.19416)。看 s 从 114.4 μm 缩到约 11.6 μm 时低温电阻如何非单调；特别检查 Fig.1(e,f) 中基线的尺寸依赖。
+2. [Fig.2：hydrodynamic scaling 与散射时间](https://arxiv.org/abs/2604.19416)。比较对温度的幂律指数、不同 s 的 Δσ 与 T² 斜率；不要只看单一温度点。
+3. [Fig.3：hydrodynamic ↔ ballistic crossover](https://arxiv.org/abs/2604.19416)。进一步缩至 s ≈ 2 μm 后低温电阻转为近常数；这对区分“局域化导致永远向上翘”很关键。
+4. [Fig.4：Cd 多口袋 Fermi surface 与极小能标](https://arxiv.org/abs/2604.19416)。理解 lens、cap、monster 以及 K 点附近局域低能尺度如何成为 e–e 碰撞瓶颈的候选解释。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- 三维金属 Cd 的特定温度及尺寸窗口具有与 Gurzhi hydrodynamics 相符的输运特征。
+- 通过 FIB 扫描 s，可以看到扩散、流体和最终重新进入弹道的序列。
+- 利用电导、温度和尺寸标度估算电子流体黏度与碰撞时间。
+- DFT 费米面显示多口袋小能标，可能解释为何某些动量守恒碰撞比仅按主口袋 Fermi energy 估算的快。
+
+### AI interpretation
+
+如果设计新型微结构输运实验，可以把 **尺寸、温度、磁场、接触几何**视为相互独立的测量轴。区别于简单寻找“奇怪的 T² 电阻”，我们更希望建立一个同时满足长度尺度与碰撞时间变化的因果证据链。
+
+### Caveats
+
+- FIB 加工、边界条件、非均匀截面和多带输运都可能改变定量系数。
+- 电子流体窗口有限，不能把全部 Cd 低温输运都归类为 hydrodynamic。
+- DFT 瓶颈解释具有说服力但还不是直接对每一种动量守恒散射事件的观测。
+- 此处的黏度为电子流体的有效输运量，不是将 Cd 晶体变成常规液体。
+
+## Historical Reading Chain
+
+1. **FIRST — [Gurzhi (1968), Hydrodynamic effects in solids at low temperature](https://doi.org/10.1070/PU1968v011n02ABEH003815)**：最先建立电子流体导致电阻温度反常的核心理论。
+2. [Krishna Kumar et al. (2017), Superballistic flow of viscous electron fluid through graphene constrictions](https://doi.org/10.1038/nphys4240)：二维石墨烯狭缝电子流体的实验参照。
+3. [Polini & Geim (2020), Viscous electron fluids](https://doi.org/10.1063/PT.3.4497)：厘清动量守恒、弛豫和边界黏性流动的优质综述。
+4. [Hui & Skinner (2025), Hydrodynamics of the electronic Fermi liquid](https://arxiv.org/abs/2504.01249)：适合按方程从头推导散射长度和输运极限。
+
+## Reading Checklist
+
+- [ ] 解释为什么 e–e 碰撞可以降低器件电阻而不是像杂质散射一样增阻。
+- [ ] 写出 ell_mc、s、ell_mr 的典型大小关系与流体窗口。
+- [ ] 核查 Fig.1 的几何定义与底噪/边界扣除。
+- [ ] 理解 Δσ 的 s² / τ_mc 标度，进一步得到 s²T²。
+- [ ] 确认 Fig.3 的极窄样品为什么重新回到弹道输运。
+- [ ] 不把 τ_mc 和 τ_mr 的实验估计互相混用。
+- [ ] 区分 Fig.4 的 DFT 低能标解释与实验直接观测。
+- [ ] 阅读 FIRST Gurzhi 文献，说明其物理条件在三维 Cd 中如何被测试。
+
+## 来源与 Figure 归属
+
+- [Guo et al., Physical Review Letters 137, 206301 (2026-11-09)](https://doi.org/10.1103/g32f-j6q2)。
+- [作者公开预印本 arXiv:2604.19416（2026-04-21 首发）](https://arxiv.org/abs/2604.19416)；Fig.1–4 均请在作者原始文件查看。
+- **未复制、编辑、裁剪、组合或依据记忆重绘任何原论文 Figure / 定量曲线**。此页文字流程明确标注为 **AI-generated explanatory diagram**，只有概念信息。
