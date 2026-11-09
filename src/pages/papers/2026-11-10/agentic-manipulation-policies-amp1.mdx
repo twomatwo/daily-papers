@@ -1,0 +1,160 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "On Agentic Manipulation Policies"
+authors: "Chen Chen, Omid Bagherieh, Naveen Nikamanth Appiah Balaji, and collaborators"
+date: "2026-11-10"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2611.09892"
+notionUrl: "https://app.notion.com/p/4137dd5567ec81d0ba49c9ab4452534e"
+summary: "将 generalist AI 留在机器人控制回路，通过视觉、代码和动作接口驱动操作，在多个 benchmark 上取得高成功率，但响应时间、公平基线和错误恢复设置需要单独审视。"
+readingTime: "30–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**AMP1 不是把预训练 VLA 的 action head 换掉，而是让通用多模态模型反复观察机器人状态、运行代码并直接下达机器人动作。论文在 RoboLab-120 报告零样本成功率 85.6%（Gemini 4 Argon）和 82.8%（Opus 5.5），在 12 个实机任务的 108 次试验中成功 104 次。增加跨回合持久化的程序与笔记以后，模型在 RoboDojo 上还能通过经验改善表现。
+
+**AI interpretation：**这篇使“使用 VLA 还是让大型通用模型直接控制机械臂”成为一个应当严格定义 **整个系统接口** 的比较：不仅比较模型权重，还要比较感知、动作空间、tools、错误恢复、推理时延和失败机制。
+
+**Caveat：**这不是“通用模型在一切机器人条件下都比 VLA 好”的证明。不同评测中摄像头/深度/标定信息、是否允许碰撞恢复、模型预算及任务分布并不完全等价；AMP1 仍有显著的模型推理等待时间。
+
+**核查范围：**阅读 arXiv:2611.09892v1 HTML 主文、Fig.1–5、Tab.1 和部分补充材料（Tab.S1、恢复及评价流程）；未独立运行 RoboLab、LIBERO-PRO、robosuite、RoboDojo 或实机。
+
+<ReadingPath
+  quick={[
+    "Fig.1：观察 AMP1 如何通过试探与修复完成普通抓取以外的复杂任务。",
+    "Fig.2：确认 85.6% 的测试集、模型、zero-shot 定义。",
+    "Tab.1 / S1：看实机成功率、执行/推理时间与 error recovery 对照。"
+  ]}
+  standard={[
+    "区分 VLA、WAM、skill orchestration 与 AMP 直接操作的动作生成方式。",
+    "读 Section 2A 和 Fig.2：RoboLab-120、LIBERO-PRO、robosuite 与 BEHAVIOR-1K 各在测什么。",
+    "读 Tab.1：108 次实机测评如何构成，哪些行为仍导致碰撞或失败。",
+    "读 Section 2C、Fig.4：AMP1+ 的持久化记忆/代码如何在无梯度训练下复用。",
+    "读 Fig.5：模型能力与 harness、感知接口和辅助操作例程的消融。",
+    "读补充 Tab.S1 和 S6：错误恢复、验证器与被动安全失败。"
+  ]}
+  deep={[
+    "梳理 state → observation → model → code → tool calls → robot → feedback 的每一步协议与时延。",
+    "逐项检查 zero-shot：不能混同没有 demonstration 与没有基础模型预训练。",
+    "比较不同 baseline 的相机数量、RGB/depth、calibration 与控制粒度。",
+    "对照 Tab.1 与 Tab.S1：同样 AMP1 禁止错误恢复后成功率如何变化。",
+    "理解仅在成功任务上平均的 time-to-success 可能掩盖的选择偏差。",
+    "区分 benchmark verifier failures、真正任务失败与模型行为安全失败。",
+    "设计一个 VLA-Arena 风格的安全评测，明确每种模型可访问的工具及危险操作阈值。",
+    "读 FIRST Code as Policies，追踪生成程序控制机器人思想的演化。"
+  ]}
+/>
+
+## Big Picture：机器人 policy 还是机器人 agent？
+
+一个典型 VLA 采用视觉/语言输入，并以固定频率或动作 chunk 预测控制指令；AMP1 将一个能力较强的通用模型留在机器人操作的循环中：每一步都可以选择新的观察、生成 Python 程序、执行机器人运动，再评估反馈。
+
+**AI-generated explanatory diagram（概念流程；非原论文 Figure，不包含定量数据）：**
+
+> 人类任务（自然语言） + RGB / 深度 / 相机标定
+>
+> → Generalist AI：观察、建立场景模型、计划并生成代码
+>
+> → Python / Motion SDK：产生运动轨迹、读取机器人反馈
+>
+> → 机器人：实际执行，返回新图像与控制器状态
+>
+> → Agent：成功判定 / 纠错 / 再规划，直到完成或终止
+>
+> 扩展 AMP1+：每次结束可写入“笔记 + 可复用 Python skill”，供之后的回合导入。
+
+**最关键区别：**VLA 的动作学习主要通过对权重的监督或强化更新，AMP1+ 的部分进步则来自**权重冻结、文件形式的长期记忆和可执行程序**。两条路线不是互斥的。
+
+## 主要实验：把成功率数字放到分母和协议里
+
+### RoboLab-120
+
+作者在 120 项操纵任务，每项不同措辞条件下执行多次试验。按论文指定的 zero-shot 规范，AMP1 在默认设置的总体成功率：
+
+- Gemini 4 Argon：**85.6%**。
+- Claude Opus 5.5：**82.8%**。
+- 对照时论文所选 VLA/WAM 基线报告 **49.2% / 42.9%**。
+
+**这里的 zero-shot 是“没有针对这些任务的机器人示范/在线练习微调”**，不是通用模型未接受海量语言/视觉预训练，也不意味着物理操作没有工具及运动库帮助。
+
+### 真实机器人
+
+实机使用 Franka Research 3、Robotiq 夹爪和三个视角。AMP1 成功 **104/108（96.3%）**，但必须与两项条件一起读：
+
+1. **错误恢复：**AMP1 允许在控制器碰撞反射触发后清除错误、重新规划，而 VLA/WAM baseline 遇到相关中断就结束试验。将 AMP1 的恢复工具禁用后，成功降为 **94/108（87.0%）**。这说明一部分优势来自恢复接口和执行协议，而不只是基础模型本身。
+2. **执行耗时：**Tab.1 分开列出机器运动与模型思考时间；AMP1 的后者在一些任务上主导总耗时。它不适合简单等同于高频闭环机器人控制器。
+
+### Memory 与无梯度学习
+
+在 **RoboDojo 42 个双臂操作任务**，AMP1+ 把成功/失败经验、机器人坐标知识和可复用 Python 代码放在外部 memory folder 中。论文展示练习后成功率从 **26.4% → 84.1%**；另一项依次跨任务积累的 continual test 上升至 **57.6%**。这些结果的练习协议不同，不能将 84.1% 当作未经接触任务的纯 zero-shot 准确率。
+
+## 一个真正需要控制的变量：Agent harness
+
+对于任何 Agent/VLA 公平对比，至少要明确以下量：
+
+| 评测维度 | 最低限度应该记录 |
+| --- | --- |
+| 传感器 | RGB、深度、相机内外参、视角数量 |
+| 动作控制 | 关节位置、末端位姿、action chunk、SDK 权限 |
+| 机器人安全 | collision reflex、动作限幅、人类接管、错误恢复 |
+| 数据经验 | 预训练、目标任务示范、在线练习、持久化记忆 |
+| 资源时间 | 机器人执行时间、模型推理时间、API 调用次数 |
+| 结局 | 成功率、物体损坏、越界、违规触碰、假阳性判定 |
+
+这是 **AI interpretation**，不是作者宣称已经统一了上述所有指标。用户若用于 VLA-Arena 的安全子集，应保证各模型可获得的图像与控制信息尽量对齐，并将错误恢复和推理/执行开销单独记录。
+
+## 关键 Figure 与表格：只链接原图
+
+1. [Fig.1：实机复杂操纵和非抓取行为](https://arxiv.org/html/2611.09892v1)。注意搜索遮挡物、推动物体以便抓取、临场标定等例子属于展示性实例，不能替代完整 benchmark 统计。
+2. [Fig.2：RoboLab-120 / CaP-Gym 四种模拟评价](https://arxiv.org/html/2611.09892v1)。核对 instruction wording 和 zero-shot/few-shot 标记，关注与 pi0.5 比较的场景差异。
+3. [Tab.1 与 Tab.S1：真实机器人成功率、耗时、error recovery 消融](https://arxiv.org/html/2611.09892v1)。**这是阅读中最应优先对照的表格**；104/108 与 94/108 的差值来自 harness-level 功能。
+4. [Fig.4：AMP1+ 经验与持久化记忆](https://arxiv.org/html/2611.09892v1)。区分同任务反复试验、跨任务单遍学习以及 memory bank 的作用。
+5. [Fig.5：模型大小、感知与动作封装消融](https://arxiv.org/html/2611.09892v1)。注意模型能力与工具选择的交互，而不是以更多工具为唯一正确方向。
+
+## Authors report 与 AI interpretation 分开
+
+### Authors report
+
+- 有代码执行与直接控制接口的 AMP1，能够在多个操作任务基准中取得很高零样本成功率。
+- 当模型更强时，某些高层自动抓取/放置辅助例程反而可能降低表现。
+- 持久化 notes 和 Python code 是一种不更新模型参数、却能提高后续成功率的学习渠道。
+- 单纯把图像替换为文本描述会明显损害特定实验设置的操作成功率。
+
+### AI interpretation
+
+这篇把 “VLA vs Generalist Agent” 从纯模型架构之争，变成了**闭环系统设计**之争。Agent 的可重规划、动态观察、记录经验等能力值得迁移到安全测评的 harness；但高度自主不意味着天然更安全，因为同一自由度也可能导致更多真实世界试探与碰撞。
+
+### Caveats
+
+- 不同策略看到的传感器、工具和恢复权限不完全一致；已对部分因素做消融，但结果不能全归因于模型类别。
+- 官方模拟器采用特定环境和评分器；论文也记录了 verifier 与人类任务语义不一致的案例。
+- 某些模拟评测暂停物理世界以等待推理；实际运行时钟与机器人控制时钟不能混为一谈。
+- 实机 12 个任务 / 108 回合的覆盖面有限，不代表所有长尾环境/高风险工作场所。
+- 本文没有完成完整的物理安全事件或危险指令基准评价；**成功率不是安全率**。
+
+## Historical Reading Chain
+
+1. **FIRST — [Liang et al. (2022), Code as Policies](https://arxiv.org/abs/2209.07753)**：通用 LLM 写策略代码，最直接衔接 AMP1 的 Python/SDK 思想。
+2. [Ahn et al. (2022), Do As I Can, Not As I Say（SayCan）](https://arxiv.org/abs/2204.01691)：对比语言模型选择预先训练的有限技能这一较早路线。
+3. [Brohan et al. (2023), RT-2](https://arxiv.org/abs/2307.15818)：典型将模型对齐成 action token 预测器的 VLA 路线。
+4. [Chi et al. (2023), Diffusion Policy](https://arxiv.org/abs/2303.04137)：理解学习式连续 action policy 与 Agent 编写程序的对照。
+
+## Reading Checklist
+
+- [ ] 用一句话区分直接生成 action 的 VLA 与直接操作 SDK 的 AMP。
+- [ ] 复述 RoboLab-120 85.6% 的模型、分母、zero-shot 定义。
+- [ ] 解释实机 104/108 和禁用错误恢复后 94/108 的对照意义。
+- [ ] 比较执行时间与模型推理时间，讨论安全闭环的实时性。
+- [ ] 通过 Fig.4 说明持续外部记忆与模型权重微调的不同。
+- [ ] 检查 Table 1 与 Fig.5 的 baseline 传感器与动作空间假设。
+- [ ] 为自己的 VLA 安全评测列出需要单独统计的危险动作和失败事件。
+- [ ] 阅读 FIRST Code as Policies，寻找长期 Agent 操作机器人中的协议演化。
+
+## 来源与归属
+
+- [Chen et al., On Agentic Manipulation Policies, arXiv:2611.09892v1（2026-11-06 首发）](https://arxiv.org/html/2611.09892v1)。
+- [论文首页与作者资源](https://arxiv.org/abs/2611.09892)。
+- **所有原论文 Figure 和表格均通过原始文件链接阅读**，未复制、裁剪、标注、改色、组合或依记忆重绘任何实验/基准数值曲线。文字流程是 **AI-generated explanatory diagram**（概念图，不是实验数据）。
