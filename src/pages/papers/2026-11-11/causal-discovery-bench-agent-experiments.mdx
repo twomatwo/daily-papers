@@ -1,0 +1,153 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Causal Discovery Bench: Can LLMs Autonomously Conduct Effective Experiments?"
+authors: "Zhuoyang Liu, Ning Peng, Ming Shen, Zijun Gao"
+date: "2026-11-11"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2611.09934"
+notionUrl: "https://app.notion.com/p/4147dd5567ec81a58a90cb3c731f7b65"
+summary: "13 个 LLM 的科学发现评测表明，关键难点常不在解释已有证据，而在自主设计可识别直接因果效应的受控实验。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**作者在一个基于 structural causal model（SCM）的交互式沙箱中，让 **13 个模型**在 **3,802 次实验 episodes** 里主动购买观测或干预，找出结果变量 $Y$ 的**直接因果父节点**。作者对其中 **3,779 个带评分的 agent 轨迹**归因时，将 **94.5% 的相关错误**归入证据采集/实验设计环节，而不是拿到证据后的最终推断。提供充分的受控实验数据时，parent set 恢复从非受控的 9/15 改为 14/15。
+
+**AI interpretation：**衡量科学 Agent 时，仅给它正确数据并问能否分析，和要求它自己决定**测什么、控制什么、何时停止**，是截然不同的测试。高分 Agent 不一定有可靠的因果证据链。
+
+**Caveats：**所有任务在合成、已知真值的 linear SCM 环境进行，并不是 3,802 次真实机器人/物理实验；数据生成器的部分前提（例如可观察候选变量、线性结构）降低了真实实验复杂性。94.5% 说的是作者归因框架下的错误分布，不是「94.5% 的所有实验失败」。
+
+**核查范围：**核对 arXiv v1 的全部主要章节、SCM 方法与 Fig.1–5 图注、budget / toolkit / protocol 消融及作者限制；未运行 benchmark、独立统计或复现模型对比。arXiv 页面标注首次提交 **2026-10-13**，本轮于 11-11 作为近期补漏发现，不当作 11-10 首发。
+
+<ReadingPath
+  quick={[
+    "看 Fig.1：Agent 能购买什么？目标究竟是 direct parent 而非所有相关变量。",
+    "读 Fig.3：相同终局准确率为何可能来自完全不同的实验行为？",
+    "看 Fig.4–5：更大预算、工具箱、每次购买上限分别改善什么？"
+  ]}
+  standard={[
+    "先区分 correlation、total effect、direct effect 和 DAG 的 parent/ancestor。",
+    "读 Section 3：有限样本 linear SCM、intervention 与 ground-truth scoring。",
+    "读 Fig.2：不同 DAG 拓扑怎样诱发混杂或 mediation 相关难点。",
+    "读 Section 5.1：固定证据与自主实验两种消融为什么能定位瓶颈。",
+    "读 Fig.3–5：工具、预算、固定 per-call cap、五步操作程序的结果与限制。"
+  ]}
+  deep={[
+    "手绘 X → M → Y 以及 X → Y 的两种结构，推导哪个对比测 direct effect。",
+    "推导 intervention do(X_j=x) 时为什么不固定其他变量会包含所有下游路径。",
+    "查 Section 3 中 agent 可观测数据及 40 个过程指标的定义。",
+    "比较 14/15 与 9/15 的 evidence-only arm，检查哪些变化被控制。",
+    "分析为何 125 倍预算可以增加探索覆盖却没有自动产生变量控制。",
+    "检查 Fig.5 中每次实验样本量上限与统计功效的关系。",
+    "设计一项 AutoLab benchmark：分别给 Agent 现成数据和仪器选择权，评估结论及其因果证据链。"
+  ]}
+/>
+
+## Big Picture：从「读懂证据」到「制造可识别的证据」
+
+传统知识问答：模型拿到观察数据、表格、论文，输出解释。真实科学探索：模型必须主动决策哪个实验值得做、是否有混杂、比较是否充分、是否需要重复实验。
+
+**AI-generated explanatory diagram（概念流程，非原论文 Figure）：**
+
+> 自主科学 Agent → 识别未解决的候选因果边
+>
+> → 决定 treatment 和 control 条件 → 购买 observations/interventions
+>
+> → 检查统计功效与样本量 → 更新 DAG / effect estimates
+>
+> → 收集冲突证据或结束并报告
+>
+> 错误可能发生在每个中间步骤；仅评判最终答案无法定位这些差异。
+
+### 一个必须区别的例子：direct parent 与 ancestor
+
+假设一个实验环境真实机制是：
+
+$$
+X \longrightarrow M \longrightarrow Y .
+$$
+
+若只对 $X$ 施加干预而让 $M$ 自由变化，$Y$ 可能会显著改变；此时我们测得 $X$ 对 $Y$ 的 **total effect**。但在这张图中，$X$ 不是 $Y$ 的直接父节点。
+
+只有把其他关键候选变量固定在对照条件，才能判断是否存在独立的**直接作用**。这解释了为什么大量实验样本并不能替代合适的控制实验。
+
+## 核心机制 / 公式：从线性 SCM 到可识别的对比
+
+论文在每个有限个体 $n$ 上使用含噪声和个体差异的结构方程：
+
+$$
+V_j^n :=
+\sum_{i\in \mathrm{Pa}(j)}
+\bigl(a_{ij}+\delta_{ij}^n\bigr)V_i^n
++\varepsilon_j^n.
+$$
+
+这里 $\mathrm{Pa}(j)$ 是 DAG 中对该变量有**直接有向边**的父节点集合。作者将名称做匿名化，避免模型凭领域知识猜 DAG。
+
+在理想的、其他变量固定的线性对照实验中，我们用
+
+$$
+\Delta_j(z)=
+\mathbb E[Y\mid do(X_j=x+1),do(\mathbf X_{-j}=z)]
+-
+\mathbb E[Y\mid do(X_j=x),do(\mathbf X_{-j}=z)]
+$$
+
+估计 $X_j$ 的直接贡献（在作者的线性结构模型中对应目标变量方程中的系数）。如果不控制其他候选变量，则可能把**中介路径**造成的总变化误读为直接边。
+
+**重要边界：**上式是用论文的假设帮助理解的理想控制对比；真实材料中并非所有变量可同时固定，潜在混杂、干预副作用与非线性相互作用会使因果辨识更难。
+
+## 读图指南：看原论文 Figure，不复制受版权限制的图片
+
+1. [Fig.1：交互式因果发现沙箱与评测流程](https://arxiv.org/html/2611.09934v1)。先确认 Agent 实际能选择哪些观测和干预、哪些动作收费，以及目标是恢复哪个 DAG 子结构。
+2. [Fig.2：不同 DAG 拓扑](https://arxiv.org/html/2611.09934v1)。观察 mediation 存在时，为什么做了许多未控制实验依然可能认错 parent；没有 mediation 时更多表现为未覆盖候选。
+3. [Fig.3：六个模型的实验行为与结果](https://arxiv.org/html/2611.09934v1)。看候选覆盖、controlled experiment 数和 exact parent recovery 三个指标的差异，不只对比最终百分比。
+4. [Fig.4：预算与工具箱消融](https://arxiv.org/html/2611.09934v1)。同一组任务中增加预算 125 倍虽能使最终 accuracy 从 17% 到 78%，却没有同等增加真正的受控对照；四个基本统计工具可能比一组复杂因果工具更实用。
+5. [Fig.5：限制单次购买样本数的效果](https://arxiv.org/html/2611.09934v1)。在论文的具体实验设定中，per-call cap 让 exact recovery 从 21% 到 64%，发生受控实验的 episode 比例从 22% 到 73%。重点研究为什么 interface 约束能改变操作行为。
+
+## 最关键的消融：失败究竟发生在哪里？
+
+**Authors report：**
+
+- 13 个模型、5 家供应商、3,802 个 episodes，报告 40 项指标、7 个类别。
+- 在一个受控的 15-sandbox 对比中，直接提供合适的 controlled evidence：正确恢复 parent set **14/15**；同样数量的 untreated/uncontrolled treatment evidence：**9/15**。
+- 在作者针对已评分轨迹的归因中，错误更常见于没有测试候选、没有固定其他变量、实验样本不具统计功效。
+- 单纯增加预算和更复杂分析工具不能自动修复变量控制；明确五步程序或限制 per-call 购买规模可以诱导更多对照实验，但不一定抹平全部能力差距。
+
+**AI interpretation：**
+
+这对实验 AutoLab、VLA benchmark 和长期 Agent 很直接：要分别评价 **是否正确操作设备、测量是否有效、实验是否能区分竞争机制、最终结论是否被证据支持**。如果只给终局 accuracy，可能会奖励错误原因碰巧得出正确答案的系统。
+
+**Caveats：**
+
+- 合成 SCM 和随机变量名不等同于复杂真实物理领域知识，更没有现实仪器风险、漂移或隐含不可控自由度。
+- 某些实验 15-sandbox 的样本量较小，不能过度推广百分点。
+- 作者的错误归因依赖其预定义的操作指标与阈值，不是独立于评测框架的普适因果归属。
+- 作者报告的统计工具效果取决于被测模型、预算与接口，不能作为对所有 Agent 的保证。
+- 论文首次公开日期为 2026-10-13，并非本轮新 arXiv 提交。
+
+## Historical Reading Chain
+
+1. **FIRST — [Gandhi et al. (2025), BoxingGym: Benchmarking Progress in Automated Experimental Design and Model Discovery](https://arxiv.org/abs/2501.01540)**：同属主动实验设计 Agent benchmark，帮助比较目标与实验沙箱。
+2. [Pearl (2009), Causality: Models, Reasoning, and Inference](https://bayes.cs.ucla.edu/BOOK-2K/)：结构方程、干预运算符和因果直接效应的基本理论。
+3. [ScienceAgentBench (2024)](https://arxiv.org/abs/2410.05080)：在更一般科学任务上评价 Agent 的独立对照。
+
+## Reading Checklist
+
+- [ ] 用一个含中介变量的 DAG 区分 total effect 与 direct effect。
+- [ ] 能用 linear SCM 写出父节点集合与干预实验的作用。
+- [ ] 解释为什么给 Agent 已收集的受控证据与让它自己收集是两种不同能力。
+- [ ] 核对 3,802 总 episodes 与 3,779 scored trajectories 的统计口径。
+- [ ] 核对 14/15 与 9/15 的对照试验差别。
+- [ ] 理解增加预算如何改变 coverage，却可能留下变量控制问题。
+- [ ] 在 Fig.4–5 分辨 toolbox、call cap、prompted procedure 的作用机制。
+- [ ] 提出一项能把「正确结论」与「正确实验设计」分开评分的实验 Agent benchmark。
+
+## Sources and Attribution
+
+- [Liu et al., arXiv:2611.09934v1（首次公开 2026-10-13）](https://arxiv.org/abs/2611.09934)。
+- [Author HTML manuscript, Fig.1–5 and methods](https://arxiv.org/html/2611.09934v1)；[Authors' benchmark code](https://github.com/mshen1019/causal-discovery-bench)。
+- 所有原论文 Figures 只提供原文链接；**没有复制、裁剪、组合、改色或根据记忆重绘定量曲线**。文本概念流程独立标注 **AI-generated explanatory diagram**。
