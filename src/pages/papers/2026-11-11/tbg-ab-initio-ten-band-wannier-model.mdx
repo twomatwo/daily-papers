@@ -1,0 +1,175 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "On the nature of low-energy electronic states in twisted bilayer graphene: a first-principles study"
+authors: "Albert Zhu, Daniel Bennett, Daniel T. Larson, Mohammed M. Al Ezzi, Efstratios Manousakis, Efthimios Kaxiras"
+date: "2026-11-11"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.10253"
+notionUrl: "https://app.notion.com/p/4147dd5567ec81a6ac2ec2899178d645"
+summary: "从原子弛豫的第一性原理波函数提取双谷十带 Wannier 模型，计算多体研究真正需要的局域库仑和交换参数。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**作者对接近 magic angle 的 twisted bilayer graphene (TBG) 做大尺度、原子弛豫后的 DFT 计算。对电中性点附近的 20 个低能带进行 Wannierization 后，得到近似解耦的两个 valley 模型，每个 valley 有 **10 个轨道**；进一步计算这些轨道之间的 Coulomb 和 exchange 积分，以及其扭角依赖。
+
+**AI interpretation：**相较于仅拟合能带形状，这篇把原子级波函数和 moiré 级局域轨道连接起来，使多体 Hamiltonian 的交互作用项拥有可追溯的微观来源。尤其值得学的是为什么保留足够的 remote bands，有利于避免只用 flat bands 时的 Wannier/topology 难题。
+
+**Caveats：**文中 DFT 方法得到的 magic angle 约 0.96°，不是任何设备都适用的普适常数；实际屏蔽介电参数并未做完整第一性原理求解，作者仍把它视为外部参数。这篇得到的是单粒子模型与相互作用矩阵元，**不是**已算出实验中的超导/绝缘多体基态。
+
+**核查范围：**arXiv v1 的 Introduction、Methods、Results、Discussion、Eq.(1)–(6) 与 Fig.1–5 图注，以及作者对 symmetrization 的分析；未独立重算 DFT 或 Appendix 的所有数值。
+
+<ReadingPath
+  quick={[
+    "看 Fig.1：作者怎样定义 DFT 中的 magic range，为什么 magic angle 不止一个单值？",
+    "看 Fig.2–3：20 个带怎样成为两个 valley 的 10-band 基底？",
+    "看 Fig.5：为什么 U 和 J 的空间衰减规律不同？"
+  ]}
+  standard={[
+    "从 Bistritzer–MacDonald 连续模型复习 flat-band、valley 和 AA/AB/BA stacking。",
+    "读 Methods Eq.(1)–(2)：Wannier spread 如何优化，为什么需要选定多带子空间？",
+    "读 Fig.2–3：每个 valley 的 3 个 AA、3 个 DW、4 个 AB/BA 轨道。",
+    "读 Eq.(5)–(6) 与 Fig.5：Coulomb direct integral 和 exchange integral 的波函数结构。",
+    "对照 Discussion：如何理解 basis symmetrization 与近似保 valley？"
+  ]}
+  deep={[
+    "推导 Wannier 轨道从 Bloch 轨道的 Fourier/gauge 变换。",
+    "比较只选 isolated flat bands 与纳入 remote bands 的局域化障碍。",
+    "查 Fig.1：DFT functional、原子重构如何改变 magic angle 和带宽。",
+    "以两条轨道写出 direct U 与 exchange J 的四波函数积分，解释其距离依赖。",
+    "检查 epsilon 在 Eq.(5)–(6) 中作为常数引入，为何它不是完整 ab initio screening。",
+    "查看 Appendix symmetrization 与 10-band model 的 hopping 结构。",
+    "比较 FIRST 的连续模型与本篇原子级起点各自擅长回答的问题。"
+  ]}
+/>
+
+## Big Picture：从第一性原理到可计算的多体模型
+
+在 twisted bilayer graphene 中，平带能量只有若干 meV 至几十 meV，却涉及成千上万原子。DFT 可以提供细致的 Bloch states；但直接把全部原子轨道送入 ED、DMRG 或 Hartree–Fock 往往过于昂贵。关键是压缩 **同时保留能谱、轨道几何与相互作用矩阵元**。
+
+**AI-generated explanatory diagram（仅概念流程，非原论文 Figure）**
+
+> Relaxed atomic TBG geometry → DFT Bloch eigenstates（原子级信息）
+>
+> → 选择电中性点附近的 20 个低能带 → Wannier90 局域化（选择波函数 gauge）
+>
+> → 两个近乎 valley-decoupled 的 10×10 blocks
+>
+> → 每 valley 的 AA / domain-wall / AB–BA 轨道
+>
+> → hopping 与 Coulomb U / exchange J → 未来的 many-body Hamiltonian
+
+图中的箭头仅说明论文方法，不是基于实验数据重绘的曲线。
+
+## 关键机制一：Wannier 变换究竟保留了什么？
+
+局域轨道由选定子空间内的 Bloch 波函数线性组合构造（论文 Eq.(2)）：
+
+$$
+w_{n,\mathbf R}(\mathbf r)=
+\frac{1}{N_k}
+\sum_{\mathbf k}e^{-i\mathbf k\cdot\mathbf R}
+\sum_m U_{mn}^{(\mathbf k)}\psi_{m,\mathbf k}(\mathbf r).
+$$
+
+这里矩阵 $U^{(\mathbf k)}$ 代表在目标能带子空间内选择局域轨道的 gauge。局域化时最小化轨道空间扩展度：
+
+$$
+\Omega=\sum_n\left(
+\langle r^2\rangle_n-
+|\langle\mathbf r\rangle_n|^2
+\right).
+$$
+
+**关键思想：**同样的目标能带，可以存在不同的轨道 gauge；它们对应的 hopping 和 interaction matrix 的具体表示也会变化。与仅拟合本征能量相比，从真实 Bloch states 建立 Wannier basis 让多体模型的投影更受约束。
+
+该论文选取 20 个目标带，最终近似分成两个各有 10 个轨道的 valley blocks。每个 valley 的局域轨道可分为：
+
+- AA stacking 附近 **3** 个；
+- domain wall（DW）附近 **3** 个；
+- AB 和 BA 区域各 **2** 个，共 **4** 个。
+
+这是 Fig.2–3 最重要的阅读线索。之所以不简单只选最靠近零能的两条平带，还涉及 TBG 低能带 Wannier obstruction / fragile topology：放宽成多带基底可更好实现局域描述。
+
+## 关键机制二：为什么 U 与 J 不一样？
+
+论文 Eq.(5) 的 direct Coulomb integral 是两团**概率密度**之间的库仑作用：
+
+$$
+U_{nm}(\mathbf R)=
+\frac{e^2}{4\pi\epsilon_0}
+\iint
+\frac{|w_{n0}(\mathbf r)|^2|w_{m\mathbf R}(\mathbf r')|^2}
+{\epsilon|\mathbf r-\mathbf r'|}
+\,d\mathbf r\,d\mathbf r'.
+$$
+
+而 Eq.(6) 的 exchange integral 含有交叉的轨道振幅：
+
+$$
+J_{nm}(\mathbf R)=
+\frac{e^2}{4\pi\epsilon_0}
+\iint
+\frac{w_{n0}^{*}(\mathbf r)w_{m\mathbf R}^{*}(\mathbf r')
+w_{m\mathbf R}(\mathbf r)w_{n0}(\mathbf r')}
+{\epsilon|\mathbf r-\mathbf r'|}
+\,d\mathbf r\,d\mathbf r'.
+$$
+
+**物理直觉：**direct U 可以在两组局域电荷相隔较远时继续以长程形式作用；exchange J 更依赖轨道重叠，所以随距离更快衰减。论文 Fig.5 报告远距离的 direct U 近似 $1/r$，exchange 则出现快得多、近指数式的衰减。
+
+作者把 dielectric screening 近似为常数 $\epsilon$，参考此前研究讨论 $\epsilon$ 大约 4–12 的情形，并提供 $\epsilon U$ 与 $\epsilon J$ 用于比较。**因此不能把 U 的绝对值视为已针对任意栅极/封装器件预测。**
+
+## Fig.1–5：原论文 Figure 应怎样读？
+
+1. [Fig.1 — DFT 的 Fermi velocity、bandwidth 与 remote-band gap](https://arxiv.org/html/2611.10253v1)：三个指标在约 0.93–0.96° 附近最有利；作者按 band isolation 和 30 meV 带宽阈值定义约 0.84–1.05° 的 magic range。阈值本身是一种模型分析约定。
+2. [Fig.2 — Wannierization、轨道中心和两个 10-band blocks](https://arxiv.org/html/2611.10253v1)：看 Fig.2(a) 的 20-band 选择、(b) 轨道中心、(d/e) valley blocks 与原始 DFT 能带吻合。block 非对角耦合小于 1 meV，但不是严格零。
+3. [Fig.3 — 十个 Wannier orbital 的位置和空间概率密度](https://arxiv.org/html/2611.10253v1)：分辨 atomic scale 与 moiré-scale 图示，理解轨道不等于某一个碳原子。
+4. [Fig.4 — orbital spread 随扭角变化](https://arxiv.org/html/2611.10253v1)：观察不同类别轨道的半径变化，检查哪些轨道随扭角减小更易扩展。
+5. [Fig.5 — direct Coulomb 与 exchange 的角度/距离依赖](https://arxiv.org/html/2611.10253v1)：重点对比 onsite 和 nearest-neighbor 的数量级，以及 J 为什么比 U 对空间重叠更敏感。请阅读原图而非把文字比例当成新的测量曲线。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- 可在接近 magic angle 的大超胞中计算原子弛豫后的 DFT Bloch states，并将选定 20 个带局域化。
+- 获得近似 valley-resolved 十带 TB 表示，识别 AA、DW、AB/BA 三类轨道及其扭角演化。
+- 计算这些基底中的 hopping、direct Coulomb 与 exchange 积分；多轨道建模可衔接相关态计算。
+
+### AI interpretation
+
+做 moiré 多体研究时，**不应只用带宽或一条拟合的 band dispersion 比较两套模型**；更应关注 form factor、波函数的空间重叠和投影后的 interaction matrix。若下一步研究 twisted TMD，可把本文与 MoireKP 方法对照，分别理解自动构模、对称性约束与波函数保持。
+
+### Caveats
+
+- 不同 DFT exchange-correlation functional 和层间相互作用处理将改变 magic-angle 数值；与经典连续模型的约 1.05° 不应直接当作实验矛盾。
+- 部分 valley 耦合只是很小，不是由此证明任何情况下严格守恒。
+- 实验电介质、栅极与远带屏蔽没有被完整计算；$\epsilon$ 是简化参数。
+- ten-band 模型没有直接解决相互作用基态、超导配对或实验无序问题。
+- orbital basis 的 symmetrization 和有限波矢网格引入模型选择与近似。
+
+## Historical Reading Chain
+
+1. **FIRST — [Bistritzer & MacDonald (2011), Moiré bands in twisted double-layer graphene](https://doi.org/10.1073/pnas.1108174108)**：先掌握连续模型与 magic-angle 平带的物理逻辑，才看得懂 DFT 结果为何有意义。
+2. [Marzari & Vanderbilt (1997), Maximally localized generalized Wannier functions for composite energy bands](https://doi.org/10.1103/PhysRevB.56.12847)：Wannier spread 最小化以及多能带 gauge 的数学基础。
+3. [Koshino et al. (2018), Maximally localized Wannier orbitals and the extended Hubbard model for twisted bilayer graphene](https://arxiv.org/abs/1805.06819)：与当前论文最直接的多轨道交互作用模型对照。
+
+## Reading Checklist
+
+- [ ] 区分「magic angle 的单个参数」和作者按阈值定义的「magic range」。
+- [ ] 能写出 Wannier 的 Bloch-to-localized 变换以及最小 spread 原理。
+- [ ] 能在 Fig.2–3 找出一个 valley 中的 3+3+4 个轨道。
+- [ ] 能解释为什么需要 20-band 子空间，而不只孤立两条 flat bands。
+- [ ] 能分别写出 direct U 和 exchange J 的波函数积分。
+- [ ] 能指出 Fig.5 中 U/J 的距离依赖来自哪些不同波函数性质。
+- [ ] 不把 $\epsilon$ 的简化处理误当成完整的第一性原理 screening。
+- [ ] 阅读 FIRST Bistritzer–MacDonald，比较连续模型与原子级 DFT 的输入和局限。
+
+## Sources and Attribution
+
+- [Zhu et al., arXiv:2611.10253v1（首次公开 2026-11-06）](https://arxiv.org/abs/2611.10253)。
+- [Original author manuscript with Fig.1–5 and Methods](https://arxiv.org/html/2611.10253v1)。
+- 所有原论文 Figures 仅链接到论文原文；**未复制、裁剪、标注、改色或组合原图，未根据记忆重绘任何定量数据/曲线**。上述文本概念箭头单独标注为 **AI-generated explanatory diagram**。
