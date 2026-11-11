@@ -1,0 +1,164 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Goldstone-Mediated Chiral Superconductivity in Self-Doped Electron Crystals"
+authors: "Shuchen Zhang, Zhihuan Dong, Zhaoyu Han, Shubhayu Chatterjee"
+date: "2026-11-12"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.12946"
+notionUrl: "https://app.notion.com/p/4157dd5567ec8132b8d3e294079ec8b9"
+summary: "电子晶体自身的 Goldstone 声子可把排斥相互作用转化为有效配对通道，从而在理论模型中产生手性拓扑超导。"
+readingTime: "25–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**在菱方石墨烯关联电子晶体附近，电子晶体与一个小的 itinerant Fermi pocket 可以共存（self-doped crystal，SDC）。作者通过 self-consistent Hartree–Fock 与集体模计算，研究晶体平移 Goldstone modes（不是离子晶格声子）如何耦合移动载流子，再求解 Eliashberg 配对方程。他们在两个理论模型中得到有效 Coulomb overscreening、手性配对与奇数 BdG Chern number，并预测 Majorana edge mode。
+
+**AI interpretation：**最有价值的物理思想是「同一组电子部分结晶、部分流动」。结晶电子的软形变成为移动电子的低能配对媒介，从而建立全电子起源的 retarded attraction，与普通依赖离子振动的 BCS 机制形成鲜明对照。
+
+**Caveats：**这是一项理论计算，**未实验证明自掺杂电子晶体诱发了拓扑超导或观测到 Majorana**。rhombohedral graphene 部分在计算时使用 inversion-symmetrized Fermi surface；如果真实的极化 valley 内费米面强烈破坏反演，作者的线性化 Eliashberg 方程可能不产生该配对解。不要把模型估计的临界温度理解为实验测得的 Tc。
+
+**实际核查：**阅读 arXiv v1 HTML 主文所有主要小节、Fig.1–3 图注、配对拓扑 Eq.(3)–(4) 及补充材料目录；未独立重算 Hartree–Fock、TDHF 或 Eliashberg 数值结果。
+
+<ReadingPath
+  quick={[
+    "看 Fig.1：电子晶体为什么能自己生成一个很小的 Fermi pocket？",
+    "看 Fig.2(a,c–e)：软 Goldstone 模与配对强度、Tc 的关系；只将曲线理解为作者模型结果。",
+    "读 Rhombohedral graphene 小节：为何这里的配对实际上是有限质心动量的拓扑 PDW？"
+  ]}
+  standard={[
+    "先区分离子 phonon 与电子晶体平移 Goldstone phonon。",
+    "读 Pairing: how and why? 与 λ-jellium model，明确 SDC 的必要相区。",
+    "看 Fig.2(a–e)：声子频率、McMillan 参数和 Tc 的参数依赖；注意插值色图只覆盖数值取样。",
+    "读 Vibration mediated electronic interactions 与 Superconductivity，理解 retarded effective interaction 和 pairing eigenvalue。",
+    "读 Eq.(3)–(4) 与 Fig.3：配对绕转、母带 Chern 数和拓扑量如何关联。",
+    "最后检查 inversion symmetry、Migdal 参数和实际器件外推的限制。"
+  ]}
+  deep={[
+    "先读 Feng et al. 2026，推导为何带反转附近的母晶体会通过自掺杂避开连续拓扑转变。",
+    "沿 Supplemental SII–SIV，复现 HF 稳定态 → TDHF 集体模 → 动量密度耦合顶角的形式推导。",
+    "识别有效作用 V_C、Fock 相关项与 Goldstone-mediated V_G；检查频率依赖及过屏蔽出现的条件。",
+    "从奇宇称配对与 Eliashberg 线性方程推导优选 chiral channel 的判据。",
+    "用论文选定的 Bloch gauge 检验 L_pair 和 C_BdG 关系，避免随意把相位绕转解释为规范不变数。",
+    "分析 Fig.3 中 valley 极化后有限动量配对为什么破坏微观晶格平移，却可以近似保留电子晶体尺度周期。",
+    "把实验提议的非线性 I–V 双阈值与 depairing、depinning 过程区分开，并列出无序造成的替代解释。"
+  ]}
+/>
+
+## Big Picture：电子既形成晶体，又提供超导载流子
+
+一般的超导故事是：费米面附近的电子借助**离子晶格**的滞后形变克服 Coulomb 排斥。这里则让参与相互作用的电子自身形成有序晶体：晶体的低能平移涨落可作为「电子起源的 phonon」，并影响自掺杂形成的小费米口袋。
+
+**AI-generated explanatory diagram（仅教学概念图，非原论文 Figure、非数据绘图）：**
+
+> Trivial Wigner crystal / topological anomalous-Hall crystal 竞争
+>
+> → 避免直接带反转：self-doped electron crystal（电子晶体 + 小费米口袋）
+>
+> → 电子晶体的低频 Goldstone displacement
+>
+> → itinerant carrier 与晶体形变耦合 + dynamical screening
+>
+> → 在合适频率区间 overscreen 原始 Coulomb repulsion
+>
+> → odd-parity chiral Cooper pairing → 模型中的拓扑 BdG 态
+
+这里的箭头表示论文提出的理论因果链，而不是证明整个过程已经在实验中发生。
+
+## 核心机制一：什么叫「电子晶体的 phonon」？
+
+Wigner-like crystal 由于电子密度自发破坏连续平移对称性，允许低能形变。平移 Goldstone modes 是电子密度波的集体位移；这不是化学晶格中离子振动。自掺杂后，一部分自由度形成 itinerant carriers，同时晶体仍可存在。较慢的晶体形变产生与移动载流子之间有时间记忆的有效相互作用。
+
+作者在 λ-jellium 中以双栅屏蔽的 Coulomb 势为起点（论文 Eq.(2)）：
+
+$$
+V(q)=\frac{e^2}{2\epsilon}
+\frac{\tanh(|q|d_g)}{|q|}.
+$$
+
+参数 $d_g$ 表示栅极距离，$\epsilon$ 是介电参数。改变它们会改变母态、自掺杂相区和低能集体模，因此「有 Goldstone phonon」不自动意味着「所有参数下都有超导」。
+
+在补充材料中，配对的频率依赖相互作用被分解为原始 Coulomb、Fock 和集体模贡献。最简概念表达为：
+
+$$
+V_{\mathrm{pair}}(i\nu;k,k')
+=
+V_C+V_F+V_G(i\nu;k,k').
+$$
+
+关键是 $V_G$ 的频率依赖：在有利参数下，低频集体模允许延迟性吸引超过直接排斥。这里的 $V_G$ 是电子晶体涨落产生的有效作用，而非电子直接变成吸引电荷。
+
+## 核心机制二：如何从配对绕转到 Majorana？
+
+对单个自旋极化、valley 极化的口袋，费米子交换统计要求适当的奇宇称 pairing channel。论文把围绕费米口袋的配对序参量相位绕转记为 $W$，并定义旋转对称下的配对角动量：
+
+$$
+L_{\mathrm{pair}}\equiv 2L_\gamma+W
+\pmod{n}.
+$$
+
+这里 $L_\gamma$ 是母晶体能带在小口袋处的旋转表征。这个区分重要：**配对绕转 W 的具体定义依赖 Bloch gauge**，不能脱离作者的约定直接拿来代表全局拓扑不变量。
+
+在论文规定的相关规范下，BdG Chern number 满足：
+
+$$
+C_{\mathrm{BdG}}=2C+W.
+$$
+
+作者发现 λ-jellium 的手性解具有 $L_{\mathrm{pair}}=1$、$C_{\mathrm{BdG}}=1$，与单条未配对的 chiral Majorana edge mode 的理论预期一致。这是数值/拓扑建模结果，尚非边界模实验。
+
+在 rhombohedral graphene 的单个 valley 内，Cooper pairs 可携带**有限质心动量**。因此作者称该态为具有微观平移破缺的 *topological pair-density wave*，并非简单零动量均匀 BCS 配对。
+
+## 原论文 Fig.1–3 阅读指引（仅链接原图）
+
+1. [Fig.1：两类母晶体与后代超导的 schematic phase diagrams](https://arxiv.org/html/2611.12946v1)：图中叉号标示 Dirac crossing，并不自身代表真实相变；重点区分 parent-state 变化与出现自掺杂口袋的窗口。示意图不等于完整实验相图。
+2. [Fig.2(a)：纵向与横向 Goldstone 声子谱](https://arxiv.org/html/2611.12946v1)：比较自掺杂晶体与母晶体的声子模式；纵向低动量色散受 screening 改变更多，横向受影响较小。
+3. [Fig.2(b–e)：耦合 McMillan 参数、软模尺度与超导 Tc](https://arxiv.org/html/2611.12946v1)：先看 (c) 与 (d) 的参数区域，再看 (e)；作者的色图由离散白点数值插值得到，不应把每个像素当成独立计算点。
+4. [Fig.3：菱方石墨烯小费米口袋的手性配对示意](https://arxiv.org/html/2611.12946v1)：观察在微观 graphene Brillouin zone 中有限动量配对的画法，以及 inset 中配对相位绕转。图中选择的是指定电位移场与载流子密度，不代表任何器件的通用状态。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- 依据已有自掺杂电子晶体相区，计算相关平移 Goldstone 集体模与移动电荷的有效耦合。
+- 在 λ-jellium 和简化 rhombohedral pentalayer graphene 中找到电子起源软模过屏蔽的理论参数区域，并得到 chiral odd-parity superconducting solutions。
+- λ-jellium 代表性模型参数换算的最高 Tc 约 94 mK；这是特定假设下的模型估计，不是实验温度。
+- 拓扑分析得到奇数 BdG Chern number；作者提出 de-pairing 与 crystal de-pinning 可能产生不同非线性 I–V 特征。
+
+### AI interpretation
+
+**与其把「电子排斥」和「配对有效吸引」对立，不如从被积分掉的集体自由度理解两者。** 局域排斥仍存在，但时滞与涨落能改变低能有效作用的符号及角动量结构。与近期 twisted MoTe₂ 的 repulsion-driven pairing 可作机制比较：两者都涉及排斥起点，但具体配对媒介不同。
+
+### Caveats
+
+- Hartree–Fock、TDHF、Eliashberg 是一套特定近似，未包含所有实验无序、非平衡驱动与涨落。
+- 强烈 inversion-asymmetric Fermi pocket 下，论文同样的线性配对方程**可能没有超导解**；不能忽略这一反例。
+- 特定拓扑公式与旋转表征、Bloch gauge 的约定有关。
+- 两种理论模型的一致不等于在实验上已经证明存在此配对通道或 Majorana。
+- I–V 双特征只是作者建议的诊断；depinning 与 depairing 还可能被器件无序、接触和钉扎效应影响。
+
+## Historical Reading Chain
+
+1. **FIRST — [Feng et al. (2026), Self-doped Crystal from Preempted Band-inversion Transitions](https://arxiv.org/abs/2604.09820)**：本文最直接的母态理论前作；先弄清为什么电荷有序与小费米海能够共存。
+2. [Bonsall & Maradudin (1977), Some static and dynamical properties of a two-dimensional Wigner crystal](https://doi.org/10.1103/PhysRevB.15.1959)：二维电子晶体低能声子及长波动力学的经典来源。
+3. [Kohn & Luttinger (1965), New Mechanism for Superconductivity](https://doi.org/10.1103/PhysRevLett.15.524)：对比纯排斥起点产生非常规配对的历史机制。
+4. [Read & Green (2000), Paired states of fermions in two dimensions](https://doi.org/10.1103/PhysRevB.61.10267)：理解奇宇称、拓扑配对与 Majorana 的联系。
+
+## Reading Checklist
+
+- [ ] 可以清楚解释电子起源 Goldstone phonon 与普通离子 phonon 有什么不同。
+- [ ] 能描述 self-doped crystal 的晶体组分和 itinerant 组分。
+- [ ] 在 Fig.2 找到 screening 如何影响纵向 phonon 色散。
+- [ ] 能说明配对有效相互作用为何必须具有频率依赖。
+- [ ] 分清 pairing winding、$L_{\mathrm{pair}}$ 和 $C_{\mathrm{BdG}}$。
+- [ ] 在 Fig.3 解释 rhombohedral graphene 里的有限动量配对。
+- [ ] 说出 inversion-symmetrized Fermi surface 的理论限制。
+- [ ] 阅读 FIRST 自掺杂晶体前作并指出本文新增哪条配对机制。
+
+## Sources and Attribution
+
+- [Zhang et al., arXiv:2611.12946v1（首次公开 2026-11-06）](https://arxiv.org/abs/2611.12946)。
+- [作者 HTML 正文及 Fig.1–3、Supporting Sections](https://arxiv.org/html/2611.12946v1)。
+- 本 guide **没有复制、裁剪、组合、重新着色或标注原论文 Figure**，全部 Figure 只提供带归属的原文链接；**没有根据记忆重绘定量曲线**。独立文字概念图明确标注 **AI-generated explanatory diagram**。
