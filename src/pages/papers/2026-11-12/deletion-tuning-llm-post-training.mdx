@@ -1,0 +1,189 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "The Surprising Effectiveness of Deleting Weights in LLM Post-Training"
+authors: "Jack Lu, Zhenbang Yang, Mike Lasby, Tejas Pote, Yani Ioannou, Mengye Ren"
+date: "2026-11-12"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.10866"
+notionUrl: "https://app.notion.com/p/4147dd5567ec8161aedcf71ae9737503"
+summary: "学习将少于 0.05% 的预训练权重删除，而不写入新权值，也可能在特定 LLM 后训练基准上接近全参微调。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**论文提出 Deletion Tuning：冻结 pretrained LLM 的原始权重，只在 Transformer MLP 的 gate projection 上训练二值掩码。部署后将选中位置的权值设为零，不写入新的非零权值。在作者的 SFT、GRPO/RLVR 和 on-policy self-distillation 设置中，删除**少于全部模型参数的 0.05%**，在多个较大 backbone 的基准上得到接近 full fine-tuning（FFT）的任务表现，并且较少损失原先能力。
+
+**AI interpretation：**更新参数的表达能力不只看连续参数数量。一个「删除哪些预训练连接」的离散组合选择，也可以在巨大的 pretrained network 中选出新的信息流路径。该结果很适合和 LoRA 的低秩更新、随机稀疏微调以及模型剪枝形成对照。
+
+**Caveats：**这**不是零训练成本**：在训练阶段仍要给目标 gate matrix 设置连续 mask logits 并优化它们，只是部署时保存稀疏的删除位置。小模型不总能匹配 FFT；表格是作者特定任务、预算和超参数下的结果，而不是所有后训练都能无损替换。论文的 update-geometry 指标是相关性诊断，并非已证明唯一机制。
+
+**核查范围：**核对 arXiv v1 Section 3–6、Fig.1–3、Table 1–6、Wanda prior 消融和部分附录说明；未复现训练或独立评估这些报告指标。论文 2026-11-07 首次公开，2026-11-11 曾在论文库速览，本次升级精读而不是新入库。
+
+<ReadingPath
+  quick={[
+    "看 Fig.1：到底是改写参数，还是学习保留/删除开关？",
+    "读 Table 2：同样的 GRPO 比较，Deletion Tuning 与 FFT 的精度和 adapter 大小如何对照？",
+    "看 Fig.2：原任务遗忘与新任务成绩并不是同一个指标。"
+  ]}
+  standard={[
+    "回顾 FFT、LoRA 和不经训练的 Wanda pruning 的差别。",
+    "读 Section 4、Eq.(5)–(8)：训练 soft-mask 的方式及推理 hard-mask 的部署语义。",
+    "读 Fig.1 + Table 1–2：比较 0.5B 到 30B 的不同模型规模，注意小模型并非都匹配。",
+    "读 Table 4：仅使用 Wanda 先验剪枝，与真正训练 deletion mask 的区别。",
+    "看 Fig.2：GRPO 期间相对于 base policy 的 forward KL 和 prior-task accuracy。",
+    "看 Fig.3：stable rank、spectrum drift 与 principal-weight overlap。",
+    "最后读 SFT/SDFT 的 Table 5–6，并检查训练成本、部署压缩与泛化边界。"
+  ]}
+  deep={[
+    "从 SwiGLU 结构写出 gate/up/down 三个 projection 为什么存在乘性耦合。",
+    "亲自推导 soft mask 的 logits 梯度，以及提高 sharpness 时 sigmoid 逼近二值选择的过程。",
+    "研究 soft mask 与 hard mask 在 rollout 时如何使用，分析训练/推理差异。",
+    "计算同一组实验中 adapter 大小和 FFT 完整权重 checkpoint 大小的比例，分清 on-disk 与 peak GPU memory。",
+    "比较 Table 4 的 random/Wanda 学前验与训练后 mask，避免把初始化本身当成 learning。",
+    "推导 stable rank，并对比 LoRA 的 rank 上界与无需低秩约束的删除位置。",
+    "以 OOD 数据或长期任务 retention 重设计实验，检验低 forward KL 是否真的解释遗忘差异。",
+    "研究 SFT、GRPO、SDFT 三种 loss 的数据分布及其对所需更新结构的影响。"
+  ]}
+/>
+
+## Big Picture：微调一定要把权重改成新值吗？
+
+传统 full fine-tuning 允许每个权重从 $W_0$ 移动到新值。LoRA 在权重上叠加低秩增量。Deletion Tuning 提供第三种可能：**只选择哪些已有连接继续存在，哪些归零**。这将优化变量从任意连续矩阵改成一个训练后离散的 mask。
+
+**AI-generated explanatory diagram（仅学习示意，非原论文 Figure、非量化结果）：**
+
+> Frozen pretrained gate projection W
+>
+> → 给各目标权重配置可训练 logits G（W 本身冻结）
+>
+> → 训练：W 与 sigmoid(αG) 按位置相乘；α 随训练提高
+>
+> → 生成 rollouts / 评估：采用二值化 mask
+>
+> → 部署：只保存选择的删除位置，未删除处使用原有 W
+>
+> → 对比新任务 accuracy、原任务 retention 和实际资源开销
+
+此流程图不包含作者的原图、定量曲线或未经核实的数据点。
+
+## 核心机制：Soft Mask → Hard Mask
+
+对预训练 gate projection $W$ 与训练时的 logits $G$，作者的 Eq.(5) 写为：
+
+$$
+\widetilde W(t)=W\odot\sigma(\alpha(t)G),
+\qquad
+\sigma(z)=\frac{1}{1+e^{-z}}.
+$$
+
+其中 $\odot$ 是逐元素乘法，$\alpha(t)$ 是逐步提高的温度/锐化参数；当 $\alpha$ 很大时，除了接近零的 logits，soft gate 会接近 0 或 1。
+
+在评估和部署时，作者使用 Eq.(7)：
+
+$$
+\widehat W=W\odot\mathbf 1[G>0].
+$$
+
+这说明**部署后仍保留的每个权值都等于预训练时的原值；只有被删去的值被设为零**。学习到的是删除集合，不是新的浮点增量。训练期的 logits 需要连续梯度，不能因为最终 adapter 很小就宣称训练态无需额外显存。
+
+作者使用 Wanda score 初始化 mask 倾向：
+
+$$
+s_{ij}=|W_{ij}|\;\|X_j\|_2.
+$$
+
+这只是先验。**Table 4 的关键控制实验**表明，一次性 Wanda 不经过 post-training，性能大致停在 base 附近；经过 Deletion Tuning 的 learned mask 才产生明显的新任务增益。
+
+## 从实验表格看：不能只记住「删除 0.05%」
+
+[原文 Table 2（作者报告的 GRPO best-checkpoint 数据）](https://arxiv.org/html/2611.10866v1)：
+
+| 模型/测试 | FFT 准确率 | Deletion Tuning 准确率 | FFT checkpoint | Deletion adapter |
+| --- | ---: | ---: | ---: | ---: |
+| Llama 8B / GSM8K | 83.24% | 83.55% | 30,633 MB | 8.4 MB |
+| Qwen 7B / SimpleRL-Zoo | 51.89% | 52.32% | 29,051 MB | 6.9 MB |
+| Qwen3 30B-A3B / SimpleRL-Zoo | 58.43% | 58.54% | 116,471 MB | 29.6 MB |
+
+以上数字只代表作者的**指定模型与 benchmark**，不是独立复算；不要把 checkpoint 磁盘大小当作训练 GPU 显存、单次 update 开销或推理时加速倍数。
+
+为什么可以有非低秩的变化？因为
+
+$$
+\Delta W=\widehat W-W
+$$
+
+可能散布于矩阵的许多独立位置，**即使非零更新位置非常少，也不自动满足 LoRA 的严格秩限制**。因此作者进一步研究更新矩阵的几何，而不只统计删去的权重数。
+
+## 核心机制二：Stable Rank 与训练几何
+
+本文使用的 stable rank（不是通常按 Shannon entropy 定义的 effective rank）为：
+
+$$
+\mathrm{srank}(\Delta W)=
+\frac{\|\Delta W\|_F^2}{\|\Delta W\|_2^2}
+=
+\frac{\sum_i\sigma_i^2}{\sigma_{\max}^2}.
+$$
+
+当更新能量都集中在一个奇异方向，stable rank 接近 1；当许多奇异方向具有相近能量时，该值较大。这有助于比较 LoRA、FFT、随机稀疏更新与删除集合形成的更新几何。
+
+Fig.3 还使用 spectrum drift（权重奇异谱的偏移）和 principal-weight overlap（被修改位置与预训练主导权重的重叠）对照。作者报告 Deletion Tuning 在这三项指标中整体更接近 FFT。
+
+**重要解释边界：**三个统计量与效果的一致性是机制线索，尚不能证明它们是成功的充分必要原因；不同优化器或任务下可能得到不同几何结构。
+
+## 关键 Figure / Table 阅读指引（不复制原图）
+
+1. [Fig.1：冻结 W、训练 G、最后二值删除](https://arxiv.org/html/2611.10866v1)：明确训练中连续松弛与部署时硬阈值的差别。理解为什么模型未被更新为新的非零权值。
+2. [Table 1–2：多尺度 GRPO 新任务指标与存储开销](https://arxiv.org/html/2611.10866v1)：核对 best validation checkpoint、不同模型规模以及小模型无法完全追平的情形。
+3. [Table 4：Wanda 无训练先验消融](https://arxiv.org/html/2611.10866v1)：同一个初始化理论，先验与 learned mask 的贡献不同；这是排除「光剪枝就够了」解释的关键对照。
+4. [Fig.2：Forward KL 与六项 prior-task 测试的遗忘变化](https://arxiv.org/html/2611.10866v1)：低 forward KL 与 retention 改善相联系，但它们不是直接证明所有能力保持的普适因果。
+5. [Fig.3：Stable rank、Spectrum drift、Principal-weight overlap](https://arxiv.org/html/2611.10866v1)：关注与 FFT/LoRA/MTH 的相对位置以及作者所用的归一化定义；不要把图上的离散计算值推成新的规律。
+6. [Table 5–6：SFT 和 on-policy SDFT](https://arxiv.org/html/2611.10866v1)：观察哪种模型规模与任务实现 comparable，哪些小模型仍存在差距；理解不能只看 GRPO 结论。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- 用训练后的 mask 选择删除极少数全部模型权重，部分较大的模型/任务上能匹配 FFT 后训练精度。
+- 多项 GRPO 遗忘对照中，Deletion Tuning 的 prior-task accuracy 更贴近 base，forward KL 更低。
+- 在作者测试的更新几何指标上，Deletion Tuning 的谱特征比 LoRA 和随机稀疏优化更加接近 FFT。
+- SFT 与 SDFT 的指定规模和任务也观察到可竞争结果，不限于 RLVR。
+
+### AI interpretation
+
+**「更新自由度多」和「高效调整 pretrained representation」不是同一个概念。** 稀疏删除虽然操作受限，但可组合地选择预训练网络中既有的多条通路；在有强预训练先验的后训练任务中，这可能足以形成显著能力变化。适合与近期 LoRA 的 singular-subspace dynamics 共同阅读。
+
+### Caveats
+
+- 训练要维护 mask logits 和优化器状态；**极小部署 adapter 不保证极小训练显存**。
+- 作者选择 gate projection，不表示任意 attention、embedding 或全部层均可同等替换。
+- 数据与测量包含模型/任务特定的最佳 checkpoint、不同 loss 与不同微调条件；不能认定删除 universally dominates FFT。
+- Forward KL 只是遗忘/行为漂移的一个指标；也应看多任务评测和分布外行为。
+- 该论文报告 NeurIPS 2026，本文只根据作者的 arXiv 标注陈述，不将其当作已单独核实的会议目录条目。
+- 本 guide 不提供作者数据的独立复现，也不保证研究结果经第三方验证。
+
+## Historical Reading Chain
+
+1. **FIRST — [Hu et al. (2021), LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)**：最容易形成比较的参数高效后训练范式，理解低秩增量与离散连接删除的差异。
+2. [Frankle & Carbin (2018), The Lottery Ticket Hypothesis](https://arxiv.org/abs/1803.03635)：神经网络中稀疏子网络可能保留高效学习能力的经典起点。
+3. [Sun et al. (2023), A Simple and Effective Pruning Approach for Large Language Models — Wanda](https://arxiv.org/abs/2306.11695)：本论文实际使用的初始化线索，也是最重要的无训练剪枝对照。
+
+## Reading Checklist
+
+- [ ] 能区别 W 冻结、G 训练、soft mask 与部署 hard mask。
+- [ ] 解释为什么直接 Wanda prune 与 learned Deletion Tuning 不是同一种实验。
+- [ ] 分别算清「删掉权重占比」「adapter 磁盘大小」「训练显存」「训练时间」四类指标。
+- [ ] 对 Table 2 的三个模型明确实验设置，不直接外推到其他 LLM。
+- [ ] 对 Fig.2 区分 prior-task forgetting 与新任务 acquisition。
+- [ ] 能推导 stable rank，并解释其为何不等于 LoRA 名义 rank。
+- [ ] 知道更新谱接近 FFT 不代表已证明唯一机制。
+- [ ] 阅读 FIRST LoRA 前作，比较两类 adapter 的可表达性与真实部署代价。
+
+## Sources and Attribution
+
+- [Lu et al., arXiv:2611.10866v1（首次公开 2026-11-07）](https://arxiv.org/abs/2611.10866)。
+- [原作者 HTML 论文、Fig.1–3、Table 1–6 与附录](https://arxiv.org/html/2611.10866v1)。
+- 图表数字均明确来源于作者的表格，**没有自行重绘原始定量曲线或补造数据**；所有原论文 Figures 只提供链接，没有未经授权复制、裁剪、标注、改色或拼接。文字概念图单独标注 **AI-generated explanatory diagram**。
