@@ -1,0 +1,164 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Are Causal Neuron Circuits Unique and Transferable?"
+authors: "Ömer Tekin Yavuz"
+date: "2026-11-13"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.13885"
+notionUrl: "https://app.notion.com/p/4157dd5567ec815eb5e6e6c333132c31"
+summary: "神经元组干预能改变答案，不代表组内每个神经元都必要、机制唯一，也不代表它可以跨问题迁移。"
+readingTime: "25–35 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**研究逐一枚举每组 **12 个 MLP 神经元的 4096 个子集**，检验对特定输入的 zero ablation 与 activation patching 是否真的需要完整群组、是否存在互不重叠的替代子集，以及效果能否跨问题迁移。首都问答实验中，zero ablation 导致约 **27%** 的正确答案 margin 下降，但将神经元替换为其他问题的激活值几乎无影响；多跳关系实验中，部分子集足以将输出推向中间“桥接实体”。同一关系链改写后的效应通常可迁移，但换一个关系链效果明显减弱。
+
+**AI interpretation：**这是研究 Mechanistic Interpretability 证据等级的有益例子：**能够改变行为，不等于定位了唯一、完整、内容特异的功能电路**。只有加入替代子集、随机对照、激活值内容对照与跨任务测试，才能更接近区分必要性、充分性、冗余和泛化。
+
+**Caveats：**分析限定于 Qwen3-0.6B、Qwen3-1.7B、Llama-3.2-1B、Gemma-3-1B 的受控任务与选定 12 神经元；**没有恢复完整的神经元连接图**。有些答案翻转基于 logit margin 判据，并非每个子集均完成开放式生成复核。
+
+**核查范围：**arXiv:2611.13885 的 12 页 v1 正文、实验方法、Fig.1–4、表述限制及样例；没有独立跑模型或复现所有 4096 子集的结果。此前于 2026-11-12 速览，今日升级精读，复用同一 Notion 记录。
+
+<ReadingPath
+  quick={[
+    "读 Abstract 和 Fig.1：为什么 zero ablation 与 activation replacement 不是等价操作？",
+    "读 Fig.3：12 神经元组中，多少个足以改变答案？",
+    "看 Limitations：作者明确没有重建完整 connectivity，也未证明跨任务普适。"
+  ]}
+  standard={[
+    "先掌握 residual stream、MLP neuron 与 logit margin 的基本概念。",
+    "读 Qwen3-0.6B 首都二选一任务：零消融与其他问题激活替换差别。",
+    "理解 two-hop question：为什么正确答案与桥接实体是不同的可比较输出？",
+    "研究 Fig.2 的 answer/bridge logit 变化和随机神经元控制。",
+    "研究 Fig.3 的不同神经元数量子集分布与最小翻转子集。",
+    "读不相交的 minimal subsets 与同链改写、异链测试的对照。",
+    "审视 margin threshold 与完整答案生成的差异。"
+  ]}
+  deep={[
+    "将所有 neuron subset 看作一个 finite set-function，定义 intervention effect。",
+    "推导群组效应为何可能分解为单元主效应与交互效应。",
+    "自己编写 12 bit mask 的穷举思路，并估计必要的 forward pass 数量。",
+    "比较 zero ablation、mean ablation、cross-question resampling 与 first-hop patching 的操作性假设。",
+    "验证 minimal effective subset、disjoint alternative 与必要性的逻辑差别。",
+    "检查模型置信度与替代子集数量之间的探索性关联为何不应直接作因果解释。",
+    "设计一个跨新实体/新模板/新关系链的数据外检验，避免同链重写带来的过拟合。"
+  ]}
+/>
+
+## Big Picture：一次局部干预到底证明什么？
+
+一种常见的机制可解释性说法是：选出一组看起来重要的神经元，删除它们之后模型答案变了，于是称其为某种“推理电路”。本论文指出这里缺了三个追问：
+
+- 是否所有选定神经元都不可或缺，还是只有少数神经元起作用？
+- 是否只有这一组能产生效果，还是存在完全不同的替代组？
+- 效果是否只发生在同一个具体问题，还是跨语义任务也成立？
+
+**AI-generated explanatory diagram（纯概念图，非原论文 Figure，也非定量数据）**
+
+> Attribution 选出 12 个神经元 → 对完整组做干预 → 答案发生变化
+>
+> → 枚举 4096 个子集，定位最小有效子集
+>
+> → 寻找互不重叠的替代子集，检验所谓“唯一性”
+>
+> → 同一问题改写 / 换实体 / 换关系链，检验迁移性
+>
+> → 分别报告：可影响输出、必要性、替代性、跨任务泛化
+
+## 核心机制：把 intervention 当作集合函数
+
+令 \(S\) 为从候选 12 个神经元中选择出来的子集，考虑一个简单的输出分数：
+
+$$
+m(S) = \mathrm{logit}_{\mathrm{answer}}(S) -
+\mathrm{logit}_{\mathrm{bridge}}(S).
+$$
+
+此处分数及其符号只是为了说明实验原理。论文在具体实验中以目标输出与对照输出的 logit margins、其相对变化或是否越过阈值作为判据，依任务设置而定。
+
+可以用：
+
+$$
+\Delta(S) = m(S)-m(\varnothing)
+$$
+
+作为**概念性的子集干预效应**。如果改变某些子集的激活，就会把 margin 推向桥接实体，那么它们在这个输入上有因果影响。对于两神经元的非加性效应，可进一步比较：
+
+$$
+I(i,j)=\Delta(\{i,j\})-\Delta(\{i\})-\Delta(\{j\}).
+$$
+
+这些形式帮助解释为什么“某一个完整组有效”不意味着每个成员都有效。**最小有效子集**也不是某个神经元在全模型中的绝对必要性：选择空间只覆盖这 12 个被事先筛出的 neuron，而非网络所有可能替代路径。
+
+### 为什么要比较 zero ablation 和 activation resampling？
+
+在 Qwen3-0.6B 的首都题中，移除整组 12 个神经元令 margin 下降约 **27%**。但把它们的激活换为来自其他问题的值，效果近乎为零，提示这些激活在不同题上相当稳定、**可能更像通用 bias/基础偏移而不是问题特异的信息内容**。
+
+因此，零消融造成的行为变化并不能独立证明这些神经元存放了“哪一个国家对应哪一个首都”的内容。需要与跨问题替换、随机神经元对照等一起解释。
+
+### 多跳关系链如何使用 bridge entity？
+
+两步关系问题需要从一个实体先推导中间实体，再从中间实体推出最终答案。作者通过将“第一跳问题”相关激活 patch 到目标问题，观察输出是否向 bridge entity 偏移。
+
+在受测试的链中，作者报告完整组选定 patch 在以下比例的链中使 greedy 答案以 bridge 开头：
+
+- Qwen3-1.7B：**9/11**；
+- Llama-3.2-1B：**9/11**；
+- Gemma-3-1B：**8/10**。
+
+这是对作者指定任务和模型的报告，不应解读为这些模型通常有九成概率输出“错误的桥接答案”。
+
+## 图表阅读：为什么 Fig.3–4 特别重要？
+
+1. [原论文 Fig.1：zero ablation 与跨问题 resampling](https://arxiv.org/pdf/2611.13885)：比较两种干预的差异，检查随机控制组和输出 margin 的定义；重点是“有因果作用”不等于“携带问题特异内容”。
+2. [原论文 Fig.2：bridge/answer logit 的转移](https://arxiv.org/pdf/2611.13885)：留意实验对桥接实体的操作定义，不能把某一个 token 的 logit 直接当作完整解释。
+3. [原论文 Fig.3：所有大小 k 的子集效应分布](https://arxiv.org/pdf/2611.13885)：横轴是加入干预的神经元个数，观察 median、strongest subset、5–95% band 的区别。最小发生目标翻转的子集，在所示 Lion King 链中 Qwen 为 **4**，Llama 为 **8**，Gemma 为 **7**（依作者图内的指定判据）；不是全模型只需要 4/8/7 个神经元。
+4. [原论文 Fig.4：替代子集与模型置信度](https://arxiv.org/pdf/2611.13885)：作者观察某些输入存在多个互不相交的有效子集，置信度较低时更常出现，但这是带有选择与样本量限制的探索性相关，不是已证实的普适因果规律。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- 逐一干预 12 个候选 MLP neurons 的 4096 个组合，对其必要子集与潜在替代组合进行有限空间的穷举。
+- 首都问题的 zero ablation 与跨问题 activation resampling 给出不同结果；后者不能支持所选 neurons 承载了问题特异信息。
+- 多跳链能通过 patching 使最终答案偏向 bridge entity；大组往往并非最小必要，部分任务存在不重叠的替代子集。
+- 同一关系链的改写比另一条关系链更容易迁移。
+
+### AI interpretation
+
+一个好的机制可解释性实验应像一套科学因果检验：**至少有随机对照、替代输入对照、局部消融的必要性测试，以及跨输入的外部有效性测试**。研究“如何让模型选择某个答案”时，还要把“神经元影响输出 margin”与“神经元编码了这个答案的语义知识”分开。
+
+### Caveats
+
+- 实验中预先选定神经元并对其子集穷举；没有搜索整个网络所有替代电路。
+- logit threshold 翻转与完整文本生成改变并不总等价；作者已指出部分互不重叠子集只用 margin 标准验证。
+- 任务为少量事实检索/多跳链，不直接适用于开放式科学推理、工具调用或机器人动作。
+- 个别较弱置信度和替代性之间的观察仍是探索性分析。
+- 作者**明确不声称复原 neuron-to-neuron connectivity 或完整 circuit graph**。
+
+## Historical Reading Chain
+
+1. **FIRST — [Elhage et al. (2021), *A Mathematical Framework for Transformer Circuits*](https://transformer-circuits.pub/2021/framework/index.html)**：建立 residual stream 和“电路”的模型概念，帮助理解单个 neuron 与完整计算路径的差别。
+2. [Zhang & Nanda (2023), *Towards Best Practices of Activation Patching*](https://arxiv.org/abs/2309.16042)：activation resampling、腐化数据、logit metrics 与控制实验的重要方法学前作。
+3. [Arditi et al. (2024), *Refusal in Language Models Is Mediated by a Single Direction*](https://arxiv.org/abs/2406.11763)：比较 representation direction 与行为因果作用，并思考可迁移性与必要性。
+4. [Gao & Gao (2026), *A Circuit for In-Context Learning*](https://arxiv.org/abs/2611.05344)：与更复杂、分布式的 ICL 电路验证、完整性测试形成研究连续性。
+
+## Reading Checklist
+
+- [ ] 能解释 zero ablation 和跨问题激活替换为什么会得出不同结论。
+- [ ] 能计算 12 个二值干预选择的总数为 4096。
+- [ ] 区分 full-group causal effect、最小有效子集、必要性和替代性。
+- [ ] 能在 Fig.3 读懂 median / strongest / quantile band 三种统计量。
+- [ ] 明确「桥接实体的 logit 增加」不是完整推理过程恢复。
+- [ ] 解释为什么同链改写成功不能代表跨任务的电路可迁移性。
+- [ ] 不把作者的探索性置信度关联当成因果定律。
+- [ ] 读 FIRST Elhage 2021，对比本文“神经元效应”与“完整连通电路”的含义。
+
+## Sources and Attribution
+
+- [Yavuz, *Are Causal Neuron Circuits Unique and Transferable?*, arXiv:2611.13885v1（2026-11-10 首次公开）](https://arxiv.org/abs/2611.13885)。
+- [原始论文 PDF，含 Fig.1–4、实验设置和限制说明](https://arxiv.org/pdf/2611.13885)。
+- 没有复制、裁剪、修改或组合任何原论文 Figure，也没有根据记忆重画图中的任何定量曲线。示意箭头明确标记为 **AI-generated explanatory diagram**，仅用于解释实验逻辑。
