@@ -1,0 +1,158 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Optimizing Chern Bands for Moore-Read States: A Parent Hamiltonian Approach"
+authors: "Bishoy M. Kousa, Yung-Chun Chao, Jung-Jung Su, Allan H. MacDonald"
+date: "2026-11-14"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.17188"
+notionUrl: "https://app.notion.com/p/4177dd5567ec81718e63e238df1168c4"
+summary: "用三粒子谱而不只用单带平坦度，设计接近 Moore–Read parent Hamiltonian 的相互作用；在 Landau level 中改善数值拓扑证据，却没有在所考察 twisted MoTe2 参数区证实该态。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**作者把 Moore–Read 非阿贝尔态的三体 parent Hamiltonian 当作“谱学目标”，将物理上常见的**两体相互作用投影到三电子 Hilbert space**，构造一个可优化的谱距离。对于 Landau level，在其测试的参数及小尺寸 ED 中，优化后的两体相互作用比 n=1 Coulomb 具有更小的成本和更大的归一化多体能隙。但在 twisted MoTe2 Chern band 内，虽然有低成本参数点，**没有得到有说服力的 Moore–Read 序证据**。
+
+**AI interpretation：**这是一个关于 **inverse many-body Hamiltonian design** 的案例：先定义目标态“最容易出现”的小体系光谱结构，再反向优化较易操作的相互作用或能带。低阶簇谱可以帮助搜索，但无法替代多粒子态的拓扑诊断。
+
+**Caveats：**这些是理论与有限系统精确对角化结果，不是实验实现了非阿贝尔 anyons。低 cost 不是 Moore–Read 状态的充分条件；晶格 Chern band 失去连续旋转对称性，其谱比较存在额外假设。作者的 engineered two-body interaction 也未必对应容易在真实器件独立实现的旋钮。
+
+**核查范围：**arXiv:2611.17188v1 论文正文、Fig.1–4、Eq.(7)–(12)、相关 Supplemental Material 的三粒子基底/ED 讨论；未独立复现优化和 ED。
+
+<ReadingPath
+  quick={[
+    "先看 Fig.1：Moore–Read 三体 parent spectrum 究竟希望哪一个角动量通道最高。",
+    "看 Fig.2–3：优化相互作用降低 cost 后，有限尺寸 many-body spectrum 有何变化。",
+    "务必看 Fig.4 与 Discussion：在 twisted MoTe2 中，低 cost 尚不能证明 Moore–Read order。"
+  ]}
+  standard={[
+    "先区分 FQH/FCI、Abelian Laughlin 态与 non-Abelian Moore–Read 态。",
+    "阅读 Moore–Read parent Hamiltonian 的三体 L=3 penalty 直觉。",
+    "从两体 Haldane pseudopotentials v_m 理解为何投影到三粒子空间后得到 U_{L,i}。",
+    "读 Eq.(8)：cost 如何归一化、为何高 L 的能级变化应受抑制。",
+    "研究 Fig.1–2 的目标谱与实际优化谱，包括 0.0445 和 0.0751 的比较。",
+    "研究 Fig.3 的偶奇电子数、动量扇区与多体准简并模式。",
+    "最后读 Fig.4：晶格 Chern band 的中心动量依赖和有限尺寸失败诊断。"
+  ]}
+  deep={[
+    "先读 Moore & Read 1991 和 Haldane 1983，理解 Pfaffian 与 pseudopotential 的物理含义。",
+    "从三电子的相对角动量基底推导两体 projector P_m 的三粒子矩阵元。",
+    "将 v_m 映射为 U_{L,i}，检查哪些自由参数可以独立调节、哪些必须满足物理可实现性。",
+    "分析 Eq.(8) 的规范化和 w_L、L_max 选择对最优参数的影响。",
+    "对比 n=0,1,2 Landau levels 中 CFL、paired 与 CDW 的竞争。",
+    "研究 Chern band 内为何 relative L 不再是好量子数，且各 momentum K 处的 triplet splitting 会改变 cost。",
+    "检查 Fig.4 对应 5x4 与 4x4 torus 的动量 sector；设计比低 cost 更可靠的 non-Abelian 检测条件。",
+    "区分 Pfaffian/anti-Pfaffian、particle–hole 对称性和 Landau-level mixing 的作用。"
+  ]}
+/>
+
+## Big Picture：从“找平带”走向“找理想三体谱”
+
+以前的莫尔 FCI 设计经常优先考虑：小带宽、均匀 Berry curvature、合适量子几何和大库仑作用。这些条件重要，却没有直接规定某一种非阿贝尔相应当在多体谱中胜出。
+
+Moore–Read 态有一个特别明确的数学起点：它是专门构造的三体 parent Hamiltonian 的零能基态。现实电子通常受两体作用，而不是任意可调的三体作用，因此作者试图让**真实两体 Hamiltonian 在三电子空间中的谱尽量模仿理想三体目标**。
+
+**AI-generated explanatory diagram（概念示意，不是论文 Figure，不含定量曲线）**
+
+> 希望稳定的 Moore–Read / Pfaffian 非阿贝尔态
+>
+> → 写出其三体 parent Hamiltonian 与目标三电子能谱
+>
+> → 用两体相互作用 v_m 构建三电子投影谱 U_{L,i}
+>
+> → 最小化谱差距 cost（可使用材料参数/相互作用参数）
+>
+> → 用完整 many-body ED 检查真实拓扑准简并与动量模式
+>
+> → Landau level：证据改善；twisted MoTe2：目前仍未证实目标态
+
+## 机制一：为何 Moore–Read 对三体接触更敏感？
+
+Moore–Read Pfaffian wavefunction 具有成对结构。它的 parent Hamiltonian 对三个电子过度聚集的局域组态施加能量惩罚；与 Laughlin 两体零模情形不同，这里理想的非阿贝尔配对物理由**三粒子约束**定义。
+
+作者将三个电子的最低相关相对角动量通道标为 L=3。理想谱要求该通道与其他更高 L 通道之间有明显分离，而较高通道彼此尽量简并。
+
+需要注意：论文不是直接宣称物理器件具备一个可任意调的纯三体相互作用。它是在**三电子子空间分析两体相互作用**，借这个谱接近程度构造优化指标。
+
+## 机制二：谱学成本函数怎样写？
+
+作者主文 Eq.(8) 的表达式：
+
+$$
+\mathcal{L} =
+\frac{1}{\mathcal N}
+\sum_{L>3,i}^{L_{\max}} w_L
+\left(\frac{U_{L,i}-\bar U}{U_3-\bar U}\right)^2.
+$$
+
+- \(U_3\)：被隔开的目标低相对角动量通道的三电子能量；
+- \(U_{L,i}\)：其他三电子态的能量；
+- \(\bar U\)：更高通道的加权能量平均；
+- \(w_L\)：更重视较短程、较低相对角动量的权重；
+- \(\mathcal N\)：正规化，避免分项数量本身决定成本。
+
+**小 cost 的意思是三粒子谱更接近理想 target**，并不意味着拓扑序已被证明。
+
+作者在 n=1 Landau-level 模型中给出的示例为：优化作用的 \(\mathcal L=0.0445\)，原先 Coulomb 的 \(\mathcal L=0.0751\)。对应 Fig.3 的有限系统 ED，N=9 与 N=12 的谱中出现期望的偶奇效应及动量扇区模式，归一化能隙优于对照。
+
+## 机制三：Chern band 中为什么更困难？
+
+在 Landau level 中可以使用相对角动量 L 整理多体状态；一般晶格 Chern band 仅有离散平移/旋转对称性，L 不再严格守恒。作者因此将三粒子谱按晶格总动量 K 分组，并追踪近似对应的 triplets，定义推广成本 \(\mathcal L_C\)。
+
+这引入了一个危险：**被归类到同一类的三粒子能级可以因晶格和量子几何显著劈裂**。即使某个物理参数点的成本相对较低，也可能仍不够像 Moore–Read 的真正 parent spectrum。
+
+Fig.4 中扫描的 twisted MoTe2 低成本参数点对应一个 moiré continuum model。5x4 torus 虽然有低能六态组，但其动量扇区排布与预期不完全相符；4x4 系统同样没有出现预期的完整结构。作者在这里给出的是**负面而有信息量的结果**。
+
+## Key Figures：按顺序核查原始图
+
+1. [Fig.1：理想三体谱 vs 不同 Landau-level Coulomb 的三体谱](https://arxiv.org/html/2611.17188v1)。观察 L=3 与其他 L 的分离，以及为何第二 Landau level 更接近目标；不要将 inset 的 cost 当实验测量。
+2. [Fig.2：优化后的两体 pseudopotentials 和三电子谱](https://arxiv.org/html/2611.17188v1)。看优化目标如何同时影响相互作用比例和高 L 结构；0.0445 是作者模型的成本。
+3. [Fig.3：torus exact diagonalization，奇/偶电子数与动量扇区](https://arxiv.org/html/2611.17188v1)。观察 N=9 时两重、N=12 时六重低能准简并与激发隙；有限尺寸信号不能单独替代热力学极限。
+4. [Fig.4：twisted MoTe2 参数扫描与三粒子谱](https://arxiv.org/html/2611.17188v1)。先找成本最低的区域，再找哪些多体拓扑证据**没有**出现；这是避免过度解释最关键的一张图。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- 建立两体 pseudopotentials 与三电子能谱之间的解析/计算联系。
+- 定义接近理想 Moore–Read parent spectrum 的可优化成本函数，并把它推广到 Chern bands。
+- 在所研究的 Landau-level 模型中优化后得到更明显的 Moore–Read-like small-torus ED 证据。
+- 对 twisted MoTe2 的候选参数进行检查，未获得令人信服的 Moore–Read 拓扑序支持。
+
+### AI interpretation
+
+相对于只优化 Berry curvature uniformity 或 bandwidth，这提供了一个更直接针对**特定多体目标态**的筛选指标，适合用于未来的 moiré 材料设计或自动化参数扫描。尤其有学习价值的是：作者没有因为指标“看起来变好”就宣布物理相出现，而是用独立多体谱拒绝过强结论。
+
+### Caveats
+
+- 小尺寸 ED 的准简并与能隙有限，不能替代完整热力学外推、激发统计或实验测量。
+- \(\mathcal L_C\) 的谱分组与权重选择需要检验稳健性。
+- 有限物理旋钮未必可以实现任意最优相互作用形状。
+- 即使产生非阿贝尔候选信号，仍需进一步区分 Pfaffian 与 anti-Pfaffian 以及竞争相。
+- 当前 twisted MoTe2 的负面结果不等于排除其他扭角、屏蔽条件或更复杂相互作用模型。
+
+## Historical Reading Chain
+
+1. **FIRST — [Moore & Read (1991), *Nonabelions in the fractional quantum Hall effect*](https://doi.org/10.1016/0550-3213(91)90407-O)**。理解目标 Pfaffian 态、非阿贝尔统计和三体 parent Hamiltonian。
+2. [Haldane (1983), *Fractional Quantization of the Hall Effect*](https://doi.org/10.1103/PhysRevLett.51.605)。学习相对角动量、pseudopotentials 和球面有限体系。
+3. [Regnault & Bernevig (2011), *Fractional Chern Insulator*](https://doi.org/10.1103/PhysRevX.1.021014)。理解从 Landau level 到晶格 Chern band 后拓扑证据要怎样修改。
+
+## Reading Checklist
+
+- [ ] 知道 Moore–Read 与 Laughlin 的 parent Hamiltonian 在相互作用阶数上有什么不同。
+- [ ] 能解释两体作用如何产生三粒子空间中的不同能量 \(U_{L,i}\)。
+- [ ] 会描述 Eq.(8) 的各项，并知道小 cost 并非拓扑序的充分条件。
+- [ ] 理解 Fig.2 的 0.0445 与 0.0751 比较代表什么。
+- [ ] 能解释奇偶电子数对应的多体谱期望差别。
+- [ ] 在 Fig.4 找出 twisted MoTe2 测试失败的动量扇区证据。
+- [ ] 能列出至少两个晶格 Chern band 相比 Landau level 的限制。
+- [ ] 阅读 FIRST Moore & Read 1991，说明该 paper 解决了什么历史问题。
+
+## Sources and Attribution
+
+- [Kousa et al., *Optimizing Chern Bands for Moore-Read States: A Parent Hamiltonian Approach*, arXiv:2611.17188v1（2026-11-12）](https://arxiv.org/abs/2611.17188)。
+- [作者公开 HTML，包括主文 Fig.1–4、公式及补充材料](https://arxiv.org/html/2611.17188v1)。
+- 本 Guide 未复制、裁剪、重新着色或重新组合论文原图；所有原始 Figure 只提供论文页面链接。以上箭头结构是 **AI-generated explanatory diagram**，不复现任何原图中的定量数据。
