@@ -1,0 +1,164 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Rethinking RL Generalizes, SFT Memorizes: The Role of SFT Data"
+authors: "Yunlong Hou, Fengzhuo Zhang, Yuan Cheng, Jiachun Pan, Xingyao Li, Zhuoran Yang"
+date: "2026-11-14"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.14912"
+notionUrl: "https://app.notion.com/p/4177dd5567ec819ab792d43d5848ff1e"
+summary: "SFT 与 RL 的泛化差异不能脱离数据来源、rollout 数量与尾部解题方法覆盖：公平对齐数据预算后，SFT 在部分任务上能追平或超过 RL。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**在 Qwen2.5-7B 与 Qwen3-8B-Base 上，研究者用数学任务训练 SFT 与 GRPO，再评价不只数学的域外推理。只匹配训练题目（prompts）时，RL 每题使用约 8 条 sampled rollouts，SFT 往往只看一条正确示例，比较并不完全公平。通过改变数据生成者、混合比例、匹配正确 rollout 数和最终匹配总 rollout 数，SFT 泛化得到显著改善；一些实验中可以达到甚至超过 RL 的测试成绩。
+
+**AI interpretation：**论文并没有证明“SFT 普遍优于 RL”，而是揭示**优化算法与训练数据分布/计算量纠缠**，使很多已有“RL 擅长迁移、SFT 只会记忆”的直接比较难以解释。它是一篇后训练实验设计与公平归因的案例。
+
+**Caveats：**作者实验主要局限于 Qwen 模型、DAPO 数学训练及所选域外基准，模型生成轨迹并非外生独立数据。SFT 在总量匹配设置下**真的对包含错误最终答案的整段轨迹应用了监督损失**，不能误写成“只训练正确答案”。作者对长尾推理方法的标注依赖另一个 LLM；浅层 Transformer 的理论结论仅适用于受控简化设定。没有独立复现。
+
+**核查范围：**arXiv:2611.14912v1 主文 Sections 1–5、Fig.3、6、9、10 和 Appendix B/G 数据构造、错误 rollout 消融、理论假设；未启动模型训练。
+
+<ReadingPath
+  quick={[
+    "先看 Fig.3：相同 prompt 数量时，SFT 数据来源/混合比例如何影响域外表现。",
+    "看 Fig.6：从匹配题目数变为匹配正确和全部 rollouts 后，SFT/RL 的差距怎样改变。",
+    "读结论与 G.2：为何带错误最终答案的完整轨迹有时也能提供可学习的中间过程。"
+  ]}
+  standard={[
+    "阅读 Section 2：SFT 的 token cross-entropy 与 RL/GRPO 的学习信号如何不同。",
+    "在 Section 3.1 中区分 Qwen3-14B teacher 与 RL-tuned model 生成的 demonstrations。",
+    "读 Fig.3 和 Table 1，核对初始 70% RL-tuned + 30% teacher 的最优混合条件。",
+    "读 Section 3.2 的 prompt-matched、solvable-prompt、correct-rollout、total-rollout 四类匹配。",
+    "看 Fig.6：为什么一题 8 条 rollout 不等价于一题 1 条示范。",
+    "看扩容后 Fig.9：约 138k 条数据时，最优混合比变为 90%/10%，不能机械照搬 70%/30%。",
+    "读 Fig.10 的 solution-method long tail 与 Section G.2 中 incorrect rollout 的控制实验。",
+    "最后阅读简化 Transformer 理论，区分模型内的推导与真实大型模型的经验解释。"
+  ]}
+  deep={[
+    "比较 prompt count、token count、rollout count、gradient/FLOP budget 与 wall-clock 的不同匹配定义。",
+    "查阅 Appendix B.2–B.3，重建 SFT/GRPO 的训练批量与数据采样协议。",
+    "从 log-likelihood 学习目标推导为何长尾推理方式在有限 SFT 数据中较少被加权。",
+    "核查 G.2：整段错误轨迹也被 supervised；作者如何通过 Qwen3-32B 与人工抽样判断中间步骤。",
+    "从 Sec.4 的浅层 Transformer 简化输入模型出发，标记所有假设（orthonormal embedding、固定 query 模板等）。",
+    "设计去掉 teacher-data source 偏差的实验：使用相同采样策略、正确率、token budget、任务集和固定推理计算。",
+    "研究 Fig.13 的尾部方法在 MMLU-Pro 评测上的作用；不把 LLM 自动标注当作直接可观测的内部机制。",
+    "结合 DeepSeekMath/GRPO 与 DAPO，考虑把结论迁移到 RLHF 对齐、VLA 与 Agent 工具任务时的额外问题。"
+  ]}
+/>
+
+## Big Picture：训练算法的差异，还是见到的数据不同？
+
+一个常见的后训练实验是让同样基座做两个版本：SFT 看到一个 prompt 和一条正确解，RL 在同一 prompt 上生成多个答案、利用反馈再更新。之后 RL 的域外表现更好，容易被概括为“RL 学会泛化、SFT 只记答案”。
+
+但这个设置同时改变了三个维度：**训练目标、模型看到的完整 rollout 数量、训练数据中覆盖的解题路径分布**。仅仅匹配题目数量，不能排除后两个因素。
+
+**AI-generated explanatory diagram（概念流程图，不是原论文 Figure，不含复刻数据）**
+
+> 同一个 Qwen 基座 + 相同 DAPO 数学问题
+>
+> → 路线 1：GRPO，按题采样多条 rollout，用奖励更新 policy
+>
+> → 路线 2：SFT，从不同模型生成的 rollout 构造 teacher-forced 训练集
+>
+> → 先匹配 prompts，再匹配正确 rollouts，最后匹配全部 rollouts
+>
+> → 同时观察数学任务与域外通用推理
+>
+> → 分别归因：优化方式 / 数据多样性 / 轨迹预算 / 长尾方法覆盖
+
+## 核心机制一：为什么 prompt-matched 不是 data-matched？
+
+作者用 Qwen2.5-7B 为主实验，Qwen3-8B-Base 为附录扩展，训练题来自 DAPO。GRPO 的实验设定每个训练题生成 **8 条 rollouts**；初始 SFT 数据集则按每题筛选一条正确答案。
+
+从训练信号角度，SFT 的基本形式是对示范轨迹做 token-level negative log-likelihood：
+
+$$
+\mathcal{L}_{\mathrm{SFT}}=-\mathbb E_{(x,y)\sim D_{\mathrm{SFT}}}
+\sum_{t}\log\pi_\theta(y_t\mid x,y_{<t}).
+$$
+
+而 RL 更新策略时会依赖 sampled trajectories 及其 reward/advantage（论文用 GRPO）。即使只比较相同问题集合，RL 学习过程仍暴露于更丰富的正负样本与不同的中间过程。
+
+这一公式是**教学性 SFT 标准目标**，并非宣称它覆盖论文全部训练细节。
+
+## 核心机制二：匹配标准怎样改变结论？
+
+作者针对 Section 3.2 逐步测试不同数据量：
+
+| 比较条件 | SFT 约含 prompt–rollout pairs | 你应该检查什么 |
+|---|---:|---|
+| 每个 solvable prompt 一条正确 rollout | 10,000 | 比只匹配原始 prompt 数更聚焦于可解题 |
+| 按每题正确 rollout 数匹配 | 39,000 | SFT 泛化与 RL 的差距明显缩小 |
+| 按每题全部 rollout 数匹配 | 138,000 | 包含约 98,000 条错误最终答案轨迹，SFT 达到或超过某些 RL 测试结果 |
+
+**重要限定：**这不是证明这些错误轨迹本身一定优于正确轨迹。作者在 Appendix G.2 替换部分错误样本为新生成的独立正确轨迹后，得到相近性能；因此训练总量、多样性和中间过程可能共同发挥作用。
+
+作者对错误轨迹做的分析是：很多轨迹虽给出错误最终答案，**中间推理步骤仍可能部分正确**。但其标注来自其他 LLM，人工复核样本也有限。
+
+## 核心机制三：Data Source 与 Tail Methods
+
+在 Section 3.1 的相对较小 SFT 数据设置下，作者混合两类来源：RL-tuned 同基座模型生成的正确解，与 Qwen3-14B 生成的正确解。
+
+**Fig.3 / Table 1：**在这一设置下，70% RL-tuned + 30% Qwen3-14B 的混合获得最高平均表现。
+
+**Fig.9：**当训练规模扩到约 138k pairs，作者比较更接近的混合比例，90% RL-tuned + 10% Qwen3-14B 成为所测选择中最优。
+
+由此可以看到，**没有一个跨规模固定的“最优 teacher 比例”**。
+
+作者还使用 LLM 标注每条轨迹包含哪些 solution methods。Fig.10 描述方法使用频率的长尾分布：扩充数据后，原本极少出现的方法更容易被覆盖，而部分这些方法在通用推理测试中被模型使用。**长尾覆盖增加与泛化改善相容，但不是排除所有混杂因素后的充分因果证明。**
+
+## Key Figures：有意识地读对照而非只看最高分
+
+1. [Fig.3 / Table 1：不同 teacher/data-source mixing](https://arxiv.org/html/2611.14912v1)。看为什么数学与通用推理不能合并为一个“总成绩”，以及初始 70/30 结果的实验条件。
+2. [Fig.6：不同 rollout 匹配标准](https://arxiv.org/html/2611.14912v1)。这是全文最重要的控制实验；按同题 8x 与 1x rollout 的区别理解变化，不要只盯最高分。
+3. [Fig.9：大数据量下的混合比例](https://arxiv.org/html/2611.14912v1)。对比 Fig.3 的最优比例，避免把一个局部最优当普适规律。
+4. [Fig.10 与 Fig.13：长尾 solution methods 的覆盖/使用](https://arxiv.org/html/2611.14912v1)。分清“LLM 对轨迹方法的标签”与“模型内部独立发现机制”的概念。
+5. [Appendix G.2 / Table 10：错误 rollout 和新增正确 rollout 消融](https://arxiv.org/html/2611.14912v1)。特别注意作者确实对错误轨迹整段应用 SFT loss。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- SFT 在域外推理上的表现明显依赖模型生成数据的来源和混合比例。
+- 在作者测试的 Qwen、DAPO、数学训练/域外评测设置中，匹配正确 rollout 和总 rollout 数显著改善 SFT 泛化。
+- 扩大的数据集更容易覆盖少见的推理方法；作者提供 LLM 标注和受控实验支持其重要性。
+- 浅层 Transformer 的简化理论帮助解释为何有限数据会低估较稀有的有效策略。
+
+### AI interpretation
+
+论文价值在于改进研究方法：**“换了训练算法”不等于只换了算法。** 为判断 RL 自身有什么不可替代的好处，必须同时限定采样预算、数据质量、数据多样性和评测分布。这对于设计任何 GRPO/PPO/DPO 与 SFT 的研究对照都很重要。
+
+### Caveats
+
+- 不是“所有 SFT 都比 RL 好”；结论依赖具体基座、训练题、rollout 生成策略和评测。
+- 总 rollout 数接近并不严格意味着训练总 FLOPs、采样时延、token 数、生成器调用成本完全匹配。
+- 数据来源于训练后模型、teacher 和 rejection sampling，并非独立、无偏的真实推理策略样本。
+- 错误最终答案的整个轨迹被纳入监督，并不表示任意错误语料都无害。
+- LLM 生成的“方法类别”标签不等于可直接观察的计算电路；浅层理论也是受控假设结果。
+
+## Historical Reading Chain
+
+1. **FIRST — [DeepSeekMath (2024), *Pushing the Limits of Mathematical Reasoning in Open Language Models*](https://arxiv.org/abs/2402.03300)**。理解 GRPO 的组内相对奖励与 RL 数学推理设置。
+2. [Ouyang et al. (2022), *Training language models to follow instructions with human feedback*](https://arxiv.org/abs/2203.02155)。SFT 和 RLHF 阶段划分的经典来源。
+3. [Yu et al. (2025), *DAPO: An Open-Source LLM Reinforcement Learning System at Scale*](https://arxiv.org/abs/2503.14476)。了解本论文使用的数学任务训练来源和多 rollout 训练背景。
+
+## Reading Checklist
+
+- [ ] 能解释 prompt-matched 为什么不意味着训练模型看过相同数量的 trajectories。
+- [ ] 能区分“solvable prompt”“correct rollout”“total rollout”三种匹配标准。
+- [ ] 记住 10k、39k、138k 的数据规模是**不同构造方式**，不是三次独立随机抽样的泛化定律。
+- [ ] 能解释 Fig.3 的 70/30 和 Fig.9 的 90/10 为什么不矛盾。
+- [ ] 知道作者把错误答案轨迹也作为 SFT 的**完整监督文本**，并了解附录消融。
+- [ ] 区分方法长尾覆盖与单纯总 token 数、独立多样性之间的关系。
+- [ ] 能设计一个进一步对齐 compute budget、token budget 与采样分布的 SFT/RL 对照。
+- [ ] 阅读 FIRST DeepSeekMath，核对 GRPO 与标准 SFT 梯度的区别。
+
+## Sources and Attribution
+
+- [Hou et al., *Rethinking "RL Generalizes, SFT Memorizes": The Role of SFT Data*, arXiv:2611.14912v1（2026-11-11）](https://arxiv.org/abs/2611.14912)。
+- [公开 HTML 主文、图表和附录（包括 Section G.2）](https://arxiv.org/html/2611.14912v1)。
+- 本页面未复制原 Figure、PDF 截图或附录图像，也没有凭记忆复刻数据曲线。箭头示意为 **AI-generated explanatory diagram**，只帮助理解实验对照逻辑。
