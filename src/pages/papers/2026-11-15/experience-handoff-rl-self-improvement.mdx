@@ -1,0 +1,201 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Experience-Handoff Reinforcement Learning for Recursive Self-Improvement"
+authors: "Doyoung Kim, Byeongguk Jeon, Kailin Zhang, Sherry Yang"
+date: "2026-11-15"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.16409"
+notionUrl: "https://app.notion.com/p/4177dd5567ec81d4be55f965513806da"
+summary: "ACE-RL 不只训练 Agent 当前动作，而把反思和 playbook 编辑也变成可被下次真实任务回报评价的训练行为；收益与重试次数、任务类别和对照设置有关。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**ACE-RL 固定一个 task-local Agentic Context Engineering (ACE) harness，由同一开源模型扮演 **actor、reflector、curator** 三个角色：执行任务、从失败轨迹提炼 insight、更新下次尝试会读到的 playbook。与仅更新 actor 或只用统一的最终奖励不同，作者对各角色构造独立的 group-relative 奖励，并使用修改后 playbook 引发的 **下一次真实 rollout 的结果**评估经验质量。在 Mastermind、MBPP、AppWorld、MiniSWEBench 四个受控基准中，按作者报告的相同训练预算对照，ACE-RL 获得更好的 held-out 表现。
+
+**AI interpretation：**它将长期 Agent 的核心问题从“如何写更长的记忆”转成“如何**学习写真正对未来行为有用的记忆**”。关键创新不是增大模型，而是把经验交接这个动作放进可验证的训练闭环。它对科研 Agent 的实验失败日志、自动化操作手册与经验压缩都具有方法学启发。
+
+**Caveats：**这里的所谓 recursive self-improvement 主要是 **task-local playbook 的反复改写**，并非自动重写模型权重、实现无界智能增长，也未评测跨任务长期知识迁移。系统在新任务上重置 playbook，结果来自四类有限 benchmark 与任务验证器；部分提升具有统计误差，且未进行真实实验室设备安全测试。
+
+**核查范围：**阅读原始 47 页 arXiv:2611.16409v1 PDF 的 Section 2–6、Fig.1–7、算法/任务/结果表及相关附录说明；已使用论文截图检查 Figure。未自行训练模型或重现任何曲线。
+
+<ReadingPath
+  quick={[
+    "看 Fig.1：为什么普通 scalar-reward RL 浪费了执行期间的错误日志和失败经验？",
+    "看 Fig.3：一轮 task-local Act → Reflect → Curate → Act 如何形成闭环？",
+    "看 Fig.6–7：RSI@K 是否优于独立采样 pass@K，且 playbook 编辑是否真的有帮助？"
+  ]}
+  standard={[
+    "阅读 Section 2，区分 actor-only RL 和 fixed-harness experience-handoff RL。",
+    "理解三个角色共享一套模型权重，经验只有短 playbook 被跨尝试保存。",
+    "推导 candidate playbook 的价值是下一次 actor rollout 的可验证 reward，而不是文字评价分数。",
+    "阅读 Section 3 的角色专属 comparison groups 及 sampling tree，并理解对齐训练预算的方式。",
+    "读 Table 2 / Fig.4–5：同训练 FLOPs，比较 actor-only GRPO、GRPO-in-harness、ERL、PPO 与 ACE-RL。",
+    "读 Fig.6：训练只见到 3 次尝试，测试增加到 K=8；不要混淆 sequential RSI@K 与 independent pass@K。",
+    "读 Fig.7：丢弃编辑的反事实对照表明 playbook 的边际贡献具有任务依赖。",
+    "读 Appendix H 局限，区分任务内适应与跨任务可迁移知识。"
+  ]}
+  deep={[
+    "先读 Reflexion、Voyager、GRPO，再读 ACE agentic context engineering 的固定控制流。",
+    "重写 Eq.(1)–(3) 的联合采样分布：actor trajectory、reflection insight、curator edit、下次 attempt。",
+    "推导 Eq.(5) 的 harness-level objective，解释为何只对 chain 的最终奖励做统一 credit assignment 容易失效。",
+    "根据 Eq.(6)–(7)，推导 curator、reflector 和 actor 的角色专属可验证 reward。",
+    "查看 Fig.3 采样树的 actor rollout 数与额外验证次数，检查训练算力对照。",
+    "将成功率分解为 base-model 能力、task feedback 质量、playbook 改写与更多 attempts 的贡献。",
+    "比较 GRPO pass@K、GRPO RSI@K 和 ACE-RL RSI@K；不要单用 final headline 推广成算法普遍优越。",
+    "从 Fig.7 分析为什么某些任务的编辑贡献在 K 增大后会消失或变成负值。",
+    "设计科研 Agent 的新实验：让工具失败日志进入 reflector、curator，并通过未来真实任务成功率评估，而不是只由 LLM 打分。"
+  ]}
+/>
+
+## Big Picture：从“记得失败”到“优化下一次能用的经验”
+
+在普通 Agent RL 中，环境奖励通常只用于更新策略参数。实际上，一段执行轨迹还包含大量非标量信息：哪个 API 参数无效、哪些网页不可访问、为什么代码测试失败。把这些信息总结为自然语言 playbook 是一种不同的学习通路。
+
+ACE-RL 的特点是 **训练 actor 使用 playbook，也训练 reflector 提炼经验和 curator 维护 playbook**。Harness 的工具、三角色 prompt 与控制流保持固定；这里不是同时比较不同的人工 prompt engineering。
+
+**AI-generated explanatory diagram（概念示意，非原论文 Figure，不包含数据曲线）**
+
+> 某项任务 q + 当前 task-local playbook P
+>
+> → [Actor] 执行动作 / 工具调用 → 得到 trajectory 和环境错误/成功反馈
+>
+> → [Reflector] 提取 insight z（观察到的错误、可能原因、下一步）
+>
+> → [Curator] 对 P 执行 Add / Update / Remove，形成候选 P'
+>
+> → [新的 Actor] 读取 P' 再次尝试，环境 verifier 给出奖励
+>
+> → 用该奖励回传训练各角色；测试时仅保留 task-local playbook 和已训练权重
+
+该流程在训练时可以评估多个候选编辑；推理时不需要为每次编辑单独花费额外验证 rollout，改完就进入下一次真实任务执行。它不是全局知识库，更不是无限自我修改代码。
+
+## 核心公式：为什么经验本身也需要 credit assignment？
+
+设某任务为 q，当前 playbook 为 P，共享模型参数为 theta。作者的 Eq.(1)–(3) 定义一轮：
+
+$$
+\tau \sim \pi_\theta(\cdot\mid \iota_{act}(q,P)),
+$$
+
+$$
+z \sim \pi_\theta(\cdot\mid \iota_{ref}(\tau)),\quad
+u \sim \pi_\theta(\cdot\mid \iota_{cur}(P,z)),
+$$
+
+$$
+P' = \mathrm{Apply}(P,u).
+$$
+
+- tau 是 actor 在环境中的完整交互轨迹。
+- z 是读取 trajectory、环境反馈及 reward 后产生的反思。
+- u 是对 playbook 的结构化编辑操作。
+- P' 是准备交给下一轮 actor 的经验文档。
+
+传统 actor-only 训练最大化当前回合的奖励；ACE-RL 关心的是**新 playbook 导致下一个尝试更成功的程度**：
+
+$$
+\widehat V(P') =
+R_q(\widetilde\tau),\qquad
+\widetilde\tau\sim \pi_\theta(\cdot\mid\iota_{act}(q,P')).
+$$
+
+这一奖励不是由人或另一个 LLM 凭文字风格打分，而是由后续任务实际环境 verifier 提供。
+
+对于 curator 的编辑 u，奖励就是候选 P' 的执行价值；对于 reflector 的 insight z，奖励是它衍生的多个有效候选编辑的平均价值；对于 actor，仍使用本身 rollout 的任务奖励。用概念式表示：
+
+$$
+r_{cur}(u)=\widehat V(\mathrm{Apply}(P,u)),\qquad
+r_{act}(\tau)=R_q(\tau).
+$$
+
+**理解关键：**最终链条失败时，不能机械把同一失败 reward 归给三个角色的每一个 token；这会掩盖是执行失败、总结失败还是 playbook 编辑失败。作者因此使用按角色的 comparison groups 与可验证的后续 reward。
+
+## 指标：RSI@K 与 pass@K 不可混为一谈
+
+论文测试最多 **K=8 次** attempts，而训练时只让任务遭遇 **F=3 次**。两种比较指标：
+
+- **GRPO pass@K**：同一任务独立抽 K 个 rollout，取其中至少一次成功；各次之间**不交接** playbook。
+- **ACE-RL RSI@K**：同一任务连续 K 次尝试，每次之后更新 playbook，后续 attempt 可读取前面失败积累的经验。
+
+因此这不仅是在比较“算法参数更新”，还在比较能否在相同次数 actor attempts 下利用前面执行经历。作者另外把 GRPO checkpoint 放入相同 ACE harness 里进行控制，避免只比较两个不对称系统。
+
+### 作者的主要结果（Fig. 6，K=8）
+
+| Held-out benchmark | ACE-RL RSI@8 | GRPO pass@8 |
+| --- | ---: | ---: |
+| Mastermind | 0.81 | 0.78 |
+| MBPP | 0.99 | 0.91 |
+| AppWorld | 0.81 | 0.68 |
+| MiniSWEBench | 0.40 | 0.30 |
+
+这些是作者在指定模型、任务、训练预算、验证程序下报告的数字，**不是我们重跑的结果**；且 RSI 与 pass 存在记忆机制差异。
+
+更公平地看 **K=3 时**，ACE-RL RSI@3 相对 actor-only GRPO pass@3 的任务配对增益分别为 0.089±0.015、0.120±0.026、0.042±0.041、0.095±0.034（±1 SEM）。其中 AppWorld 的 0.042±0.041 不应被当成高度确定的提升。
+
+### Edits-discarded：怎样证明真的在用经验？
+
+Fig.7 做了关键消融：**保持同一 ACE-RL actor，但每次把 curator 修改的 playbook 丢弃**，下次都从空 playbook 开始。这样可以尽量隔离经验交接文档自身的贡献。
+
+在 AppWorld、MiniSWEBench 的一些 K 范围内，保留编辑显著提高表现。作者报告 AppWorld 在 K=2 的收益约 0.105±0.041；MiniSWEBench 在 K=3 约 0.090±0.040。
+
+但在 Mastermind，经验编辑效用在 K=3 后减弱，到 K=8 时 **discarded** 反而略胜（约 0.016±0.016）。这一负面结果说明 Agent memory 不是每一次都帮忙，冗余或误导性的经验可能影响后续重试。
+
+## Key Figures：按学习顺序阅读
+
+1. **[Fig.1：从 outcome-only RL 到 experience handoff](https://arxiv.org/pdf/2611.16409)**。先检查作者把哪些能力交给训练，哪些属于固定 harness：不要把 playbook 的存在与其质量混为一谈。
+2. **[Fig.2：AppWorld 真实任务失败日志如何转成可用提示](https://arxiv.org/pdf/2611.16409)**。左侧成功率看 8 次 attempts，右侧案例看“先识别室友身份/日期”的经验是如何指导第三次任务；单案例只是机制解释，不是全体代表。
+3. **[Fig.3：三角色的 sampling tree 与 credit group](https://arxiv.org/pdf/2611.16409)**。研究 actor / reflection / curation 三类比较如何共享有限的验证预算。
+4. **[Fig.4–5 / Table 2：相同训练预算和 harness 对照](https://arxiv.org/pdf/2611.16409)**。与 PPO、ERL、GRPO 及 GRPO-in-harness 比较，识别训练流程与部署流程的影响。
+5. **[Fig.6–7：K=8 的泛化与 edits-discarded 因果消融](https://arxiv.org/pdf/2611.16409)**。看经验交接获益随 K 增长是否持久，尤其关注 Mastermind 的反例和误差条。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- 在固定的 task-local ACE harness 中，让三角色模型统一训练比仅优化 actor 更适合“连续尝试并改写经验”的部署设置。
+- 通过执行候选 playbook 产生可验证后续奖励，并对不同角色构造 comparison groups。
+- 在四种基准上、匹配训练预算的比较中，ACE-RL 给出最好的 held-out reward；某些收益可延续到超过训练遇到的 attempts 数。
+- Playbook edits discarded 的消融为后续性能提升中来自经验交接的部分提供支持，但这种支持并非每个任务、每个 K 都一样强。
+
+### AI interpretation
+
+对于长期科研 Agent，最值得借鉴的是：不要仅衡量“记忆总结是否漂亮”，而要用**未来真实任务表现**奖励它。例如自动实验平台可将 SSH/仪器错误、样品条件、数据分析失败写成小型操作 playbook，并以之后任务的可验证成功率衡量编辑质量。此建议不是作者已证明的真实物理实验室应用。
+
+### Caveats
+
+- Task-local playbook 每个新任务重置，尚未证明能跨多个科研项目形成可迁移长期知识。
+- K=8 只是相对训练 K=3 的短视野外推，不是无限迭代稳健性。
+- Benchmarks 的 verifier 给出奖励；开放式科研缺少完美 verifier，经验可能固化错误。
+- 三角色使用相同模型但 prompts 与 harness 固定，训练之外的工作流工程对结果很重要。
+- 训练和推理资源开销需同时计入额外 reflection/curation tokens，不能只看 actor rollout 数字。
+- 部分实验差异的误差较大；对照项的指标定义不同，应优先检查共同 harness 评测。
+- 不代表已达成自动修改自有权重、无限 self-improvement 或真实机器人安全保证。
+
+## Historical Reading Chain
+
+1. **FIRST — [Shinn et al. (2023), *Reflexion: Language Agents with Verbal Reinforcement Learning*](https://arxiv.org/abs/2303.11366)**：不更新模型参数，通过语言反思改进后续尝试，是经验交接范式的直接起点。
+2. [Wang et al. (2023), *Voyager: An Open-Ended Embodied Agent with Large Language Models*](https://arxiv.org/abs/2305.16291)：技能/代码记忆和长期累积经验的代表性 Agent，理解可复用状态为何有价值。
+3. [Shao et al. (2024), *DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models*](https://arxiv.org/abs/2402.03300)：GRPO 的经典来源，理解 group-relative reward 更新。
+4. [原论文中引用的 Agentic Context Engineering (ACE) 前作及 Appendix A](https://arxiv.org/abs/2611.16409)：先理解固定 harness 的 actor/reflector/curator 组织方式，再评价 RL 是否真正提高经验质量。
+
+## Reading Checklist
+
+- [ ] 能清楚区分 actor、reflector、curator 的输入输出和共享模型权重。
+- [ ] 能复述每次 task-local attempt 传递的唯一状态为何是 playbook。
+- [ ] 能解释为何用下一次执行奖励给 curator / reflector 反馈比纯文字打分更可信。
+- [ ] 理解 Eq.(5)–(7) 的训练目标与角色奖励如何关联。
+- [ ] 能解释 RSI@K 与 pass@K 不同，以及为什么要做 GRPO-in-harness 控制。
+- [ ] 在 Fig.6 找到 K=8 四个 benchmark 的结果，注意误差和训练只见过 K=3。
+- [ ] 在 Fig.7 找出至少一个经验编辑有效的任务，以及 Mastermind 的反例。
+- [ ] 能列出向科研 Agent 迁移时至少三个新挑战：跨任务记忆、奖励验证、经验污染/安全。
+- [ ] 阅读 FIRST Reflexion，说明 ACE-RL 相比纯反思新增了哪种训练信号。
+
+## Sources and Attribution
+
+- [Kim et al., *Experience-Handoff Reinforcement Learning for Recursive Self-Improvement*, arXiv:2611.16409, first public 2026-11-12](https://arxiv.org/abs/2611.16409).
+- [Author PDF: 47 pages, original Figures 1–7, methods, appendix, and tables](https://arxiv.org/pdf/2611.16409).
+- 只链接作者原始图表与公开文字，不复制、裁切、重新着色或拼接论文 Figure。箭头流程为 **AI-generated explanatory diagram**，不是对数据、结果曲线或原始 Figure 的重绘。
