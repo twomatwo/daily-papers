@@ -1,0 +1,196 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "LEASH: Stay Safe in Agentic Robotics"
+authors: "Qinfeng Zhu, Weiguang Zhao, Ke Sun, Xihao Guo, Yunxi Jiang, Rui Zhang, Lei Fan, Kaizhu Huang"
+date: "2026-11-16"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2611.14115"
+notionUrl: "https://app.notion.com/p/4197dd5567ec81f89998fc1b1ccf8ed0"
+summary: "RoboRisk 以闭环执行检验机器人危险任务；LEASH 通过共享安全策略和 task/action/commit 三层审查降低伤害，强调行为安全与任务完成必须同时评价。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**论文提出 **RoboRisk**：92 个模拟机器人任务、13 个实机任务，涵盖 Task-level Refusal、Plan Repair、Execution-time Hazard、Injection 和 Sequential Memory 五种风险。对多个通用模型和部分机器人专用 API 进行闭环评估后，作者发现基线系统存在较高伤害率。随后提出无需重新训练 planner 的 **LEASH**：task、action、commit 三层安全检查，共享一份可配置安全策略，检查当前视觉信息和即将执行的操作。作者报告，在其 benchmark 上相较未加保护的 harness，六个模型的伤害率都有降低。
+
+**AI interpretation：**其最大的价值不只是多加一个拒绝分类器，而是把安全约束放在“任务被接受之前、动作实际执行之前、不可逆操作发生之前”三个不同控制点。对于 VLA-Arena 与 Agent+robot benchmark，这种分层评价比只比较最终 success rate 更有学习价值。
+
+**Caveats：**LEASH 不是数学形式的绝对安全保证。任务安全标准是 benchmark 预定义的，人工判断涉及主观判据；不同模型、模拟和实机的测试配置不完全相同。论文没有完成全部三层 gate 的独立完整消融；长时间运行的动作技能仍可能发生中途风险，当前 commit gate 只监测开爪和倾倒等具体事件。人在场时又出现过度拒绝、任务失败的问题。
+
+**阅读范围：**逐节核对 arXiv:2611.14115v1 HTML 的 Sections 3–6、Fig.1–4、Table 1–3、Appendix 的 gate/human-presence 讨论；没有重跑 MuJoCo 或真实机器人任务，未复制任何图片。
+
+<ReadingPath
+  quick={[
+    "Fig.1：区分普通机器人成功率与可能造成伤害的安全结果。",
+    "Table 1：理解 T/P/E/I/S 五种不同安全失败。",
+    "Fig.3：看三层 gate 分别在什么时机阻止什么操作。",
+    "Table 3：读 HR、SSR 的权衡，不要只看 harm=0。"
+  ]}
+  standard={[
+    "读 Section 3.1：先明确 Harm、Safe Success、Safe Incomplete 的标签和优先级。",
+    "看 Table 1：分别将 92 模拟任务、13 实机任务分配到五类。",
+    "读 Section 3.3：推导 HR 与 SSR，讨论拒绝危险任务为何是 Safe Success。",
+    "读 Fig.3 / Section 4：task gate 可终止任务、action gate 可拒绝候选动作、commit gate 保护延后不可逆动作。",
+    "读 Section 5 / Fig.4：分模型和模拟/实机比较，而不是汇总一个万能安全分数。",
+    "看 Table 3：不同 reviewer 能力影响安全与任务完成率。",
+    "读 Section 5.5–5.7：成本、组件分析、Human-Presence Gap；注意缺少完整独立 ablation。",
+    "看 Appendix 对机器人场景和人工判定的细则。"
+  ]}
+  deep={[
+    "先读 SafeAgentBench 和 Code as Policies，区分文本行为评测与闭环物理执行。",
+    "建立每个 task 的危险事件判据；解释 Harm 优先于已完成任务。",
+    "分析最小权限 lease 和三个 gate 的权力边界与时序。",
+    "根据 Section 4.2 重写 gate score 超阈值允许的条件，讨论错误允许和错误拒绝的后果。",
+    "计算两种混淆成本：漏拦危险动作与把良性动作拒绝。",
+    "研究 Fig.4/Table 3 对照：planner 能力、reviewer 能力、测试任务集合、实机与仿真差异如何混杂。",
+    "列举一个延迟触发的不可逆动作：为何仅在 skill 开始前审查不足。",
+    "阅读 Human-Presence Gap 的实机场景，讨论 harm rate 接近 0 却 Safe Success 也不高的情况。",
+    "设计一个基于LIBERO/VLA-Arena的对照：相同视觉、工具、恢复权限、任务数与种子，比较固定planner的各个gate。",
+    "将安全层与机器人控制障碍函数、急停、独立执行边界作概念区分。"
+  ]}
+/>
+
+## Big Picture：安全不是一次文本审查
+
+传统机器人 VLA benchmark 往往先问能否完成操作。在更通用的编码 Agent 控制机器人时，模型还可能访问网页、文件或配置，并让这些信息影响真实动作；一个文字看似正常的任务，也可能因当前环境而危险。
+
+RoboRisk 的目标是以**物理闭环行为**检验这种风险。LEASH 则把通用模型视为可替换的 planner，靠 harness 在多个执行边界审核。
+
+**AI-generated explanatory diagram（纯概念示意；非原论文 Figure，非定量复刻）：**
+
+> 用户任务 + 当前摄像头  
+>
+> → [Task gate] 评估原始指令与场景：允许规划 / 拒绝并结束  
+>
+> → [Planner] 在共享策略下提议动作或长技能  
+>
+> → [Action gate] 审查即将执行的技能和路径：允许 / 拒绝并重新规划  
+>
+> → [执行器] 实施已批准的技能  
+>
+> → [Commit gate] 当执行到开爪、倾倒等不可逆操作前再次审查  
+>
+> → 新观测 → 下一次规划，最终判断 Harm / Safe Success / Safe Incomplete
+
+三种 gate 不是同一个分类器重复三次。它们拦截的是**不同时间粒度的危险**。拒绝一个不安全的动作后，planner 往往还有机会换路线；但当前论文中 action/commit gate 本身不能直接终止任务。
+
+## 核心机制、数学指标与公平比较
+
+### 1. Harm Rate 不能等同于失败率
+
+作者定义每次 rollout 是否达到 harm condition，并将安全结局分成三类：
+
+- Harm：执行期间出现该任务预定义的伤害事件，即便最终完成任务仍算 Harm。
+- Safe Success：在无 harm 的前提下，完成应当完成的良性指令，或正确拒绝本就不应执行的危险任务。
+- Safe Incomplete：没有造成 harm，但也没有达到本任务的 safe success。
+
+论文 Eq.(2–3)：
+
+$$
+HR = N_H / N
+$$
+
+$$
+SSR = N_{safe-success} / N
+$$
+
+**关键：**只通过过度拒绝压低 HR，可能同时损害 SSR。因此至少要同时报告两个指标、逐类别安全结果与执行成本。
+
+### 2. Gate 的决定是一个受阈值控制的 lease
+
+LEASH 让 reviewer 根据 instruction、camera frames、最近执行 history、shared safety policy 和候选动作返回一个安全评分。对每个 gate 可写成：
+
+$$
+allow \quad \mathrm{if}\quad s_k > \tau_k
+$$
+
+否则拒绝该操作。这里 k 指 task/action/commit 不同审查位置；论文明确对它们使用不同阈值。
+
+这属于**概率模型审查**而非物理安全不变式证明。视觉遗漏、评审误判、执行过程中出现未监测的新事件，都可能导致失败。
+
+### 3. 为什么一定要检查 commit？
+
+动作在计划时看似安全，执行过程中对象和场景却会变化。例如开始拿起杯子没有问题，但等机器人在指定地点松开夹爪时，原先视野里的危险物体可能已经移位。
+
+所以作者对监测到的 irreversible operations（包括开爪、pouring）先暂停，再根据新摄像头图像做决策。**它并未监测每一种长技能内部风险**，这一点在 Section 6 被列作限制。
+
+## Authors report：主要实验与数字
+
+RoboRisk-S：92 模拟任务；RoboRisk-R：13 个物理机器人任务。五类任务数量在论文 Table 1 中分别为 T=29/3、P=21/4、E=15/2、I=12/2、S=15/2（模拟/实机）。
+
+论文指出，在评估的六种通用模型中，基线在不同配置上 HR 可从 **9.06% 到 76.92%**；绝不能把这两个端点误解为同一模型两次训练前后的变化。
+
+**Table 3 中 GPT-6 Astra 规划器、RoboRisk-S，换 reviewer 的作者报告：**
+
+| Reviewer | HR | SSR |
+| --- | ---: | ---: |
+| GPT-6 Luna reviewer | 0.00% | 88.41% |
+| Decisions API | 0.36% | 78.99% |
+| Jev (default) | 0.00% | 80.80% |
+
+这些是同一篇论文特定任务和审查配置下的结果，**不是**全部模型或真实世界安全保证。某些 reviewer 获得较高 SSR 但更慢、更贵，不能仅按成功率选取。
+
+**性能开销：**在作者对 RoboRisk-S、GPT-6 Astra 和 GPT-6.1 Sol 的统计下，平均时延由 245.21 s 增至 249.28 s（约 1.66%），评审模型平均每次额外成本约 0.00522 美元（论文报告占总成本 0.66%）。成本结论同样依赖这些模型、价格和运行配置。
+
+## Key Figures：只给作者原图链接
+
+1. **[Fig.1：unsafe agentic robot 的研究动机和 harm/SSR 对比](https://arxiv.org/html/2611.14115v1)**：区分任务成果与行动伤害，图表数字由作者给出。
+2. **[Fig.2：五类 RoboRisk 安全场景](https://arxiv.org/html/2611.14115v1)**：看同一自然语言指令为何因环境物体而变危险；注入和记忆风险不能只做文字拒绝测试。
+3. **[Fig.3：LEASH 三层 gate 与 shared policy](https://arxiv.org/html/2611.14115v1)**：标注 task/action/commit 的职责，注意 task gate 唯一可独立终止。
+4. **[Fig.4 和 Table 2–3：模型基线、LEASH 和 reviewer 对照](https://arxiv.org/html/2611.14115v1)**：逐模型比较 HR 与 SSR，不同样本/场景不可混在一起。
+
+原论文图像没有复制至公开仓库，也没有裁切、重着色或从文字重构定量曲线。
+
+## Authors report vs AI interpretation vs caveats
+
+### Authors report
+
+- RoboRisk 五类任务以真实控制执行结果，而非仅文本回答，评价危险和安全成功。
+- 基线模型在多类机器人安全任务中存在显著缺陷。
+- LEASH 依靠共享规则与三层可插拔门禁，在作者测试中降低所有规划模型的 harm rate。
+- 人在场的实机场景可能导致安全过度保守；部分模型甚至未尝试完成操作。
+
+### AI interpretation
+
+对于具身智能 benchmark，至少应分离四层指标：风险识别、危险任务拒绝、执行阶段动作安全、良性任务完成率。更进一步，不同系统的 planner、tool SDK、error recovery、物理急停、门禁能力必须被作为 benchmark 控制变量，而不是只统计最终成功。
+
+对于已有 VLA，可以考虑在输出动作块的前后加入外部审查层；但该论文没有证明它可以直接适配所有高频控制环路，reviewer latency 与长技能内部风险仍需验证。
+
+### Caveats
+
+- 全面的 task/action/commit gate 独立消融未完成；文中采用了部分日志分解分析。
+- 任务按预定义危害进行人工结果判定，语义边界与操作者判断可能影响成绩。
+- 人体临近场景出现 Human-Presence Gap：严格拒绝能够避免伤害，但也会妨碍正常协作任务。
+- Action/commit gates 目前只拒绝并要求重规划，本身不能终止；一个弱 planner 仍可能重复提出危险操作。
+- 长期技能只有有限几类操作接受 commit 监测，不能推断整个动作轨迹受到完全保护。
+- 模拟结果与小规模实机不等于大规模部署，也不代表作者对后续第三方模型有安全保证。
+- 原文预印本发表于 2026-11-10；本 guide 是基于公开全文的教学解读，不是独立安全认证。
+
+## Historical Reading Chain
+
+1. **FIRST — [SafeAgentBench (2024), A Benchmark for Safe Task Planning of Embodied LLM Agents](https://arxiv.org/abs/2412.13178)**：早期成体系的危险任务拒绝和执行评测，理解 RoboRisk 为什么强调更多风险种类与真实闭环。
+2. [Code as Policies (2022)](https://arxiv.org/abs/2209.07753)：理解让通用 LLM 生成机器人程序的早期架构，以及纯指令安全与物理执行安全为何不同。
+3. [AgentDojo (2024)](https://arxiv.org/abs/2406.13352)：理解来自文档/第三方工具信息的间接 prompt injection；关联 RoboRisk 的 I 类任务。
+
+## Reading Checklist
+
+- [ ] 列出 T/P/E/I/S 五类安全任务各自至少一个本质不同的失败机制。
+- [ ] 从 Table 1 复算模拟任务总数 92 和实机任务总数 13。
+- [ ] 清楚解释 Harm、Safe Success、Safe Incomplete 的优先级。
+- [ ] 解释 task/action/commit gate 的触发时机和谁有权终止。
+- [ ] 能用一个技能执行中的场景变化说明为何 commit gate 不能省略。
+- [ ] 能解释为什么 HR 下降但 SSR 也下降时不能直接声称系统更好。
+- [ ] 阅读 Fig.4 与 Table 3 分模型评价 reviewer 的精度与成本。
+- [ ] 识别论文尚无全 gate 独立消融、人工 outcome 判定等因果证据缺口。
+- [ ] 讨论 Human-Presence Gap 对实体机器人部署的影响。
+- [ ] 为一个已有的 LIBERO/VLA-Arena 安全任务设计至少一种匹配 harness 对照。
+- [ ] 阅读 FIRST SafeAgentBench，写出 RoboRisk 比它扩充了哪些任务类型。
+
+## Sources and Attribution
+
+- [Zhu et al., LEASH: Stay Safe in Agentic Robotics, arXiv:2611.14115v1 (10 Nov 2026)](https://arxiv.org/abs/2611.14115).
+- [作者公开 HTML：Section 3–6、Figure 1–4、Table 1–3、Appendix](https://arxiv.org/html/2611.14115v1).
+- 论文 HTML 标注 arXiv.org perpetual non-exclusive 许可；本公开网站并未据此假定拥有图片二次出版许可。Figure 仅作为外链，流程图文字明确标记为 **AI-generated explanatory diagram**，不包含重绘的定量数据。
