@@ -1,0 +1,170 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Electron-phonon coupling and electronic transport at the moiré scale in twisted bilayer graphene"
+authors: "David J. Abramovitch, Marco Bernardi"
+date: "2026-11-16"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://doi.org/10.1038/s41535-026-00952-x"
+notionUrl: "https://app.notion.com/p/4197dd5567ec81568ddae7030fb604d7"
+summary: "将 DFPT 标定的局域电声势用于 5044 原子的 TBG 莫尔超胞；接近小扭角时，载流子速度下降而不只是耦合增强，显著提高声子限制电阻率。"
+readingTime: "25–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**Abramovitch 与 Bernardi 在 *npj Quantum Materials* 2026-11-13 正式发表的研究，将电子–声子相互作用的第一性原理精度扩展至包含 **5044 个原子**、扭角 **1.61°** 的双层石墨烯莫尔超胞。核心是利用 DFPT 标定一个依赖原子位移的局域 Holstein-like onsite + Peierls-like hopping 电子势，再以 Boltzmann relaxation-time approximation 求取声子限制电阻率。在论文指定的计算中，1.61° 的电阻率在 100 K 时约为 13.2° 样品的 **40 倍**；从更宽的温度/填充条件看，小角和大角之间可达约两个数量级。主要驱动因素是电子能带速度减小，不能简单解释为电子–声子耦合常数单调增加。
+
+**AI interpretation：**这篇值得学习的是如何将昂贵的局部第一性原理计算压缩为可在莫尔长度尺度求值的原子级物理模型，而且如何以输运结果检验模型而非只比较局域耦合矩阵元。它是研究二维材料输运、电子–声子散射与自动建模的重要可复用方法。
+
+**Caveats：**这不是在魔角强关联系统中证明电阻率完全由声子决定。论文明确采用半局域DFT/DFPT、绝热声子处理与 Boltzmann-RTA；低温某些扭角数据拟合较好，但在 2°、1.61° 的较高温度仍低估实验电阻率，2° 在 300 K 约小一倍。靠近严格魔角时电子关联、屏蔽、准粒子和非绝热效应需要额外处理。
+
+**阅读范围：**核对 arXiv:2603.14800 作者公开正文（Eq.1–3、Fig.1–4 对应文字和 captions、Results/Discussion）及期刊官方网站的发表元数据；没有独立重新运行DFPT或输运计算。期刊网页正文因身份验证重定向无法直接完整访问，所以图表原件均链接作者的公开版本。
+
+<ReadingPath
+  quick={[
+    "读 Abstract：论文填补什么尺度鸿沟？",
+    "看 Fig.1 的 DFPT benchmark 与 Fig.3 的扭角依赖，不要把电阻率提升误读为耦合常数提升。",
+    "读 Discussion 的相关性、温度及方法有效范围。"
+  ]}
+  standard={[
+    "理解 2° TBG 的 3268 原子和 1.61° TBG 的 5044 原子为何使 brute-force DFPT 困难。",
+    "读 Eq.(1) 定义 Bloch-phonon matrix element，Eq.(2–3) 从原子局域势取位移导数。",
+    "读 Fig.1：对比 21.8° TBG 的 acoustic、layer-breathing、optical phonon coupling 与单层石墨烯电阻率。",
+    "读 Fig.2：温度与填充依赖对照，明确 100 K 以下和 300 K 的不同误差。",
+    "读 Fig.3：扭角与 transport 的相互关联，分清 band velocity 和 lambda。",
+    "读 Fig.4：能带、van Hove singularity、激活能标和电阻率非线性的联系。",
+    "列出至少三条超出模型的关联、屏蔽、声子动力学修正。"
+  ]}
+  deep={[
+    "先读 Giustino 2017 和 Bistritzer–MacDonald 2011 的相关章节。",
+    "由局域 orbital basis 推导 Bloch electron–phonon matrix element 的相位因子及位移导数。",
+    "区分 onsite Holstein 与 hopping Peierls 两类耦合，以及 intralayer/interlayer 的空间截断。",
+    "基于 Boltzmann-RTA 推导 conductivity 对 band velocity、scattering time、Fermi derivative 的依赖。",
+    "比较 Fig.3 的 resistivity 与 lambda，解释二者为何不能互相代替。",
+    "检查 Fig.2 中高温低估与 DFT 对 optical phonons 的系统性偏差。",
+    "评估该原子级模型如何迁移至 twisted TMD，哪些额外长程 Fröhlich、激子或关联成分必须新增。",
+    "区分首次公开日期 2026-03-16 与期刊在线日期 2026-11-13，避免同一研究重复入库。"
+  ]}
+/>
+
+## Big Picture：从局域第一性原理到莫尔尺度输运
+
+在单层石墨烯或大扭角 TBG，DFPT 可计算原子位移造成的晶体势变化和电声散射。但小扭角超晶胞包含成千上万原子，将标准 DFPT 对每个声子自由度直接用于莫尔超胞，成本急剧膨胀。
+
+**AI-generated explanatory diagram — 纯概念流程，不是论文图表，不包含任何根据记忆绘制的数据点或曲线：**
+
+> 小晶胞 DFT/DFPT：提取原子环境对 on-site energy 与 hopping 的响应  
+>
+> → 标定 Holstein-like / Peierls-like 局域电子势  
+>
+> → 在大扭角与单层 graphene 上验证 phonon coupling 和 resistivity  
+>
+> → 应用到大莫尔胞的 electronic bands + phonon modes  
+>
+> → Boltzmann-RTA 计算不同扭角、温度、填充的 phonon-limited resistivity  
+>
+> → 对照实验，识别能带速度变化和耦合变化的不同贡献
+
+这里实现的是**局域模型的可扩展性**，不是用某种 ML 模型直接预测整个莫尔输运过程。
+
+## 核心机制：矩阵元、能带速度和电阻率
+
+### 1. 为什么位移依赖势可以替代大超胞逐一 DFPT？
+
+作者的 Eq.(1) 给出电子从 Bloch 态 n,k 散射到 m,k+q 的电声矩阵元：它包含每个原子位移对电子势的一阶导数、声子质量与频率、偏振本征矢，以及局域轨道到 Bloch 能带的变换。
+
+简化为概念表达：
+
+$$
+g_{mn\nu}(k,q)\ \propto\
+\langle m,k+q\vert\, \partial_{\nu q} V\,\vert n,k\rangle.
+$$
+
+论文 Eq.(2–3) 的关键是将势近似写成两个可微分的局域部分：
+
+$$
+V_{\mathrm{e-ph}} = V_{\mathrm{onsite}} + V_{\mathrm{hopping}},
+$$
+
+再对附近原子的位移求导得到局域电声矩阵元。在当前 graphene/TBG 实现中，作者包括若干近邻层内 hopping 和短程层间 hopping；并通过 DFPT 拟合，而不是任意指定耦合强度。
+
+**物理直觉：**晶格振动既可改变局部轨道能量（Holstein），也可改变轨道之间的跃迁（Peierls）。在莫尔体系中，后者的局部堆垛/层间几何尤其不可忽略。
+
+### 2. 为什么电阻率不能只由 lambda 判断？
+
+在 relaxation-time picture 的示意层次，沿 x 方向的电导贡献包含：
+
+$$
+\sigma_{xx}\ \propto\
+e^2\sum_{n,k}v_{n,x}(k)^2\tau_{n,k}
+\left(-\partial f/\partial E\right).
+$$
+
+因此即使散射时间没有下降很多，**能带速度降低**也能使电导显著减小、对应电阻率升高。电声 lambda 则是依照能带与声子态加权定义的耦合指标，不是电阻率本身；二者尤其不能跨不同扭角直接按比例换算。
+
+## Authors report：可核实的具体结果
+
+| 证据位置 | 作者报告 | 不应过度推广为 |
+| --- | --- | --- |
+| Fig.1 | 21.8° TBG 的 acoustic、optical、layer-breathing 耦合与 DFPT 基准吻合；单层 graphene 的 RTA 电阻率也吻合 | 已对所有材料和声子精确无误 |
+| Fig.2 | 2.0° TBG 在 100 K 以下电阻率、填充趋势和实验较吻合；300 K 计算约低估一倍 | 任意温度都准确预测 |
+| Fig.3 | 1.61° vs 13.2° 在 100 K 电阻率约 40 倍，且主要关联能带速度下降 | 电声 lambda 单调按 40 倍增大 |
+| Fig.4 | 1.61° 的 van Hove singularity 和较小电子能标使温度、填充依赖出现非线性 | 已包含 magic-angle correlation-driven transport |
+
+作者还指出在 1.61° 附近的能带细节尺度约为 20 meV，升温会改变实际参与输运的电子态。这有助于理解为什么简单常数 scattering time、单一 Dirac cone 近似不可靠。
+
+## Key Figures：只链接原始图，阅读时看什么？
+
+1. **[Fig.1：large-angle benchmark 和 graphene 电阻率](https://arxiv.org/abs/2603.14800)**。研究模型耦合颜色标度与 DFPT 基准；对照层间 breathing 模和光学声子激活。
+2. **[Fig.2：2.0° 的温度/载流子填充图](https://arxiv.org/abs/2603.14800)**。分开检查 100 K 以下的匹配与 300 K 的偏差；注意实验测到的总电阻率可能还含有非声子机制。
+3. **[Fig.3：角度扫描电阻率与 lambda](https://arxiv.org/abs/2603.14800)**。横轴是扭角，两个 panel 代表不同物理量；不要把它们视觉相似性看成同一机制。
+4. **[Fig.4：13.2°、3.15°、1.61° 的能带/温度/填充](https://arxiv.org/abs/2603.14800)**。先看 van Hove singularity 与填充，再解释温度形状变化。
+
+这些 figure 的原始图像、定量点位和许可归属均留在作者/出版社页面。本 guide 没有复制、裁切、重新着色或组合 figure。
+
+## Authors report vs AI interpretation vs caveats
+
+### Authors report
+
+- 提出基于 DFT/DFPT 标定的原子级局域电声势，计算成本足以覆盖数千原子的 TBG 超胞。
+- 在大扭角体系验证声子耦合与电阻率计算，并在小扭角体系与实验定向对照。
+- 扭角降低使 phonon-limited resistivity 大幅增加，主要来源于电子色散速度变小。
+- 论文讨论局限于所计算的扭角、温度、载流子填充、结构和 Boltzmann 描述。
+
+### AI interpretation
+
+这为材料建模提供了一种非常值得模仿的“两阶段标定”：先对局域物理量进行可解释的高精度拟合，再用宏观可测的输运量检验模型。它可与 twisted TMD 的材料自动生成、DFT-to-tight-binding 管线结合，但需要重新定义 orbital basis、声子与极性长程耦合。
+
+### Caveats
+
+- 该方法不等于完整求解强关联和 superconducting pairing；临近 magic angle，半局域DFT、quasiparticle与screening近似更加敏感。
+- 光学声子电声耦合的 DFT 偏差导致高温电阻率低估；不能声称整张实验曲线都吻合。
+- “40 倍”对应作者给出的 100 K、特定扭角条件；文章的“两个数量级”指更广参数/趋势，非同一固定点的两次陈述。
+- 目前没有独立重复实验或软件复现；来自作者模型与文中引用的实验比较。
+
+## Historical Reading Chain
+
+1. **FIRST — [Giustino (2017), Electron–phonon interactions from first principles](https://doi.org/10.1103/RevModPhys.89.015003)**：建立电声矩阵元、DFPT、Bloch/Wannier 及输运的基础框架；优先阅读相关公式。
+2. [Bistritzer & MacDonald (2011), Moiré bands in twisted double-layer graphene](https://doi.org/10.1073/pnas.1108174108)：解释扭角如何改变莫尔能带及电子速度，理解 Fig.3 的核心物理。
+3. [Cao et al. (2018), Correlated insulator behaviour at half-filling in magic-angle graphene superlattices](https://doi.org/10.1038/nature26154)：认识 phonon-limited transport 与 magic-angle 强关联系统之间的边界。
+
+## Reading Checklist
+
+- [ ] 解释为什么 5000 原子的超胞不能逐一直接使用标准 DFPT 计算所有电声响应。
+- [ ] 能说清 Holstein onsite 与 Peierls hopping 对原子位置的依赖区别。
+- [ ] 知道 Eq.(1–3) 如何把原子位移导数变成 Bloch-state 电声矩阵元。
+- [ ] 能从 Boltzmann 导电表达式解释 band velocity 如何影响电阻率。
+- [ ] 读 Fig.1 确认模型不是仅凭实验电阻率反向调参。
+- [ ] 读 Fig.2 比较 100 K 以下和 300 K 的实验误差。
+- [ ] 读 Fig.3 后不再把 lambda 和 resistivity 当成同一变量。
+- [ ] 读 Fig.4 理解 VHS 与较小莫尔能标的作用。
+- [ ] 写出此方法迁移到 TMD 前需要核验的额外物理成分。
+- [ ] 阅读 FIRST Giustino RMP 并复述一个具体公式。
+
+## Sources and Attribution
+
+- [Abramovitch & Bernardi, npj Quantum Materials, 13 Nov 2026, DOI 10.1038/s41535-026-00952-x](https://doi.org/10.1038/s41535-026-00952-x).
+- [同研究先前的公开预印本 arXiv:2603.14800，首次提交 16 Mar 2026](https://arxiv.org/abs/2603.14800).
+- 已阅读公开预印本文字、方程和 Figure captions；期刊正文入口经身份验证重定向。所有论文 Figure 只采用作者原始页面链接；上述流程为 **AI-generated explanatory diagram**，不是论文的原图或定量曲线。
