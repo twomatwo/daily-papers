@@ -1,0 +1,195 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Agentic-Teacher: An Agentic Data Engine for Failure-Driven VLA Post-Training"
+authors: "Gongyue Teng, Yuqing Xie, Yixian Zhang, Feng Gao et al."
+date: "2026-11-17"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2611.17394"
+notionUrl: "https://app.notion.com/p/41a7dd5567ec81048103dd5c22dad6e1"
+summary: "A coding agent repairs VLA failure states, generates validated demonstrations, and curates them for flow-matching post-training; improved success is shown in simulations."
+readingTime: "30–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**研究者提出 Agentic-Teacher：给定一个已有 VLA checkpoint，先让它在模拟环境中执行任务、收集失败轨迹，再让 coding agent 识别关键干预状态，逐步编写和调试 closed-loop code policies，生成能从原 VLA 失败状态出发恢复任务的**成功演示**。作者发现，成功轨迹本身并不保证训练有效：还需要相关时间噪声、去除长时间 idle frames（保留 gripper changes）、以及使用冻结 VLA 的 flow-matching loss 过滤不合适的轨迹。由这些数据后训练所得 VLA **推理时不调用 coding agent**。
+
+**作者仿真结果：**基模型 pi_0 在 LIBERO-10 从 79.4% 提高至 87.8%，MetaWorld-10 从 80.4% 至 90.6%，三个选择的 RoboCasa 任务平均从 0% 至 30%。与利用基模型自身成功轨迹的 RFT 基线相比，作者的外部 code-policy teacher 对几乎无成功轨迹的任务有独特价值。
+
+**AI interpretation：**它把 agentic robotics 与 VLA post-training 连接起来：通用 Agent 负责在困难状态**搜索可执行恢复程序**，VLA 最终学习蒸馏后的 action distribution。研究提示，Agent 的工具、控制接口和验证能力是产生训练数据的资源，不能把结果简单归因于新 VLA 架构。
+
+**Caveats：**所有主要结果是作者在模拟环境下报告的，尚未验证真实机械臂安全性、代码策略在 sim-to-real 中的可靠性、同等数据/算力预算下对所有竞争方法的优势。LIBERO 10 个任务有得有失，平均值不代表每项任务改善。
+
+**阅读范围：**已核查 arXiv:2611.17394v1 HTML 的 Sections 1–6、Fig.1–6、主要表格、Appendices A–E 的相关实验/训练细则；没有运行 LIBERO、RoboCasa、训练脚本或实机实验。
+
+<ReadingPath
+  quick={[
+    "Abstract 和 Fig.1：coding agent 只负责生成训练数据，推理时 VLA 仍独立工作。",
+    "Fig.2：从具体失败状态、修复代码、成功轨迹理解 pipeline。",
+    "Fig.4：比较 base/RFT/Agentic-Teacher 的成功率，特别是 RoboCasa 基模型零成功。",
+    "Section 5：检查数据采集和真实机器人重放的限制。"
+  ]}
+  standard={[
+    "Section 3.1：如何从 rollout 诊断失败、定位 intervention frame 和聚类 failure modes。",
+    "Section 3.2：Agent 怎样通过可执行反馈创建 reusable closed-loop code policies。",
+    "Section 3.3：依次解释 temporal noise、idle removal、flow-matching filter 和 policy update。",
+    "Fig.3：为什么干净的代码轨迹不一定在连续动作分布上适合训练 VLA。",
+    "Fig.4 与 Appendix per-task table：分开看 LIBERO、MetaWorld、RoboCasa 和负面任务。",
+    "Fig.5：逐级消融对数据质量的贡献，注意这是 step 4000 时的消融。",
+    "Fig.6：区分成功样本收集效率与最终 VLA 训练性能。",
+    "Section 5：Agent 生成策略是否覆盖长尾失败，实机重放成本如何。"
+  ]}
+  deep={[
+    "先读 DAgger，理解行为克隆分布偏移与主动选择失败状态。",
+    "复现一个最小状态失败的 code repair loop：录像→定位→提交候选代码→仿真验证。",
+    "定义 failure mode 的独立评价指标，与通用任务成功率分开。",
+    "推导 flow matching 的连续动作监督目标，解释冻结 base-policy loss 作为数据兼容性筛选信号的含义。",
+    "研究 temporally correlated noise 与 i.i.d. noise 对机器人控制的不同影响。",
+    "思考为什么删除 idle actions 有时改变有效动作比例，却可能误删重要 gripper 时机。",
+    "比较 RFT、DAgger/human teacher、coding agent teacher 的数据量、外部 oracle 权限和总样本成本。",
+    "阅读 Appendix E 的不改善/退步任务，分析训练数据可能导致的其他失败。",
+    "设计 VLA-Arena 的后训练安全实验：成功率、违规动作、碰撞和修复次数必须分开。",
+    "最后提出真实机器人上如何设置独立 motion safety controller 与最小工具权限。"
+  ]}
+/>
+
+## Big Picture：从失败中收集专门的教学样本
+
+单纯模仿固定离线演示的 VLA，会在自己的 rollout 中进入分布外状态。基模型已经学会的任务可能不需要更多重复数据，反而是其**特定失效状态**最需要新的监督。
+
+Agentic-Teacher 把这两件事分离：coding agent 负责搜索、诊断和生成 data，VLA 负责学习 compact, real-time policy。最终系统不是把 coding agent 直接装进每个 action-control cycle。
+
+**AI-generated explanatory diagram（教学概念图，非原论文 Figure / 非定量数据）：**
+
+> 原有 VLA policy pi_0 运行  \
+> ↓  \
+> 收集成功和失败 rollouts  \
+> ↓  \
+> Coding agent 定位关键失败帧、分析失败类型  \
+> ↓  \
+> 编写 closed-loop code policy → 仿真验证 → 失败则迭代  \
+> ↓  \
+> 成功修复的 trajectory generator  \
+> ↓  \
+> temporal correlated noise → 去除空闲帧 → frozen pi_0 FM loss filter  \
+> ↓  \
+> 与基模型成功轨迹合并，进行 VLA post-training  \
+> ↓  \
+> 改进 VLA policy（**推理时不使用 coding agent**）
+
+这个流程仅解释论文系统结构；未复制、拼接或编辑作者图像。
+
+## 核心方法与公式
+
+### 1. 针对失败状态而不是只重新生成漂亮的演示
+
+作者从基模型尝试的 rollout 出发，寻找导致失败的局部关键状态，再写程序从该状态进行**闭环恢复**。代码执行的 simulator feedback/验证器帮助 agent 纠正自己的控制策略。验证通过的代码可反复用于相似状态，而不仅是某条静态轨迹。
+
+和纯 Rejected Fine Tune（RFT）相比，当基模型无法成功完成任务时，RFT 可能几乎没有正样本，但 Agentic-Teacher 可以用外部 agent 寻找解。这一优势同时依赖 agent 的推理、工具、探索和仿真预算，必须在对照中明确。
+
+### 2. 为什么要加入时间相关动作噪声？
+
+代码策略往往走出比较理想化、光滑的成功路径。VLA 训练时只学习这条“细线”可能并不能在小扰动下回到轨迹。
+
+作者加入时间相关噪声，使训练样本覆盖成功轨迹周围的可纠正状态。相比独立逐帧扰动，相关噪声更接近机器人执行中的连续控制误差。但噪声并不能无限加大：如果转移到完全无关的状态，成功监督反而会变差。
+
+### 3. 为什么不是所有成功演示都值得用于 Flow Matching？
+
+Flow matching VLA 学习从带噪动作走向 target action 的速度场。用概念化训练目标（并非逐字符复写作者每个实现细节）表示：
+
+$$
+\mathcal L_{\mathrm{FM}}
+=
+\mathbb E_{x,a,t,\epsilon}\,
+\lVert v_\theta(x,a_t,t)-v^*(a,\epsilon,t)\rVert^2.
+$$
+
+一条代码轨迹在 simulator 中成功，并不意味着其连续动作序列与当前 VLA 的模型结构、状态访问和动作表示兼容。
+
+因此作者使用**冻结的 base VLA flow-matching loss**评价候选演示，过滤较不适合当前 VLA 的样本。这使收集成功与生成**有用的后训练监督**成为两个独立标准。
+
+另外，长时间 idle segments 的去除提高有效动作密度，但必须保留 gripper 的状态切换，不能简单逐帧采样以致抹去抓取释放的语义。
+
+## Authors report：性能、消融与负面结果
+
+### 在作者指定 simulation benchmark 上
+
+| Benchmark | Base pi_0 | Rejected FT | Agentic-Teacher |
+| --- | ---: | ---: | ---: |
+| LIBERO-10 | 79.4% | 81.4% | **87.8%** |
+| MetaWorld-10 | 80.4% | 85.2% | **90.6%** |
+| RoboCasa（3 selected tasks） | 0% | 无基模型成功轨迹供 RFT | **30.0%** |
+
+这些成功率来自作者的仿真任务，不能直接相加平均为“机器人平均成功率”，也不等于实体机器人完成率。每个 LIBERO-10 task 的最终测试包含 50 次 rollout。
+
+### 平均提升并不意味着每个任务提升
+
+论文 Appendix 的 per-task results 显示，某些任务退步，例如 LIBERO-10 的 book-caddy 从 96% 变为 88%、mug-microwave 从 78% 变为 56%；而 two-moka-stove 从 24% 提升至 78%。这类不均匀性非常值得在安全 benchmark 中保留。
+
+### 消融不可和主要 benchmark 数字混为一谈
+
+Fig.5 对同一套 trajectory processing 依次测试 raw code data、noise injection、idle removal 和 flow-matching filter。论文附录特别注明该消融在 **training step 4000** 评价，LIBERO 完整训练预算是 10000 steps。不要把 Fig.5 某个消融点与 Fig.4 的完整训练结果当成相同条件。
+
+Fig.6 则比较成功样本**收集效率**，与最终训练模型的性能属于不同指标。
+
+## Key Figures：看什么，不复制原图
+
+1. **[Fig.1 — Agentic-Teacher 框架](https://arxiv.org/html/2611.17394v1)**：标出 coding agent 和 VLA 的职责边界，尤其解释为什么推理时可以脱离 agent。
+2. **[Fig.2 — 定位失败、编写修复代码、闭环执行反馈](https://arxiv.org/html/2611.17394v1)**：识别最有价值的监督样本是**从失败状态出发的成功后续**，不是随机新任务。
+3. **[Fig.3 — 动作分布与数据处理](https://arxiv.org/html/2611.17394v1)**：读 temporal noise 与 idle-frame cleanup 的不同作用。
+4. **[Fig.4 — 三组 benchmark 的成功率](https://arxiv.org/html/2611.17394v1)**：检查同一 benchmark 下 baseline、RFT 和本方法，不要跨 benchmark 直接比较。
+5. **[Fig.5–6 — 数据消融与成功样本收集效率](https://arxiv.org/html/2611.17394v1)**：关注消融的 step 4000 与训练 budget，区别数据质量和 agent 搜索成本。
+
+## Authors report vs AI interpretation vs caveats
+
+### Authors report
+
+- 失败驱动的 code-policy repair 可在模拟环境里生成针对 base VLA 薄弱状态的成功 demonstrations。
+- 加入 correlated noise、清理 idle frame 和基模型 loss filtering 后，演示对于 VLA 后训练更有用。
+- 在指定 LIBERO/MetaWorld/RoboCasa 仿真任务上，平均成功率高于论文所列基线。
+- 一些任务没有改善，甚至出现成功率退步。
+
+### AI interpretation
+
+这为自动化机器人实验提供一条清晰路线：**昂贵的 Agent 可作为“教师/数据生成工厂”，低延迟的 VLA 仍负责实时闭环控制**。同时，它提示了一个可能值得研究的安全问题：如果 coding agent 以“任务完成”为唯一修复判据，可能学到碰撞风险较高的演示。因此安全约束应参与 trajectory validation、filtering 和 post-training evaluation，而不仅在推理末端加拒绝层。
+
+这是应用推论，**不是作者已经验证的机器人安全改善结论**。
+
+### Caveats
+
+- 主要评测为仿真环境；没有提供独立的大规模真机安全复现。
+- Coding agent 可用的工具、动作权限、仿真器和计算预算，会影响与纯 VLA/传统 RFT 的公平比较。
+- “Causal frame localization” 是对轨迹错误位置的操作性诊断，不等于形式化因果识别或反事实证明。
+- Agent 的脚本可以反复修复特定场景，但技能库可能难以覆盖新分布中的复杂失败。
+- FM loss 过滤基于当前 frozen base policy；它是否会系统性排除真正创新但与现有策略差异很大的优秀轨迹，需要额外研究。
+- RoboCasa 只有三个选定任务，不能外推到全套 benchmark。
+- 成功率提升并不等同于实际伤害率、动作碰撞频次或危险环境下鲁棒性提升。
+
+## Historical Reading Chain
+
+1. **FIRST — [Ross, Gordon & Bagnell 2011, DAgger: Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning](https://arxiv.org/abs/1011.0686)**：为什么 behavior cloning 因状态分布偏移而在自己访问到的状态失败，是理解该论文失败驱动数据采集的最好先修。
+2. [Code as Policies (2022)](https://arxiv.org/abs/2209.07753)：理解 Agent 如何生成用于机器人控制的可执行程序。
+3. [LIBERO (2023)](https://arxiv.org/abs/2306.03310)：理解机器人终身操作基准任务及成功率计算，与本文 LIBERO-10 实验连读。
+
+## Reading Checklist
+
+- [ ] 明确区分 coding-agent teacher、code-policy generator 与最终的 VLA student。
+- [ ] 能说明为什么单纯收集 base VLA 成功轨迹不能修复 0% 成功的 RoboCasa 任务。
+- [ ] 在 Fig.2 找出一个失败状态、候选修复代码、仿真反馈组成的闭环。
+- [ ] 解释 temporal-correlated noise 的泛化作用，以及噪声过强的风险。
+- [ ] 解释为什么删除 idle frames 时一定要保留 gripper transitions。
+- [ ] 从公式理解 frozen base-policy FM loss 作为 trajectory compatibility signal 的优势与偏差。
+- [ ] 写出 LIBERO 79.4→87.8 与 MetaWorld 80.4→90.6 的实验条件。
+- [ ] 看 Fig.5 和 Appendix，区分 step 4000 消融与完整训练。
+- [ ] 找出至少一个退步任务，避免仅凭 benchmark 平均值断言算法普遍改进。
+- [ ] 设计能匹配 teacher tool budget、simulation rollouts 和 recovery privileges 的新实验。
+- [ ] 为 VLA-Arena 提出区别 task success、unsafe action、collision 和 intervention cost 的评测方式。
+- [ ] 阅读 FIRST DAgger，说明这里的外部 code teacher 与经典数据聚合的区别。
+
+## Sources and Attribution
+
+- [Teng et al., Agentic-Teacher: An Agentic Data Engine for Failure-Driven VLA Post-Training, arXiv:2611.17394v1, first submitted 12 Nov 2026](https://arxiv.org/abs/2611.17394).
+- [作者公开 arXiv HTML、Sections 1–6、Figures 1–6、Appendices A–E](https://arxiv.org/html/2611.17394v1).
+- 原论文标注 CC BY 4.0，但本 Guide 仍选择 **只链接**原始 Figure，不复制、裁剪、改色或重新组合论文图片。箭头图明确为 **AI-generated explanatory diagram**，绝非实验曲线或作者原图。
