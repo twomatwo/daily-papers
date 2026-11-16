@@ -1,0 +1,180 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Narrow-Band Magnetism Allowed by Quantum Geometry: Altermagnetism and Beyond"
+authors: "Minxuan Wang, Pei-Han Lin, Yang Ge, Jiabin Yu"
+date: "2026-11-17"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.17414"
+notionUrl: "https://app.notion.com/p/41a7dd5567ec816d9d38f8c6f4d8e01c"
+summary: "With identical narrow-band dispersions, different Bloch quantum geometry radically changes projected interactions and the resulting Hartree-Fock magnetic phases."
+readingTime: "25–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**作者利用一个具有四个原胞轨道的 quadrupole insulator 模型，把最低能带**色散完全相同**、但 Bloch 波函数的量子几何差异极大的两种参数极限放在一起比较。在严格只包含原胞内 generalized Hubbard–Kanamori interactions 的原始模型中，强几何的 obstructed-atomic regime 经最低带投影后获得显著的相邻晶胞相互作用，Hartree–Fock（HF）相图出现 altermagnetism、向列序和其他磁序；弱几何的 trivial-atomic regime 在相应扫描中主要出现铁磁态。
+
+**AI interpretation：**这个研究的重要方法学设计，是控制住单粒子能带能量、改变波函数几何，从而识别相互作用投影后的差异。与单纯说“平带易磁化”不同，它研究的是：**在能带一样平的条件下，为什么磁序类型不同？**
+
+**Caveats：**这是特定多轨道格点模型内的自洽 HF 结果，文中找到的相为**金属**，不是在真实 TMD 或石墨烯样品中直接观察到的 altermagnet。HF 的相边界会受平均场近似、填充、局域相互作用参数、候选序选择和涨落影响；“几何在此模型中必要”不能推广成所有交替磁体必然需要大的量子度规。
+
+**阅读范围：**核查 arXiv:2611.17414v1 的主要正文 Sections I–V，Fig.1–3 的图注和论述、部分 Appendix B–F 的模型定义与 HF 限制；未自行运行数值求解。
+
+<ReadingPath
+  quick={[
+    "Abstract：识别相同色散与不同量子几何这个受控对照。",
+    "Fig.1：比较两个 regime 的 Wannier 轨道中心及展开范围。",
+    "Fig.2：比较弱/强量子几何两幅磁性相图。",
+    "结论：哪些是数学构模与 HF 结论，哪些还需要实验验证。"
+  ]}
+  standard={[
+    "Section II：检查四轨道模型的对称性，以及如何允许 AM 与 AFM。",
+    "Section III：推导两个极限中量子度规与 Wannier spread 的差异。",
+    "Fig.1(c,d)：从原胞内 bare interactions 到更长程 projected interactions。",
+    "Fig.2：区分 ferromagnetic、nematic、具有不同空间/自旋对称性的 order。",
+    "Section IV、Fig.3：学习 orbital-anisotropic interaction 如何稳定 AM I 和 AM II。",
+    "Section V：整理 mean-field 与真实材料的不同证据层次。"
+  ]}
+  deep={[
+    "先阅读 Marzari–Vanderbilt 1997，建立 Bloch gauge 与 Wannier 局域化的数学基础。",
+    "由四轨道最低能带能量式检验两个极限能带完全相同，而 metric 不同。",
+    "写出量子度规的投影算符形式，并理解其与 Wannier 空间 spread 的联系。",
+    "把 onsite Kanamori 相互作用投影到 lowest-band Wannier basis，标注跨胞矩阵元。",
+    "对比 m/t << 1 和 m/t >> 1 的极限，解释近邻密度/交换通道为什么大不一样。",
+    "从 Fig.3 识别 AM 与 Néel AFM 在同类实空间磁矩图案之外的自旋-轨道序参数差异。",
+    "检查 Appendix 的 HF 竞争解、收敛性、未收敛点及涨落稳定性讨论。",
+    "设计一个相同色散、不同量子几何的独立数值实验，用 exact diagonalization/DMRG 复核趋势。"
+  ]}
+/>
+
+## Big Picture：相同的能谱，不相同的多体物理
+
+一个孤立低能带的 dispersion 只给出每个动量上电子的能量，却没有包含 Bloch wavefunction 如何随动量变化，也没有完整决定将相互作用投影到这一带以后的 form factors。
+
+这篇通过改变 m/t，构造了以下“控制实验”。
+
+**AI-generated explanatory diagram（教学概念图，非原论文 Figure，绝非定量数据重绘）：**
+
+> 相同最低能带 E(k)、相同带宽  \
+> ↓  \
+> 两种不同的 Bloch geometry  \
+> ↙ 强 metric / obstructed atomic  ↘ 弱 metric / trivial atomic  \
+> Wannier spread 跨多个晶胞   Wannier 更局域  \
+> ↓                ↓  \
+> onsite interactions 投影出非局域通道  投影仍以 onsite 为主  \
+> ↓                ↓  \
+> HF：AM + nematic 等丰富磁序   HF：主要 ferromagnetic orders
+
+箭头仅表示作者模型中的因果解释；没有使用原论文的面板、颜色或数据。
+
+## 核心公式与机制
+
+### 1. 带宽相同，metric 不同
+
+论文最低带色散是：
+
+$$
+E(\mathbf k)=-\sqrt{m^2+t^2+2mt\cos k_x}
+-\sqrt{m^2+t^2+2mt\cos k_y}.
+$$
+
+其带宽为：
+
+$$
+W=4\min(m,t).
+$$
+
+两个极限的量子度规可通过带投影算符 P(k) 定义：
+
+$$
+g_{ij}(\mathbf k)=\frac12\mathrm{Tr}[\partial_iP(\mathbf k)\partial_jP(\mathbf k)].
+$$
+
+积分量子度规的迹在论文规范和归一化下满足：
+
+$$
+\mathrm{Tr}\mathcal G \simeq 2\pi^2\quad (m\ll t),
+$$
+
+而在另一极限：
+
+$$
+\mathrm{Tr}\mathcal G = O(t^2/m^2)\quad (m\gg t).
+$$
+
+**注意：**宽窄和 gap 的比较本身不能告诉我们不同区间磁序为什么不同。量子度规所关联的 Wannier spread 及其影响的 projected interaction 才是作者研究的机制。
+
+### 2. 为什么严格 onsite 的相互作用会变得非局域？
+
+在原始 atomic-orbital basis，Hubbard–Kanamori interactions 只作用于原胞内。将 c-operators 写成 lowest-band Wannier d-operators 的叠加后，原本分布在一个原胞中的轨道密度项可能对**多个 Wannier center** 产生耦合。
+
+强几何 regime 的 Wannier 轨道中心偏离原子位置并覆盖相邻原胞；因此在投影基底中，出现 sizeable nearest- 和 next-nearest-neighbor channels。弱几何 regime 中相同类型的局域相互作用投影后更接近简单 onsite Hubbard channel。
+
+这是 **band projection 的空间结构变化**，并不是声称现实中的裸 Coulomb 作用本来只在原胞内。
+
+### 3. Altermagnet 与反铁磁不能只靠磁矩示意区分
+
+论文采用具有 orbital anisotropy 的自发自洽解，在 Fig.3 中得到 AM I、AM II 以及 Néel AFM 等多个相。它们可有相似的实空间磁化纹理，却由对称性和额外自旋-轨道 order parameters 区分。
+
+论文将 relevant contribution 写为：
+
+$$
+H_z=-\sum_{\mathbf R}(g_0+g_\pi e^{i\mathbf q\cdot\mathbf R})Q_z(\mathbf R).
+$$
+
+其中 uniform component g0 对 AM 与相近的 AFM 解的区分具有重要作用。这里不能把任何具有交替实空间磁矩的状态都直接叫作 altermagnet。
+
+## Key Figures：链接原图与导读
+
+原论文 Figure 因公开仓库复用许可不作复制；下列均为原始 arXiv HTML 外链。
+
+1. **[Fig.1：模型、相同色散与 Wannier profiles](https://arxiv.org/html/2611.17414v1)**。先看最低能带色散如何在两个 regime 保持一致，再看 Fig.1(c,d) Wannier 轨道的空间中心与波函数 spread。特别注意这里不是从曲线读出某个真实材料的磁化值。
+2. **[Fig.2：weak / strong geometry 的 HF 相图](https://arxiv.org/html/2611.17414v1)**。对照相同扫描参数下的 FM、nematic、不同 broken symmetry magnetic states；Fig.2(a) 更丰富并不意味着所有各向异性都自动稳定。
+3. **[Fig.3：orbital-anisotropic interaction 与两种 AM](https://arxiv.org/html/2611.17414v1)**。关注 AM I/II、Néel AFM 的费米面与 symmetry labels，避免只看实空间箭头外观。
+4. **[Appendix HF convergence and metastable solutions](https://arxiv.org/html/2611.17414v1)**。识别自洽收敛失败区域、近简并解及近似边界，才可能理解相图的可信度。
+
+## Authors report vs AI interpretation / caveats
+
+### Authors report
+
+- 在两种可精确对比的能带结构中，最低带能量与带宽一致，量子度规和 Wannier 态不同。
+- HF 相图中强几何情形支持多种自发磁序，而弱几何的对应扫描主要得到铁磁解。
+- 投影相互作用出现或缺乏更长程通道，提供这种差异的一种微观解释。
+- 在额外轨道各向异性交互作用下，强几何支持两种以对称性区分的 collinear altermagnetic phases。
+
+### AI interpretation
+
+对 moiré Hamiltonian 设计，除了 Chern number、bandwidth 和 DOS，还可以把 quantum metric、Wannier spread 和 projected interaction channels 作为设计变量。检验“量子几何是否重要”的强实验/理论对照应保持能谱尽可能一致，单独控制波函数和投影 form factors。
+
+### Caveats
+
+- HF 是近似多体方法，不能排除被涨落改写的磁序与相边界。
+- 本文模型是 quadrupole-insulator lattice，不是针对特定真实化合物的 ab initio 预测。
+- 相图中的有序态是金属而非普遍绝缘的 altermagnets。
+- 强几何在此受控模型中打开某类磁序通道，但不是所有晶体中该磁序形成的普适充分必要条件。
+- 量子度规与投影相互作用的对应依赖所选带、规范不变的度规和受控投影近似；不能把某一张 Wannier 示意误当成直接实验测量。
+
+## Historical Reading Chain
+
+1. **FIRST — [Marzari & Vanderbilt 1997, Maximally localized generalized Wannier functions](https://doi.org/10.1103/PhysRevB.56.12847)**：从 Bloch gauge、Wannier spread 入手，是理解 Fig.1 中同样能带却不同波函数空间分布的最短前置路径。
+2. [Peotta & Törmä 2015, Superfluidity in topologically nontrivial flat bands](https://doi.org/10.1038/ncomms9944)：另一个体现 quantum geometry 影响平带关联物理的经典例子。
+3. [Šmejkal et al. 2022, Emerging research landscape of altermagnetism](https://doi.org/10.1103/PhysRevX.12.031042)：了解为什么 altermagnetic order 的定义不能仅使用反平行实空间磁矩。
+
+## Reading Checklist
+
+- [ ] 亲手验证最低带 E(k) 的两个参数极限有相同带宽。
+- [ ] 从量子度规投影公式解释为何 Berry curvature 或能谱不能独立决定 metric。
+- [ ] 描述 strong/weak geometry 的 Wannier 轨道中心和 spatial spread。
+- [ ] 从 onsite bare interaction 画出至少一种投影后跨胞相互作用的概念连接。
+- [ ] 在 Fig.2 中分别指出 FM、nematic、额外磁序出现的范围和近似条件。
+- [ ] 解释 Fig.3 中 altermagnet 与 Néel AFM 的 order parameters/对称性不同点。
+- [ ] 识别本文模型与真实材料实验之间的缺口，检查 HF 收敛及涨落限制。
+- [ ] 阅读 FIRST Marzari–Vanderbilt 并写一句量子度规与 Wannier spread 的联系。
+
+## Sources and Attribution
+
+- [Wang et al., Narrow-Band Magnetism Allowed by Quantum Geometry: Altermagnetism and Beyond, arXiv:2611.17414v1, submitted 12 Nov 2026](https://arxiv.org/abs/2611.17414).
+- [作者公开 HTML、正文 Sections I–V、Figures 1–3 与 Appendices](https://arxiv.org/html/2611.17414v1).
+- 本站未复制、裁剪、合并或重着色论文图片。论文页面标注的 arXiv perpetual non-exclusive license 并不自动授权本站重刊其 Figure。上述概念箭头示意明确为 **AI-generated explanatory diagram**，不是作者原图或数据曲线。
