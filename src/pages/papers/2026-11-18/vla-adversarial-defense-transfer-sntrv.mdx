@@ -1,0 +1,203 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Robustness as a Transferable Skill: Cross-Task Adversarial Defense for Vision-Language-Action Policies"
+authors: "Jinquan Zhang, Run Yang, Dongfu Yin, Qiang Lai, Yufeng Yan, Pengshuai Yin, F. Richard Yu"
+date: "2026-11-18"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2611.18702"
+notionUrl: "https://app.notion.com/p/41b7dd5567ec8184b711c24d3b45ea63"
+summary: "Adversarial-defense updates learned on other robot tasks can be transferred into an independent VLA visual encoder, provided shared parameter coordinates and suitable update scaling."
+readingTime: "30–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**VLA 容易因视觉对抗贴片而执行失败。本文询问：已经在一个操作任务上训练的视觉防御，能否**不看目标任务对抗数据**就迁移给独立训练的目标 VLA？作者发现单一源任务的防御参数差分已经具有跨任务价值，进一步提出 Source-Norm Transferable Robustness Vector（**SN-TRV**），将多个源更新的**平均方向**与**平均源范数**结合，再加到目标策略的视觉编码器上。在 OpenVLA-OFT 的 LIBERO Goal / Long 双相机 EDPA 扰动下，论文报告原策略成功率 22.2% / 10.0%，迁移后达 95.4% / 79.4%。在有打印 adversarial patch 的真实 PiPER 实验中，报告平均成功率 20.3% → 45.8%。
+
+**AI interpretation：**鲁棒性在特定条件下可以是一种可迁移的参数空间 capability，而不仅仅是对某个机器人任务逐次加装防御。这提示 VLA 安全评测需要明确**目标端训练预算、参数骨干是否对齐、攻击是否自适应、干净任务表现**，不能只比较对抗攻击后的成功率。
+
+**Caveats：**源防御仍需事先用对抗训练获得；跨骨干不能随意叠加不对齐的参数。目标特定 EDPA-AF 使用了目标任务对抗数据，不能作为预算匹配基线。固定攻击效果高不代表在自适应攻击、不同扰动类型或所有真实场景都有同等收益。
+
+**核查范围：**已经核对 arXiv:2611.18702v1 HTML 正文 Sections I–V、Fig.1–4 captions、Tables I–IV、adaptive attack/physical robot 小节及 PDF 关键页；没有重跑 LIBERO、生成对抗贴片或操作 PiPER 机器人。
+
+<ReadingPath
+  quick={[
+    "Fig.1：理解 cross-task defense reuse 与 target-task adversarial fine-tuning 的差别。",
+    "Table I：在 Goal/Long 的 Dual attack 列比较 Original、单源、Mean、SN-TRV。",
+    "Table II：不要漏读 adaptive attack，固定攻击下的成功率并非完整安全结论。"
+  ]}
+  standard={[
+    "Section III-A：target policy 已针对自身 manipulation task 训练，但从未参与 defense-vector construction。",
+    "Fig.2 与 Equations 1–5：写出源防御向量及目标视觉编码器更新。",
+    "Table I：同时读取 Clean、Primary、Wrist、Dual 四列。",
+    "Fig.4：理解不同源防御 delta 的方向不一致为何使平均范数变小。",
+    "Table II：区分 fixed EDPA patch 和重新对受测模型优化的 adaptive EDPA patch。",
+    "Table III：测试 AGSD 时，原 source defense recipe 的覆盖能力可能比迁移校准本身更关键。",
+    "Table IV：OpenVLA、OpenVLA-OFT 与 pi_0 在各自骨干内部迁移；不能解释为跨架构直接移植。",
+    "Physical robot 小节：明确 printed patch、PiPER、平均成功率与现场实验的范围。"
+  ]}
+  deep={[
+    "先读 OpenVLA 与 LIBERO，掌握视觉编码器和跨任务 policy 的基本结构。",
+    "把每个 source 的 original/robust encoder 权重对应起来，检查坐标和 initialization 是否完全匹配。",
+    "推导 ||Mean(delta)|| ≤ Mean(||delta||) 的三角不等式和 cosine alignment 影响。",
+    "推导 SN-TRV 是固定向量范数下的平方距离最小化结果，而不等于目标鲁棒性的最优解。",
+    "实现只修改视觉编码器、保留 action head 等其他参数的消融。",
+    "在目标安全测评中控制源防御训练成本、目标端预算、干净性能与攻击者可访问信息。",
+    "比较固定 EDPA 与目标模型自适应重新优化 EDPA 的攻击差异。",
+    "分析为何针对 EDPA 产生的向量对 AGSD 不一定有效。",
+    "设计 VLA-Arena 的不同相机攻击、任务类型、未知攻击和跨域分布测试。",
+    "对 PiPER 真实物理贴片实验单独定义 task success、碰撞/物理风险、控制延时等指标。"
+  ]}
+/>
+
+## Big Picture：防御也可能存在共享参数方向
+
+过去常见方案：目标机器人任务受到贴片攻击 → 对目标本身重新进行 adversarial fine-tuning → 得到鲁棒的新 checkpoint。目标任务越多，这一训练成本可能重复。
+
+本文先证明单源更新可以跨任务复用，再关注多源平均时的**方向与幅值不能混为一谈**。
+
+**AI-generated explanatory diagram（教学流程；非论文图像或定量数据）：**
+
+> Spatial / Object 等源任务 VLA \
+> ↓ 原始 checkpoint 与对抗训练后的 checkpoint 对比 \
+> 得到各自视觉编码器的防御更新 delta_i \
+> ↓ 保留源更新平均方向 \
+> ↓ 根据源更新平均 L2 范数校准长度 \
+> SN-TRV 参数向量 \
+> ↓ 加到独立训练的 Goal / Long 等目标视觉编码器 \
+> 目标 VLA 在原本 action head 和其他模块保持不变时执行 \
+> ↓ \
+> 在指定攻击下评价 task success / clean success / adaptive success
+
+**关键限定：**这里的 transfer 发生在具有**同骨干、同初始化、参数坐标对齐**的 source/target 之间。论文也在多个 VLA backbone 内分别测试，但没有在互不兼容的骨干之间直接相加参数。
+
+## 核心机制与数学
+
+定义源任务 i 的普通视觉编码器参数 theta_i，以及对抗训练后的参数 theta_i^R：
+
+$$
+\Delta_i=\theta_i^R-\theta_i .
+$$
+
+当有 M 个源任务时，先计算平均更新以及平均源范数：
+
+$$
+\bar\Delta=\frac{1}{M}\sum_{i=1}^M\Delta_i,
+\qquad
+r_{\mathrm{src}}=\frac{1}{M}\sum_{i=1}^M\lVert\Delta_i\rVert_2 .
+$$
+
+**SN-TRV** 选择平均方向，但恢复到平均源范数：
+
+$$
+\Delta_{\mathrm{SN}}=
+\frac{r_{\mathrm{src}}}{\lVert\bar\Delta\rVert_2}\bar\Delta,
+\qquad \bar\Delta\ne0.
+$$
+
+目标更新只在视觉编码器进行：视觉参数 theta_T 加上上式；其余参数 psi_T 不改动。该步骤不使用目标任务对抗数据、不做目标端梯度优化、也不添加推理时模块。
+
+由三角不等式：
+
+$$
+\lVert\bar\Delta\rVert_2
+\leq \frac1M\sum_i\lVert\Delta_i\rVert_2
+=r_{\mathrm{src}} .
+$$
+
+两个源更新若方向不一致，平均可能互相抵消。论文中 Spatial 与 Object 的 global cosine 约 **0.0942**；平均更新范数 **7.841**，而平均源更新范数 **10.600**，因此 SN-TRV 方向不变、长度约乘 **1.352**。
+
+但是，以上几何推导仅说明**范数校准的定义**，不意味着得到了任何目标任务上的数学最优鲁棒解。
+
+## Authors report：关键结果与对照
+
+### Table I — OpenVLA-OFT / LIBERO 双相机 EDPA
+
+| 方法 | Goal Clean | Goal Dual | Long Clean | Long Dual |
+| --- | ---: | ---: | ---: | ---: |
+| Original | 97.2% | 22.2% | 93.2% | 10.0% |
+| Spatial 单源 | 93.0% | 87.2% | 90.2% | 68.6% |
+| Mean delta | 94.6% | 76.6% | 90.4% | 62.0% |
+| SN-TRV | 97.2% | **95.4%** | 92.4% | **79.4%** |
+| Target-specific EDPA-AF | 96.4% | 96.2% | 92.6% | 85.2% |
+
+**重点：**单源迁移已经有效；SN-TRV 在两源平均的基础上改善鲁棒性。最后一行需要目标侧对抗训练，因此**不是相同训练数据/成本的基线**。
+
+### Table II — 重新针对受测策略生成自适应攻击
+
+| 目标 | Mean delta adaptive | SN-TRV adaptive | Target-specific EDPA-AF adaptive |
+| --- | ---: | ---: | ---: |
+| Goal | 61.4% | **81.2%** | 85.4% |
+| Long | 28.6% | **46.6%** | 43.8% |
+
+即使针对修改后的策略重新优化攻击，SN-TRV 相比简单均值仍有提升；但 SN-TRV 从 Goal fixed 95.4% 降到 adaptive 81.2%，Long 从 79.4% 降到 46.6%，不能说固定测试结果能直接推广到所有强攻击者。
+
+### Table III — 防御来源决定能抵挡什么
+
+当源任务只用 EDPA-AF 防御，迁移后的 Goal/Long 在 AGSD 下仍可能几乎失效（例如 **2.0% / 0.8%**）。如果来源训练采用能覆盖 AGSD 的 SARF，迁移的攻击覆盖才随之扩大。**规范化多个向量不会自动生成原本缺少的防御能力。**
+
+### Physical PiPER experiment
+
+作者报告在带实体打印对抗图案的 PiPER 操作中，平均任务成功率从 **20.3%** 增至 **45.8%**。这是指定 patch / task / robot 设置下的实验，不是机器人在所有现实场景中的“安全率”。
+
+## Key Figures：原图外链与具体阅读问题
+
+本公共仓库仅外链原始 arXiv HTML Figure，不复制第三方图片。
+
+1. **[Fig.1 — Cross-task adversarial defense](https://arxiv.org/html/2611.18702v1)**：观察 source policy、held-out target policy 与具体对抗视觉输入的关系。
+2. **[Fig.2 — SN-TRV pipeline](https://arxiv.org/html/2611.18702v1)**：明确只更新视觉编码器，而不是整模型 checkpoint。
+3. **[Fig.3 — Goal/Long 闭环操作对照](https://arxiv.org/html/2611.18702v1)**：比较匹配初始条件、相同攻击下不同策略成功/失败示例；这仍是个别示例，须回到 Table I。
+4. **[Fig.4 — 更新方向、范数几何和 fixed-attack improvement](https://arxiv.org/html/2611.18702v1)**：同方向不同长度的 controlled comparison 是论证幅值作用的核心证据。
+5. **[Tables I–IV — 性能与攻击覆盖](https://arxiv.org/html/2611.18702v1)**：优先比较同一骨干/攻击/数据权限下的行；不能混用 target-side optimization 或不兼容模型的数字。
+
+## Authors claim / AI interpretation / Caveats
+
+### Authors report
+
+- 从一个源任务提取视觉防御 delta，已经能提高其他任务下独立目标 VLA 的对抗成功率。
+- 用平均源向量方向与源更新范数校准组合得到 SN-TRV，普遍优于论文测试中的 naive mean 方案。
+- 在多个骨干内的分任务迁移、固定/自适应攻击，以及 PiPER 实物贴片测试中，作者提供了有正面效果的实例。
+- 攻击覆盖仍取决于 source defense recipe，且某些设置下 clean performance 下降。
+
+### AI interpretation
+
+这种参数更新向量可能代表由共享视觉编码器学到的一些对抗稳定表征，值得研究**与任务语义、相机几何、感知偏差究竟有何关系**。在 VLA benchmark 中，robustness transfer 也可以作为单独评价轴：给定见过的 source defense，面对新 target task 的可靠性如何变化？这项建议是延伸应用，不是论文已经建立普适可迁移安全机制的证明。
+
+### Caveats
+
+- 更新向量需要依赖各源 policy 的 adversarial training，不能称为“无需任何防御训练”。
+- 若来源与目标初始化、视觉编码器结构或参数顺序不一致，直接相加不具备论文保证。
+- Table I 的 target-specific reference 消耗目标侧数据与额外训练，比较时不应忽略。
+- Adaptive EDPA 与不同类型的 AGSD 暴露较强的 attack-specific gap。
+- 跨三骨干结果是在每个骨干内分别计算 delta，不代表跨骨干向量通用。
+- 成功率不等于避障、碰撞风险、人体安全或策略的长期稳定性；实机测试范围仍有限。
+- 研究的向量几何与目标成功率存在经验关联，不是唯一必要机制或形式化安全认证。
+
+## Historical Reading Chain
+
+1. **FIRST — [OpenVLA (2024)](https://arxiv.org/abs/2406.09246)**：先理解 VLA 的视觉编码器、语言条件与动作输出，再看为何可以只改 encoder。
+2. [LIBERO: Benchmarking Knowledge Transfer for Lifelong Robot Learning (2023)](https://arxiv.org/abs/2306.03310)：论文中 Spatial/Object/Goal/Long 操作任务套件的背景。
+3. [Task Arithmetic: Editing Models with Task Vectors (2022)](https://arxiv.org/abs/2212.04089)：参数差分与多任务更新组合的基本想法。
+4. [RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control (2023)](https://arxiv.org/abs/2307.15818)：VLA 的早期范式和可迁移视觉语义。
+
+## Reading Checklist
+
+- [ ] 能定义 source policy、held-out target policy 与 target-specific defense 的不同权限。
+- [ ] 找到视觉 encoder 的 delta_i 定义，并说明非视觉模块是否变化。
+- [ ] 自己推导向量均值范数不大于平均源范数。
+- [ ] 用 7.841、10.600 的例子解释 SN-TRV 的 rescaling。
+- [ ] 将 Table I 的 Goal/Long dual success 与 clean success 一起记录。
+- [ ] 区分固定攻击与自适应攻击，列出 Table II 中两种条件的差别。
+- [ ] 能解释为什么源 EDPA-AF 对 AGSD 的覆盖有限。
+- [ ] 不将 target-specific EDPA-AF 误写为预算匹配对照。
+- [ ] 分清“跨任务迁移”和“跨架构直接移植参数”。
+- [ ] 设计一套含 task success、collision、robustness、simulation budget 与 physical-risk 的 VLA 安全评测。
+- [ ] 先读 FIRST OpenVLA，再对照本文 visual encoder 定义。
+
+## Sources and attribution
+
+- [Zhang et al., arXiv:2611.18702v1, first submitted 6 November 2026](https://arxiv.org/abs/2611.18702); [HTML、正文 Tables I–IV、Fig.1–4](https://arxiv.org/html/2611.18702v1).
+- 本导读没有复制、裁剪、标注、改色或拼接原始论文 Figure；所有关键图片链接指向作者公开原稿。
+- 上述流程为 **AI-generated explanatory diagram**，仅定性解释方法，没有从记忆重绘定量数据。
