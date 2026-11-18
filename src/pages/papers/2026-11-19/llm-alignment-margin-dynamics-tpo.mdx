@@ -1,0 +1,194 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Margin Dynamics for Large Language Model Alignment"
+authors: "Xingzi Xu, Mehmet Saygin Seyfioglu, Karim Bouyarmane"
+date: "2026-11-19"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.21766"
+notionUrl: "https://app.notion.com/p/41c7dd5567ec8129892fea064610a0da"
+summary: "A one-dimensional preference-margin ODE separates unbounded DPO growth from finite IPO attractors and motivates a smoothed reference-free alignment loss, with important mean-field limitations."
+readingTime: "35–55 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**本文把 LLM 偏好对齐目标表示为概率单纯形中的向量场，再聚焦单个 chosen/rejected completion pair 的 **log-probability margin**。在连续时间梯度流近似下，**无标签噪声的 DPO margin 对数增长且没有有限吸引点，而 IPO 会收敛到有限 margin**。有标签翻转噪声的 DPO 也出现稳定固定点。作者据此设计具有 label smoothing、参考模型自由的 TPO-S 损失，在一些 8B–9B 模型的 IFEval 中获得适度增益。
+
+**AI interpretation：**将 SFT、DPO、IPO 和其他方法放在相同的 dynamical-systems 语言里，可以解释不同损失为何出现不同的 gradient pressure、噪声鲁棒性和训练漂移；从一个函数演化的「吸引子」出发设计 loss，比盲目搜索超参数更容易提出可检验预测。
+
+**Caveats：**两回答的 1D ODE 不是实际十亿参数 Transformer 的精确动力学。作者引入 fitted effective beta；例如 label smoothing ε=0.05 时，单对理论固定点约 29，但某些实验 margin 达 832，存在数量级差异。**margin 的稳定不等于 downstream correctness、safety 或 generalization**。论文也明确指出 TPO-S 的性能优势较小，且模型和任务依赖。
+
+**实际核查范围：**阅读 arXiv:2611.21766v1 的 Introduction、Sections 2–5、主要定理与 Eq.(4–7)、Fig.2–6、Tables 2 与正文 Limitations，并查看部分 Appendix 理论说明。没有重新训练模型、复现随机种子或核查所有补充表格。
+
+<ReadingPath
+  quick={[
+    "Abstract + Fig.2：先看不同 loss 对 margin 所形成的 effective potential。",
+    "读 Fig.3：DPO 的持续 margin 增长与 IPO 的有限吸引子。",
+    "看 Table 2 和 Section 5 Limitations：区分理论预测与真实质量改善。"
+  ]}
+  standard={[
+    "Section 2：写出 Δ=log π(chosen)/π(rejected) 与 reference subtraction。",
+    "SFT vs preference-gradient：看 logit softmax Jacobian 下 bad-completion probability 的不同衰减。",
+    "Theorems 2.3–2.4：DPO/IPO 在有无label noise时的定点与收敛率。",
+    "Fig.4：标签反转率 ε 如何把 DPO 从无界增长改为有限吸引子。",
+    "Fig.5：repulsion weight γ 过高时，样本间梯度干涉如何引发 margin collapse。",
+    "TPO-H/TPO-S：理解「理论预测有限吸引点」如何转化成新loss。",
+    "Section 3 Table results：分开比较 margin trajectories、IFEval 和偏好准确率。"
+  ]}
+  deep={[
+    "FIRST 先读 Rafailov et al. DPO 原始损失与reference policy为何进入log-ratio。",
+    "从两类 completion 的softmax函数计算对数几率margin和概率微分。",
+    "推导 DPO 的 dotΔ=β sigmoid(-βΔ) 与长期log t行为；再推 IPO 的线性回归吸引点。",
+    "推导DPO在标签翻转率ε下的有限固定点及标签噪声从隐式变为显式正则的意义。",
+    "检查其他completion概率泄漏、共享模型参数及不同样本梯度耦合如何破坏1D封闭性。",
+    "比较理论 β、effective β 和实测margin的尺度；观察为何ε=0.05的29与832可同时出现。",
+    "逐项比较TPO-S和SimPO/cDPO：reference、margin shift、label smoothing 的作用不应混淆。",
+    "研究训练margin与下游任务评分之间的低相关（论文给出AIME约ρ=0.13）及不确定性。",
+    "设计固定rollout样本、模型规模和优化器的对照实验，验证由损失向量场而非训练数据引起的效果。"
+  ]}
+/>
+
+## Big Picture：对齐损失可以看成概率空间上的动力系统
+
+通常我们比较偏好优化时主要看 reward 或最终 benchmark 分数，容易忽略训练中模型如何将概率质量从 rejected completion 转向 chosen completion。本研究先做一个可解简化模型：只考虑两个 completion，观察概率几率及其 log margin 的时间演化。
+
+**AI-generated explanatory diagram（文字机制示意，非原始Figure、非数据曲线）：**
+
+> Pairwise preference data：chosen y_w 与 rejected y_l \
+> ↓ 定义 margin Δ = log[π(y_w)/π(y_l)]（视目标是否减去 reference） \
+> 选 loss → 得到驱动函数 w(Δ) → margin ODE：dotΔ = w(Δ) \
+> **DPO / SimPO（无噪声）：**驱动力为正、渐趋零，margin 慢慢增大，无有限吸引子 \
+> **IPO：**线性恢复力推动 margin 回到有限 Δ* \
+> **Label-smoothed DPO / TPO-S：**负反馈使margin出现有限稳定点 \
+> ↓ 模型参数共享、Adam、概率泄漏、多样化样本影响有效时间尺度 \
+> **实验层：**margin dynamics + preference accuracy + IFEval 必须分别检验
+
+文字箭头只用于建立直觉，不代表作者已经完整验证所有大模型参数的真实ODE。
+
+## 机制与公式：从偏好损失到有限吸引子
+
+在只考虑两个 completion 的简化空间：
+
+$$
+\Delta_\theta
+=\log\frac{\pi_\theta(y_w\mid x)}{\pi_\theta(y_l\mid x)},\qquad
+\widetilde{\Delta}=\Delta_\theta-\Delta_{\rm ref}.
+$$
+
+冻结 reference 时，Δ_ref 是常数，因此可将其看作初始条件的平移。对某些 pairwise preference objectives，作者写出经过时间尺度归一化的动力学：
+
+$$
+\frac{d\Delta}{dt}=w(\Delta).
+$$
+
+### DPO：越来越弱的正向驱动力
+
+$$
+w_{\rm DPO}(\Delta)=\beta\,\sigma(-\beta\Delta).
+$$
+
+它对所有有限 Δ 都为正，但在 margin 很大时指数衰减。因此在连续梯度流里，Δ 长时近似按 log t 增长，而**不存在有限稳定 Δ***。这描述的是无噪声、特定模型假设下的loss动力学，不是「训练到无穷大」的实际承诺。
+
+### IPO：有限 margin
+
+在论文采用的 reference-free 写法下，IPO 的简化目标为：
+
+$$
+\mathcal L_{\rm IPO}
+=(\tau\Delta-1/2)^2.
+$$
+
+对应的稳定固定点：
+
+$$
+\Delta^*_{\rm IPO}=\frac{1}{2\tau}.
+$$
+
+它可被理解为一维有效势的极小值。注意如果加入 reference log-ratio，吸引点会发生相应平移。
+
+### Label noise：DPO 出现有限固定点
+
+若标签以概率 ε 翻转，在平均场近似下，DPO margin 的稳定值成为：
+
+$$
+\boxed{
+\Delta^*_{\rm DPO}
+=\frac{1}{\beta}
+\log\frac{1-\varepsilon}{\varepsilon}
+},\qquad 0<\varepsilon<1/2.
+$$
+
+同一情况下，IPO 的固定点是：
+
+$$
+\Delta^*_{\rm IPO}=\frac{1-2\varepsilon}{2\tau}.
+$$
+
+所以标签噪声对无噪声 DPO **定性改变**了是否有有限吸引子，对 IPO 主要是移动固定点。作者据此把 label smoothing 作为有意的损失设计，而不是把数据标签错误误认为训练目标本身。
+
+### TPO-S：从固定点反推损失
+
+TPO-S 结合 reference-free 训练和 label-smoothed sigmoid，让 ε 控制期望的有限 margin。作者的默认设置 β=0.1、ε=0.05 给出理论 Δ*≈29。**但在 full-model、Adam 与共享参数训练中，作者报告一组实验测得margin≈832**，约为理论值的几十倍，归因于 effective β renormalization。必须用这一局限理解其「可预测性」。
+
+## Key Figures 与 Table：怎样读证据？
+
+以下均为**原论文的外链**，此公开站点没有转载、裁剪、标注或改色其 Figure：
+
+1. **[Fig.2：effective potential 的示意图](https://arxiv.org/html/2611.21766v1)**。比较 SimPO 为何没有有限极小值，而 TPO-S / TPO-H 有有限margin attractor。
+2. **[Fig.3：DPO 和 IPO 的margin trajectories](https://arxiv.org/html/2611.21766v1)**。对比对数增长与收敛；看拟合 R²≈0.85，不要把简化模型当作精确预测每个训练step。
+3. **[Fig.4：label-noise phase transition](https://arxiv.org/html/2611.21766v1)**。观察不同 ε 下 DPO 的有限固定点如何移动，以及effective β 的拟合。
+4. **[Fig.5：repulsion weight与collapse](https://arxiv.org/html/2611.21766v1)**。区分增加对 rejected 的压制和跨样本梯度干涉可能造成的性能下降。
+5. **[Fig.6：五种模型家族的margin dynamics](https://arxiv.org/html/2611.21766v1)**。判断作者证实的是演化形状跨架构一致，而非所有架构的绝对尺度一致。
+6. **[Table 2 / Section 3：理论与实际数据对应](https://arxiv.org/html/2611.21766v1)**。要同时看训练动态证据和末端IFEval；不要用一个指标代替另一个。
+
+**Authors report：**在作者的 IFEval 设置中，TPO-S 对 DS-R1-8B、Qwen3.5-9B、Ministral-3-8B 的分数分别为 **66.8±0.3、61.4±0.4、76.5±0.3**；对应 SimPO 为 **66.5±0.6、60.9±0.2、73.9±1.4**。收益大小依模型而变化，不能解读为统计显著地全面超越所有其他方法。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+- SFT 对低概率 rejected completion 的压制在简化概率模型中衰减更快；pairwise preferences 提供持续的相对概率梯度。
+- 无噪声DPO/SimPO与IPO的long-time margin具有不同固定点结构。
+- 非零标签翻转率会使DPO出现有限稳定点，且可启发TPO-S等损失设计。
+- 多架构实验支持**轨迹的定性形状**，而不同模型的绝对速度/尺度需有效参数拟合。
+- TPO-S 在部分目标上取得适度收益，而不是全方位统一提升。
+
+### AI interpretation
+
+这篇可作为 Physics of AI 中「从损失函数推训练动力学」的案例。它尤其适合解释为何不能把loss较低、margin较大直接等同于更可靠的alignment：我们仍需要看样本支持集、ref KL、bad-completion probability、实际任务和安全效果。
+
+### Caveats
+
+- 两个 completion 的封闭概率模型未包括未采样 completion 的 probability leakage，也不精确描述真实token级长序列分布。
+- DPO/IPO 的 ODE 是梯度流与简化作用参数假设下的结果；有限学习率、Adam与跨example耦合有额外影响。
+- β_eff 根据实际实验拟合，**不是无额外参数的绝对定量预言**；不同模型下可显著变化。
+- Margin与下游生成质量未必同向：作者明确报告部分场景弱相关，AIME任务约 ρ=0.13。
+- 论文中的TPO-S是特定模型、数据和评价指标的研究结论，不能视为已证明替代全部PPO/RLHF方法。
+
+## Historical Reading Chain
+
+1. **FIRST — [Rafailov et al., Direct Preference Optimization (2023)](https://arxiv.org/abs/2305.18290)**：先弄清 reference policy 如何进入pairwise log ratio，后面DPO margin ODE才能自然导出。
+2. [Azar et al., A General Theoretical Paradigm to Understand Learning from Human Preferences / IPO (2024)](https://arxiv.org/abs/2310.12036)：比较 IPO 的平方损失与有限margin固定点。
+3. [Meng et al., SimPO (2024)](https://arxiv.org/abs/2405.14734)：reference-free preference optimization的直接对照，用于理解TPO-S的修改点。
+4. [Ouyang et al., InstructGPT (2022)](https://arxiv.org/abs/2203.02155)：偏好训练的实际行为问题与评价方法背景。
+
+## Reading Checklist
+
+- [ ] 能解释 margin Δ 与 reference-adjusted margin 的不同。
+- [ ] 从两类 softmax 计算 DPO 的 w(Δ)=βσ(-βΔ)。
+- [ ] 解释为什么 DPO 长时 log t 上升而IPO收敛到 1/(2τ)。
+- [ ] 从 noisy labels 推导 DPO 的有限吸引点公式，并讨论 ε=0 时的极限。
+- [ ] 能说明 label smoothing 与训练数据本身真实标签噪声并非同一概念。
+- [ ] 找到 Fig.4 的定点趋势，并区分理论 β 与经验 β_eff。
+- [ ] 比较 Fig.3 / Fig.6 的动态证据和 Table 2 的行为评分。
+- [ ] 明确说明为何大margin不是强安全性、泛化性或准确率的充分条件。
+- [ ] 阅读FIRST DPO前作，再读IPO或SimPO之一。
+
+## Sources and attribution
+
+- **Primary source:** [Xu, Seyfioglu & Bouyarmane, Margin Dynamics for Large Language Model Alignment, arXiv:2611.21766v1, submitted 16 November 2026](https://arxiv.org/abs/2611.21766).
+- **Original figures and tables:** [arXiv v1 HTML](https://arxiv.org/html/2611.21766v1); all visual sources are links to the paper, no original figure is stored or altered here.
+- **Explanatory graphic:** labeled AI-generated explanatory diagram above, conceptual text arrows only; no empirical curve or data point reconstructed from memory.
+- **Scope:** main text, key theoretical expressions, original captions, selected experiments and some appendix passages; no independent model training or exhaustive source-code audit.
