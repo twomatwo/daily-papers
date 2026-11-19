@@ -1,0 +1,189 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Recoverability, Not Invariance: Certified Safety for Robots at the Limits of Performance"
+authors: "Thomas A. Berrueta, Joshua D. Ibrahim, Gilchrist X. Johnson, John Lathrop, Soon-Jo Chung"
+date: "2026-11-20"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2611.23589"
+notionUrl: "https://app.notion.com/p/41d7dd5567ec81e79bebccc145f33381"
+summary: "Certify an aggressive robot's trusted recovery mode rather than its aggressive controller; contraction-based tubes make timely switching provably safe under explicit assumptions."
+readingTime: "35–55 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：**传统 CBF/Hamilton–Jacobi 安全方法经常要求**正在执行的高性能策略本身**持续保持安全集合的 forward invariance。Berrueta 等提出另一种证据目标：允许未认证的 aggressive controller 原样运行，只要机器人仍处在某个**可信 recovery controller 的收缩管道（contraction tube）**中，就能提前安排一次具有保证的控制模式切换。作者在四旋翼仿真及雨天真实 IndyNXT 赛车中演示了该方法；后者在约 30 分钟、最高 20 m/s 的赛道试验中执行了八次获认证恢复。
+
+**AI interpretation：**把系统分成「高性能但不完全可信的执行模式」和「形式化验证过的撤退/恢复模式」非常适合研究 robot-agent 或 VLA 的安全执行边界。然而，一套证明依赖**明确的状态/动力学/扰动假设**，并不等于对所有具身 AI 任务具有无条件安全保证。
+
+**Caveats：**认证成立的前提是 recovery mode 的 contraction certificate 在所用区域有效、tube 全部满足状态/输入限制、扰动界与在线状态估计符合条件。论文没有证明任意未认证动作都安全，也没有直接评测通用 VLA 视觉对抗鲁棒性。
+
+**实际核查范围：**阅读 arXiv v1 HTML Sections I–VII（包括相关定义、Theorems 1–3、contraction insertion gradient、tube growth、quadrotor 和真实赛车部署）、Fig.1–5 captions 与局限性。未独立复现正式证明、数值优化或机器人实验。
+
+<ReadingPath
+  quick={[
+    "Abstract + Fig.1：明确「认证一个撤退路径」而非「认证激进策略」。",
+    "Fig.2：对比 unfiltered aggressive、backup-CBF 和 recoverability。",
+    "Fig.5：真实赛车什么时候切换，恢复后误差怎样变化？"
+  ]}
+  standard={[
+    "Section II：为什么 forward invariance 和高性能运行之间有张力？",
+    "Section III：closed-loop modes、Riemannian metric、safe contraction tube。",
+    "Section IV：恢复定理、disturbance bound、one-step margin 和 switching-time problem。",
+    "Sections IV–V：quadrotor仿真与sequential-convex tube synthesis。",
+    "Section VI：雨天赛车实机切换与 Fig.5 的统计证据。",
+    "Discussion：辨明未证实的泛化和现有一向切换的限制。"
+  ]}
+  deep={[
+    "FIRST：读1996 Simplex Architecture，再与本文双模式调度对比。",
+    "复习Lohmiller–Slotine contraction theory：为何微分收缩能控制有限轨迹距离。",
+    "从 Eq.(4) 的矩阵不等式推导 recovery distance 的指数收敛界。",
+    "研究 disturbance 加入后 ultimate tracking error 和鲁棒性余量的联系。",
+    "从 Riemannian recovery energy 推导 contraction insertion gradient 与切换时机的关系。",
+    "比较 HJ viability kernel、CBF backup set 和 synthesized tube 的适用假设与在线代价。",
+    "梳理 Fig.5 中0.75s的证书触发和1.68s预测越界的关系。",
+    "设计VLA harness接口：state estimator、可信低层backup、外部监测器和不可逆动作应如何隔离？"
+  ]}
+/>
+
+## Big Picture：为什么要改变「安全」的证明对象？
+
+安全控制传统路线常尝试保证执行模式在所有时刻都不会越过某个安全边界。问题是：高性能机器人最有价值的行为往往发生在轮胎接近饱和、接触条件变化、模型难以准确估计的区域。因此，证明 aggressive policy 自己的 forward invariance 可能既困难又限制性能。
+
+**AI-generated explanatory diagram（文字概念图；不是原论文 Figure）：**
+
+> **High-performance / unverified mode**（可包含 learned policy、规划器和低层控制器）  
+> ↓ 按原策略执行，实时监测预测状态  
+> **Certified recovery tube?**（离线由可信 recovery mode + model bounds 验证）  
+> ↓ 预测接近 tube 边界时，求可行的 switching time  
+> **Switch at a certified point**（不一定等到真正越界）  
+> ↓ 执行 trusted recovery controller，追踪保守安全参考轨迹  
+> **Exponential contraction to reference**（受 disturbance/residual 限制的最终误差界）
+
+这张示意图不表示所有 high-performance 动作都可获认证，也不包含作者原 Figure 的曲线或数值重绘。
+
+## 核心机制与公式
+
+### 1. Recovery tube 与 contraction metric
+
+设 \(F_{\mathrm{new}}\) 表示未知或激进的实际闭环向量场，\(F_{\mathrm{rec}}\) 是可认证的恢复模式，\(x_r(t)\) 为保守安全参考轨迹。
+
+作者引入状态相关 Riemannian metric \(M(x,t)\)，定义与参考轨迹的几何距离 \(d_M\) 和 recovery energy：
+
+$$
+V_M(x,t)=\frac12 d_M^2\bigl(x,x_r(t),t\bigr).
+$$
+
+获得安全认证的 tube 是：
+
+$$
+\mathcal T_r=\left\{(x,t):d_M\bigl(x,x_r(t),t\bigr)\le r\right\}.
+$$
+
+这两个公式应该一起看：一个在线计算的几何误差量，充当复杂状态空间里是否**仍可保证回到安全模式**的判据，而不是简单的欧氏距离或「模型置信度」分数。
+
+### 2. 可信 recovery mode 的收缩不等式
+
+作者定义的 contraction metric 满足（见论文 Eq.(4)）：
+
+$$
+\dot M_{\mathrm{rec}}+
+A_{\mathrm{rec}}^T M+
+M A_{\mathrm{rec}}
+\preceq -2\gamma M,
+\quad \gamma>0.
+$$
+
+其中 \(A_{\mathrm{rec}}=\partial F_{\mathrm{rec}}/\partial x\)。
+
+**物理直觉：**恢复模式中的相邻轨迹在该几何度量下持续靠近；足够强的 contraction rate 帮助吸收有界模型误差/外扰。
+
+在没有额外模型残差时，论文的主要收敛结论可以用距离上界理解：
+
+$$
+d_M(t)\lesssim e^{-\gamma(t-\tau)}d_M(\tau)
++\frac{\bar d}{\gamma}\bigl(1-e^{-\gamma(t-\tau)}\bigr).
+$$
+
+残差或外扰的界必须满足 tube 的鲁棒性余量；当额外 reference residual \(\bar r\) 存在时，渐近误差界相应扩大到约 \((\bar d+\bar r)/\gamma\)。**这里的符号/省略条件只是阅读辅助，请以论文定理的确切假设和范数约定为准。**
+
+### 3. 安全不是「必须最优」，而是「必须可行」
+
+在线监测预测轨迹，寻找仍位于 certified tube 内、而且满足 state/input constraints 的切换时间 \(\tau\)。
+
+作者利用 **contraction insertion gradient** 来刻画短时间插入 recovery mode 对未来能量的一级影响，并构建切换时刻优化。
+
+这带来一个很有用的区分：
+
+- **Feasibility：**满足证书条件，决定切换是否有理论保证。
+- **Optimality：**在可行时间集合内，决定是否尽可能保留高性能策略运行时间。
+
+如果优化器找到了一个可行但非最优的时间，**安全证书仍然可以有效**；如果候选压根不在 tube 内，不能用「优化成功」替代缺失的认证条件。
+
+### 4. 如何扩大可恢复区域？
+
+如果 recovery tube 太保守，机器人会频繁切换，失去高性能行为。作者用 sequential convex synthesis 扩大 tube，并与 HJ viability kernel 和 backup-CBF set 对照。
+
+需要记住：在特定受控模型上，验证 tube 趋近 viability kernel 并不代表在任意高维视觉机器人里都能同样轻易构造或实时评估这一证书。
+
+## Key Figures：原图外链与阅读问题
+
+只链接原论文 HTML 中的 Figure，不复制、裁剪、注释或改绘原始图像。
+
+**[Fig. 1 — recoverability system architecture](https://arxiv.org/html/2611.23589v1)**：区分 new / rec 两个 closed-loop modes、offline tube synthesis 和 online switch scheduler。检验认证到底属于哪个 mode，避免误认为一套 VLA 权重已被证明安全。
+
+**[Fig. 2 — 三种安全策略比较](https://arxiv.org/html/2611.23589v1)**：aggressive unfiltered、backup-CBF filtering、recoverability scheduled handoff 的性能与安全约束不同；重点看安全边界、切换时间、性能损失发生的阶段。
+
+**[Fig. 4 — certificate tube vs viability](https://arxiv.org/html/2611.23589v1)**：在特定二维可控示例中，作者比较扩大后的 certified set 与确切 viability kernel；注意小维度理论证明不能直接推至高维通用具身任务。
+
+**[Fig. 5 — rainy IndyNXT deployment](https://arxiv.org/html/2611.23589v1)**：作者报告在同一次 corner planning horizon 中，预测 \(1.68\) 秒时将违反阈值，但调度器在 \(0.75\) 秒进入恢复，提前约 \(0.93\) 秒。八次获认证切换的 post-recovery 横向误差总和均小于 \(0.09\)，pre-switch 范围约 \(0.25\)–\(0.80\)。**这些是特定赛车测试下的作者结果，不是可跨平台照搬的安全余量**。
+
+## Authors report vs AI interpretation
+
+### Authors report
+
+- 从可信 recovery mode 而非 aggressive mode 构建收缩证书。
+- Tube 内可行切换配合约束条件，可证明恢复向参考轨迹的指数收敛及有界误差。
+- 通过 contraction insertion gradient 改善切换时机，synthesis 扩大可认证 tube。
+- 四旋翼仿真与 IndyNXT 赛车部署展示模式切换。赛车雨天 30 分钟内共八次 certified recoveries，速度上限约 20 m/s。
+
+### AI interpretation：对 robot-agent / VLA 的真正启发
+
+这篇不是一篇 VLA 模型 benchmark，却提出了一个值得与 VLA Arena/LEASH/Agentic-Teacher 对照的**安全系统架构**：可让高层 Agent 提议动作，但低层 actuator 的最后许可由可独立验证的安全监督器控制。在部署时，应把 *model-level refusal*、*motion-planner constraints*、*recovery certificate* 和 *hardware emergency stop* 当作不同层次，不能用一个 LLM 打分来替代物理证明。
+
+真正值得拓展的科研问题是：如何为有接触和不确定障碍物的 VLA manipulator 构建可信 backup mode，如何处理观测不完整/状态估计误差，以及在危险不可逆动作之前触发干预。
+
+### Caveats
+
+- **形式保证是条件性的**：依赖验证过的 recovery contraction metric、tube 正确包含安全状态与许可输入、有界 disturbance/model mismatch、准确的切换执行。
+- 未认证 aggressive mode 可以原样执行，但**不能超出可恢复域再幻想自动挽救**。
+- 该论文主要针对已知或可估计的动力学，不保证自然语言指令、视觉对抗攻击、数据投毒或任意 VLA 行为安全。
+- 实机赛车演示具有工程价值，但八次恢复并不能证明所有赛道、天气和其他 robot embodiments 都安全。
+- 恢复后再切回 aggressive mode 的完整长期循环需要额外策略与证明，不能从单次恢复结果自动推出。
+
+## Historical Reading Chain
+
+1. **FIRST — [Simplex Architecture, SEI 1996](https://insights.sei.cmu.edu/library/an-architectural-description-of-the-simplex-architecture/)**：经典双控制器/监督器架构；最直接解释为什么要将高性能和可信恢复拆分。
+2. [Lohmiller & Slotine, Automatica 1998](https://doi.org/10.1016/S0005-1098(98)00019-3)：Contraction theory 与非线性系统轨迹收敛的核心理论。
+3. [Ames et al., IEEE TAC 2017](https://doi.org/10.1109/TAC.2016.2638961)：Control barrier functions 与 forward invariance，作为本文主要对比方法。
+
+## Reading Checklist
+
+- [ ] 能清楚说出 \(F_{\rm new}\)、\(F_{\rm rec}\)、\(x_r\) 的角色。
+- [ ] 解释 tube 和 Riemannian metric 在安全证明中的作用。
+- [ ] 理解 \(\dot M+A^TM+MA\preceq-2\gamma M\) 的物理意义。
+- [ ] 分清「切换时机优化」与「可行性的安全保证」。
+- [ ] 在 Fig.2 解释为什么过滤高性能控制器可能降低速度/性能。
+- [ ] 在 Fig.5 区分预测越界时刻、触发时刻和实际恢复轨迹。
+- [ ] 能列出保证成立的每个重要模型/扰动/安全输入假设。
+- [ ] 思考如何在VLA操纵系统中提供 independent trusted recovery mode，而不是仅用LLM风险文本分数。
+- [ ] 阅读 FIRST 历史文献，并提出一个未覆盖的失败案例。
+
+## Sources and attribution
+
+- **Primary:** [Berrueta et al., arXiv:2611.23589v1, submitted 17 Nov 2026](https://arxiv.org/abs/2611.23589); [original HTML / full text](https://arxiv.org/html/2611.23589v1).
+- **Original Figures:** Fig.1, 2, 4, 5 are hyperlinks to the arXiv original only. No figures or numerical trajectories are reproduced here.
+- **Explanatory diagram:** the marked text mechanism flow is an **AI-generated explanatory diagram** based on the paper's claims, not a screenshot, copied figure or quantitative reconstruction.
+- **Scope:** selected theorems, main body, figure captions, hardware/simulation descriptions. No independent control-system validation or hardware reproduction.
