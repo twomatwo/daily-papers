@@ -52,7 +52,7 @@ import ReadingPath from '../../../components/ReadingPath.astro';
 
 **AI-generated explanatory diagram（文字概念图；不是原论文 Figure，不重绘任何数值曲线）：**
 
-> 目标：\(\nu=1/3\) Laughlin-like FCI ground-state manifold  
+> 目标：$\nu=1/3$ Laughlin-like FCI ground-state manifold  
 > ↓ 设计普通平移对称的 Gaussian-local two-band hopping  
 > **Exactly flat, Chern-ideal lower band**  
 > ↓ 构造随空间距离 Gaussian 衰减的 pair-annihilation operators  
@@ -79,7 +79,7 @@ c^\dagger_{\mathbf R+\delta_\alpha}
 c_{\mathbf R'+\delta_\beta}.
 $$
 
-与某些需要 magnetic translation algebra 的模型不同，这里的 hopping 只依赖**相对晶格矢量**，是普通晶格平移对称的；其模随空间距离 Gaussian 衰减。构造得到的 lower band exactly flat 且具有 \(C=1\) 的 ideal quantum geometry。
+与某些需要 magnetic translation algebra 的模型不同，这里的 hopping 只依赖**相对晶格矢量**，是普通晶格平移对称的；其模随空间距离 Gaussian 衰减。构造得到的 lower band exactly flat 且具有 $C=1$ 的 ideal quantum geometry。
 
 对凝聚态理论而言，重要的学习点是：**能带拓扑由 Bloch eigenvectors 决定**，不必因为单粒子能量完全平坦而消失。
 
@@ -106,21 +106,21 @@ B_{\mathbf r}^{(p)\dagger}
 B_{\mathbf r}^{(p)},\qquad u>0.
 $$
 
-这是 **frustration-free / positive-semidefinite** 的结构。对任意态，期望值非负；如果一个态满足所有 \(B_{\mathbf r}^{(p)}|\Psi\rangle=0\)，它必然是相互作用零能态。论文更进一步，证明特定的离散 Laughlin-like 晶格波函数还同时满足单粒子下能带的要求，因此是**未投影完整 Hamiltonian** 的精确多体基态，而不仅是投影后近似。
+这是 **frustration-free / positive-semidefinite** 的结构。对任意态，期望值非负；如果一个态满足所有 $B_{\mathbf r}^{(p)}|\Psi\rangle=0$，它必然是相互作用零能态。论文更进一步，证明特定的离散 Laughlin-like 晶格波函数还同时满足单粒子下能带的要求，因此是**未投影完整 Hamiltonian** 的精确多体基态，而不仅是投影后近似。
 
 但要小心：**写成正半定平方和本身，并不能自动证明只有这三个基态**。零模完整性、边界条件、Chern 特征还需要额外解析论证；论文的附录专门处理这些问题。
 
 ### 3. 三重简并、Hall 量子化与 quasihole
 
-在 \(N=3N_e\) 个晶胞、填充 \(\nu=1/3\) 的有限 torus 上，作者得到三个零能 ground states。对于整个多体基态子空间，总 Chern number 是整数 1；其平均 Hall response 对应 \(\sigma_{xy}=e^2/(3h)\)，与三重 torus 简并相容。
+在 $N=3N_e$ 个晶胞、填充 $\nu=1/3$ 的有限 torus 上，作者得到三个零能 ground states。对于整个多体基态子空间，总 Chern number 是整数 1；其平均 Hall response 对应 $\sigma_{xy}=e^2/(3h)$，与三重 torus 简并相容。
 
-若固定 \(N_e\)，将晶胞数增至 \(N=3N_e+1\)，可以构造带任意位置参数的**单 quasihole 零能态**。这个对象与连续 Laughlin quasihole 相对应；但「零能」不应误读为它在任意实验扰动下都有完全平坦色散或永远无法被局域化。
+若固定 $N_e$，将晶胞数增至 $N=3N_e+1$，可以构造带任意位置参数的**单 quasihole 零能态**。这个对象与连续 Laughlin quasihole 相对应；但「零能」不应误读为它在任意实验扰动下都有完全平坦色散或永远无法被局域化。
 
 ## Key Figure 阅读指引（原 Figure 只链接、不复制）
 
 本页不嵌入论文 Figure 像素，也没有从记忆重绘定量数据。
 
-**[Main Fig. 1 — finite-size ED gap](https://arxiv.org/html/2611.23409v1)**：仔细区分不同网格尺寸的中性 gap、projected / unprojected Hamiltonian，以及基态与第一激发态的能量。作者在相互作用仅为 single-particle gap 的 1/500 的设置中报告，24/30/36 晶胞的 projected gap 位于约 \(0.27426u\) 至 \(0.28305u\)；这 **约 3.2%** 的有限尺寸变化支持数值稳定性，却不是严格的无限尺寸下界。
+**[Main Fig. 1 — finite-size ED gap](https://arxiv.org/html/2611.23409v1)**：仔细区分不同网格尺寸的中性 gap、projected / unprojected Hamiltonian，以及基态与第一激发态的能量。作者在相互作用仅为 single-particle gap 的 1/500 的设置中报告，24/30/36 晶胞的 projected gap 位于约 $0.27426u$ 至 $0.28305u$；这 **约 3.2%** 的有限尺寸变化支持数值稳定性，却不是严格的无限尺寸下界。
 
 **[Appendix Fig. 2 — ED spectra and momentum sectors](https://arxiv.org/html/2611.23409v1)**：观察三重零能态在动量扇区中的分布，以及 projected/unprojected 对照。附录还报告部分网格上解析与 ED 基态的 overlap 在数值精度下等于 1；这验证了有限系统波函数构造，不等于对任意物理材料参数的证明。
 
@@ -131,7 +131,7 @@ $$
 ### Authors report
 
 - 普通平移对称、Gaussian-local hopping 和 two-body interaction 的解析模型。
-- 有限尺寸 torus 在 \(\nu=1/3\) 下具有精确的 FCI 零能基态与相关 topological properties。
+- 有限尺寸 torus 在 $\nu=1/3$ 下具有精确的 FCI 零能基态与相关 topological properties。
 - 增加一个晶胞时，存在解析构造的 quasihole zero modes。
 - 在相互作用远小于单粒子能隙的条件下，有限尺寸 ED 的中性 gap 缩放较稳定。
 
@@ -141,7 +141,7 @@ $$
 
 ### Caveats & open questions
 
-- **Thermodynamic gap 未证明。**有限系统全都 gapped 不足以推出 gap 在 \(N\to\infty\) 时存在正下界。
+- **Thermodynamic gap 未证明。**有限系统全都 gapped 不足以推出 gap 在 $N\to\infty$ 时存在正下界。
 - Gaussian decay 表示非常局域但仍**非严格有限程**；实际材料的物理两体 Coulomb 相互作用是否近似该 parent interaction 需要额外检验。
 - 无磁平移代数不等于任意 disorder 破坏后仍保持相同拓扑。
 - 有限尺寸/小相互作用 ED 与完整微观器件（band mixing、screening、edges、contacts）的差异不能忽略。
@@ -149,16 +149,16 @@ $$
 ## Historical Reading Chain
 
 1. **FIRST — [Haldane, PRL 51, 605 (1983)](https://doi.org/10.1103/PhysRevLett.51.605)**：分数量子霍尔层级/相互作用选择规则。先建立 pseudopotential 和 parent-Hamiltonian 的直觉。
-2. [Laughlin, PRL 50, 1395 (1983)](https://doi.org/10.1103/PhysRevLett.50.1395)：\(1/3\) 波函数和准空穴的奠基工作，为本文晶格离散构造提供对照。
+2. [Laughlin, PRL 50, 1395 (1983)](https://doi.org/10.1103/PhysRevLett.50.1395)：$1/3$ 波函数和准空穴的奠基工作，为本文晶格离散构造提供对照。
 3. [Regnault & Bernevig, PRX 1, 021014 (2011)](https://doi.org/10.1103/PhysRevX.1.021014)：早期 FCI 的数值谱学和拓扑证据；与本文解析构造形成清晰对比。
 
 ## Reading Checklist
 
 - [ ] 能区分 Chern-ideal flat band 与零 Berry curvature / trivial band。
 - [ ] 说明为什么 Eq.(4) 是非负平方和，以及何时态能达到零能。
-- [ ] 解释 \(\nu=1/3\) torus 三重简并与多体 Hall response 的联系。
+- [ ] 解释 $\nu=1/3$ torus 三重简并与多体 Hall response 的联系。
 - [ ] 在 Fig.1/Appendix Fig.2 识别哪些证据是解析的，哪些由 ED 提供。
-- [ ] 说明 \(N=3N_e+1\) 的 quasihole 构造。
+- [ ] 说明 $N=3N_e+1$ 的 quasihole 构造。
 - [ ] 对比 **finite-size gap** 与 **thermodynamic gap** 的逻辑区别。
 - [ ] 阅读至少一篇 FIRST / historical 工作并提出可证伪的扰动稳定性实验。
 
