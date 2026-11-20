@@ -1,0 +1,156 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Flat-band-induced integer doping and phase transition in monolayer graphene"
+authors: "Z. Wang, C. Moulsdale, X. Guo, J. Liu, and colleagues"
+date: "2026-11-21"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://doi.org/10.1038/s41586-026-11254-4"
+notionUrl: "https://app.notion.com/p/41e7dd5567ec81f9be55d6e870af8b4a"
+summary: "Double-aligned graphene between monolayer and bulk hBN reversibly switches structural registry and its discrete moire-cell doping; strain-generated localized pseudo-Landau bands provide a supported physical explanation."
+readingTime: "30–55 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report.** Nature 于 2026 年 11 月 18 日发表的这一实验，利用两侧同时对齐的 mhBN/graphene/hBN，把**结构堆垛**和**电子掺杂**联动起来。扫描隧道显微镜观察到不同的莫尔重构图案；门电压、磁场及温度可使系统在 AB/AA 结构之间切换。输运中电中性点不是连续漂移，而是对应**每个莫尔晶胞整数个电荷**的离散状态。
+
+**AI interpretation.** 重要之处不是普通栅压掺杂，而是外部驱动重新排列层间相对注册和局域应变，继而改变与平坦局域电子态混合的载流子数。它连接了结构相变、局域伪磁场、平带和输运四个可独立验证的层次。
+
+**Caveat.** 结构转换和整数电荷位移有直接实验依据，但把全部整数掺杂归于特定应变诱发 pseudo-Landau levels (PLLs) 仍涉及 MD、DFT、模型及 ARPES 的联合解释。3.8 T 附近磁场抑制转换的微观原因，作者也未定论。
+
+**核查范围.** 阅读出版社文章 Abstract、实验装置和转换机制、Fig. 1–5 图注与相关 Methods、DFT/MD 与 ARPES 解释。未独立分析原始 STM/ARPES 数据或复现计算；未完整审阅全部 Supplementary Figures。未核实最早预印本日期，因此只确认期刊在线日为 2026-11-18。
+
+<ReadingPath
+  quick={[
+    "Abstract 与 Fig. 1：识别 mhBN/graphene/hBN 双对齐和 AB/AA 两类重构",
+    "Fig. 2：为什么电中性点的位移被换算为每晶胞整数个电子？",
+    "Fig. 3：可逆切换与磁场阈值，有哪些直接观测证据？"
+  ]}
+  standard={[
+    "阅读设备控制样本：为什么单对齐和普通 hBN sandwich 不表现同样行为？",
+    "用 n0 = 1/Am 和二级 Dirac point 间距重建整数掺杂的判据",
+    "对照 Fig. 1、5 的 STM/MD 三角与六角纹理",
+    "阅读 Fig. 4 电荷改变 AB/AA 平均 adhesion energy 的计算逻辑",
+    "最后看 Fig. 5 伪磁场、work function 与局域 flat bands 的关联"
+  ]}
+  deep={[
+    "FIRST：Woods et al. 2014 的 graphene/hBN commensurate–incommensurate transition",
+    "从应变修正 hopping 推导 valley-odd gauge field 和 pseudomagnetic field",
+    "检查 Fig. 2 的四重简并二级 Dirac point 计数与 n0",
+    "拆分实验事实：STM 结构、Hall/电阻掺杂、ARPES平带，与计算解释",
+    "阅读 Nature Methods 和 Supplement 对 7 类对照器件的描述",
+    "思考如何用局域 STS、电压回扫和 magnetostriction 独立排查 charge-trap 替代机制"
+  ]}
+/>
+
+## Big Picture：两种可切换的莫尔重构
+
+传统 graphene/hBN 接近对齐时，层间 van der Waals 黏附、二维弹性和电荷作用竞争，形成局域近共格区域与累积应变的畴壁。本文多加一层**单层** hBN：它不像 bulk hBN 那样硬，可以随 graphene 发生显著松弛与褶皱。
+
+**AI-generated explanatory diagram（概念文字图；非论文 Figure，非定量曲线）：**
+
+> 电场 / 温度 / 磁场条件改变  
+> ↓  
+> 层间黏附与局域弹性代价重新竞争  
+> ↓  
+> **AB registry 与 AA registry 的相对稳定性转换**  
+> ↓  
+> 三角 / 六角莫尔重构，以及顶点局域应变与伪磁场分布改变  
+> ↓  
+> 局域 pseudo-Landau flat bands 与延展带混合方式改变  
+> ↓  
+> 输运中观察到的整数莫尔晶胞电荷重分配
+
+最后两步是作者由测量和模型共同支持的微观图像，不等同于直接逐粒子跟踪。
+
+## 核心机制与公式
+
+### 1. 把栅压位移换算为每晶胞电荷
+
+如果莫尔晶胞面积为 $A_m$，一个电子对应的面密度是
+
+$$
+n_0 = \frac{1}{A_m},
+\qquad
+\frac{\Delta n_{\mathrm{int}}}{n_0} = N, \quad N \in \mathbb Z.
+$$
+
+实验通过电阻峰/中性点、次级 Dirac 点与 Hall 输运的相对位置，判断突变所对应的晶胞电荷数。石墨烯四重自旋—谷简并使典型相邻次级 Dirac 点间隔对应四个电子/晶胞，形成独立校准。
+
+**重要区别：**这里的“integer doping”表示**每个莫尔晶胞电荷数为整数**，不是电阻出现整数 $e^2/h$ Hall 平台，更不是已经观测到整数 Chern 绝缘态。
+
+### 2. 为什么改变 registry 能改变电子计数？
+
+作者的 DFT 计算认为：中性条件下 AB 黏附能更低，而向 graphene 注入电子会改变 C–B/C–N 局域静电作用，使 AA 更优。这提供了可由门电压驱动的**结构能量交叉**。
+
+强莫尔重构在顶点附近产生显著应变，低能连续 Dirac 模型中可用谷依赖矢势表示：
+
+$$
+H_\xi = v_F\, \boldsymbol{\sigma}\cdot
+[\mathbf p + \xi e\,\mathbf A_s(\mathbf r)] + V_s(\mathbf r),
+\qquad
+B_s = \partial_x A_{s,y}-\partial_y A_{s,x}.
+$$
+
+该式是教学用的典型应变 Dirac 表达式，而非作者拟合参数的完整复刻。局域 $B_s$ 可产生 PLL-like flat bands；**局域功函数变化**又把这些带向延展价带或导带移动，使局域电子与导电区域之间的电荷发生整数级转移。
+
+### 3. 哪些数据最有说服力？
+
+- **Gate hysteresis：**作者在一项双栅器件中报告正向/反向阈值约为 +5.3 V 与 −6.9 V，100 次切换后仍具有可重复性。阈值依赖具体器件，绝非普适常数。
+- **Magnetic threshold：**代表性器件中高于约 3.8 T 会抑制门控切换；对应磁长约 13.4 nm，与莫尔长度约 13.8 nm 接近，但“接近”本身不能证明共振机理。
+- **Fig. 5：**STM、MD 重构、DFT band model 与 ARPES 联合检验局域平带机制。在作者模拟中 AB 与 AA flat-band 带宽分别约 24 和 17 meV，而非普适实验平带宽度。
+
+## Key Figure 阅读指引
+
+因公开仓库的 Figure 复用许可未在本轮完成逐图独立核查，**仅链接原图，不复制、不裁剪或修改原始像素**。
+
+**[Fig. 1 — 结构相与双对齐](https://www.nature.com/articles/s41586-026-11254-4)**：看 STM/AFM 和 MD 模拟中 registry 与几何图案的差异；分辨直接观测和模型示意。
+
+**[Fig. 2 — Integer doping](https://www.nature.com/articles/s41586-026-11254-4)**：观察电中性点和 secondary Dirac points 的共同位移，而不仅是某条 Rxx 曲线。
+
+**[Fig. 3 — 可逆性与场控制](https://www.nature.com/articles/s41586-026-11254-4)**：追踪正/反向阈值，区分电场驱动与磁场抑制。
+
+**[Fig. 4 — DFT adhesion energy](https://www.nature.com/articles/s41586-026-11254-4)**：图中给出在假设电荷条件下 AB 与 AA 相对稳定性变化；它是对转换驱动力的理论解释。
+
+**[Fig. 5 — PLL / work-function hypothesis](https://www.nature.com/articles/s41586-026-11254-4)**：分辨实验 STM/ARPES 与计算得到的伪磁场、带结构、态密度分布。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+在特殊双对齐器件中出现能由门控、磁场、温度调节的可逆结构转换；石墨烯电荷密度以莫尔晶胞整数数目变化。作者用 DFT/MD、STM 和 ARPES 形成与局域 PLL 和 work-function 重排一致的机制解释。
+
+### AI interpretation
+
+这为实验设计提供了很有价值的双路径：先用 STM 检验结构，再用输运/局域谱检验电子电荷；如果只看到电阻 hysteresis，很容易误归因于接触或普通 trapped charges。
+
+### Caveats and open questions
+
+- 需要双对齐和可以显著重构的单层 hBN；不能推广到任意 TMD 或所有 graphene/hBN。
+- 磁场阈值的机制仍不明确，磁长数值接近莫尔尺度只是一个线索。
+- PLL 机制依赖多种理论与光谱证据，而不是简单由离散电荷直接推出。
+- 局域应变、不同 registry 和层间充电在不同样品中可能耦合；应避免把 DFT 单一相图当作所有器件的无参数预测。
+
+## Historical Reading Chain
+
+**FIRST — [Woods et al., 2014, Commensurate–incommensurate transition in graphene on hBN](https://doi.org/10.1038/nphys2954)**：先理解 graphene 如何因与 hBN 对齐而应变重构、形成畴壁及不同局部堆垛。
+
+[Guinea, Katsnelson & Geim, 2010, Energy gaps and zero-field quantum Hall effect from strain](https://doi.org/10.1038/nphys1420)：建立应变伪矢势和 pseudo-Landau bands 的理论语言。
+
+[Levy et al., 2010, Strain-induced pseudomagnetic fields in graphene nanobubbles](https://doi.org/10.1126/science.1191700)：认识 STS 中与应变伪磁场相关的离散能级，作为新研究的经典实验对照。
+
+## Reading Checklist
+
+- [ ] 能解释为何 mhBN 与 bulk hBN 机械柔性不同
+- [ ] 能从 $A_m$ 推导单个电子对应的莫尔密度 $n_0$
+- [ ] 知道 Fig. 2 哪个数据直接支持整数掺杂
+- [ ] 能区分 Fig. 4 的理论 adhesion-energy 计算与 Fig. 3 的实测切换
+- [ ] 能讲清局域 pseudo-Landau flat bands 和 work function 在解释中的不同角色
+- [ ] 阅读 Woods et al. 2014 FIRST
+- [ ] 写下一项能区分 PLL 与普通静电陷阱的后续实验
+
+## Sources and attribution
+
+Original research: Z. Wang et al., [Flat-band-induced integer doping and phase transition in monolayer graphene](https://doi.org/10.1038/s41586-026-11254-4), Nature, online 2026-11-18. All reported figures belong to their respective authors/publisher; **no original figure assets have been copied**. All diagrams on this page are explicitly labeled AI-generated explanatory text diagrams. Derived equations are conceptual reading aids, not reproductions of fitted data.
