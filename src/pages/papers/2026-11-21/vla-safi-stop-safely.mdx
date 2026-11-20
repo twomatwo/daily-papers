@@ -1,0 +1,159 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Teaching Vision-Language-Action Models to Stop Safely"
+authors: "Zheyuan Liu, Chuhan Wang, Jinduo Guo, Yue Huang, Xiangchi Yuan, Ningshan Ma, Meng Jiang"
+date: "2026-11-21"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2611.26239"
+notionUrl: "https://app.notion.com/p/41e7dd5567ec811ab11fcc3ff14ffa7b"
+summary: "Refusing unsafe robot tasks from the initial state is not enough: SAFI trains intermediate-state fallback actions, explicitly preserving the gripper and retained task skills."
+readingTime: "30–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report.** VLA 在任务开始时能拒绝危险命令，并不意味着它在**任务已经进行一半**时接手控制也会停止。同样，即使机器人没有完成有害目标，它仍可能因突然张开夹爪而掉落物体。作者提出 **State-Aware Fallback Imitation (SAFI)**：从禁止任务的中间状态构造明确的「机械臂停止 + 夹爪保持」动作监督，并与保留任务的原始示范联合学习。在指定 LIBERO 中途接管实验中，禁止任务完成率下降到 **1.3%**、没有记录到物理事故。
+
+**AI interpretation.** 评价具身 Agent 安全性，至少要同时检查**是否继续完成危险目标、停止时的物理响应、原有良性任务能力**。只用“拒绝/没完成任务”衡量安全，将漏掉最危险的交接阶段。
+
+**Caveat.** “holding safe” 是特定环境假设：有些状态下应放下、撤退、减力或切换安全控制器。零记录事故不是形式化无伤保证；作者报告的测试范围不等于部署于任意真实机器人或 adversarial setting。
+
+**核查范围.** 核对 arXiv:2611.26239v1 HTML Abstract、Motivation、Method、Experiments、Discussion、Fig. 1–5、Table 1–2 和选定 Appendix；未独立重跑 OpenVLA-OFT、LIBERO 或真实机器人实验。
+
+<ReadingPath
+  quick={[
+    "Fig. 1–2：为什么 initial-state refusal 和 mid-execution safe stop 不是同一能力？",
+    "Fig. 3：SAFI 的两个训练阶段",
+    "Table 1：分别比较禁止任务完成、physical incidents、command saturation"
+  ]}
+  standard={[
+    "Sections 2–3：从禁止任务演示的每一个中间状态构造 fallback target",
+    "Fig. 2：比较突然松开夹爪与保持当前接触的后果",
+    "Eq. 与 Fig. 3：joint adaptation 为什么还需要 retained-task imitation",
+    "Table 1 与 Fig. 4：识别禁止任务抑制与正常能力保持的 trade-off",
+    "Table 2：撤去 fallback 或 retained supervision 会发生什么"
+  ]}
+  deep={[
+    "FIRST：DAgger / covariate shift，理解为什么初态示范不足以覆盖中间状态",
+    "推导固定arm target与gripper hold的动作编码，逐维解释fallback action",
+    "区分 at-time-zero suppression、mid-rollout takeover、物体掉落与最终目标完成",
+    "仔细看 Appendix 中接管窗口选择和 physical incident 指标",
+    "设计应对更广泛现场情境的 recovery-policy selection：hold / release / retreat",
+    "与 LEASH gate 和形式化 recoverability 做架构比较：训练内化策略与外部监控各解决什么？"
+  ]}
+/>
+
+## Big Picture：让“安全停止”成为一个动作策略而非一句回答
+
+过去一些 VLA task suppression 工作侧重：在初始帧发出危险指令，政策是否拒绝或不执行。但真实机器人中的安全控制通常发生于开放环动作链的中间：可能已经抓起杯子、正在移动抓手，或者刚接近碰撞风险位置。
+
+**AI-generated explanatory diagram（概念文字图；不是论文 Figure）：**
+
+> 观察到禁止继续的任务（起始状态或中途接管状态）  
+> ↓  
+> **构造每个观察状态的 fallback action**  
+> ↓  
+> arm command → 近似静止；gripper command → 保持抓取状态  
+> ↓  
+> 与正常任务原示范一起训练一个 VLA  
+> ↓  
+> 安全测评拆成三部分：禁止目标的停止率 / 物体与环境的物理事件 / 保留任务成功率
+
+这张图只表示论文的固定 holding fallback 设计，不表示任意机器人操作中“原地不动”都安全。
+
+## 机制和核心公式
+
+### 1. 中途接管为什么改变安全目标？
+
+令禁止目标的原始任务轨迹包含观察与动作序列：$D_p = \{(o_t,A_t)\}$，保留任务数据为 $D_r$。一个只在初态上学过拒绝的模型，可能在分布外的中间状态延续先前动作序列。
+
+安全训练需要对**沿真实行为轨迹出现的状态**定义替代动作 $A_t^{\mathrm{fallback}}$，而不仅对初始指令输出一个拒绝文本。
+
+### 2. SAFI fallback target construction
+
+若动作向量有 $d$ 个维度，其中 $d$ 表示夹爪命令维度，则作者将禁止任务第 $k$ 个时间步动作的监督目标改写为：
+
+$$
+\bar A_{k,j} =
+\begin{cases}
+h_j, & j < d,\\
+A_{1,d}, & j=d.
+\end{cases}
+$$
+
+这里 $h_j$ 是固定机械臂控制命令（使臂静止），$A_{1,d}$ 是该轨迹最初夹爪命令，用于让策略在其编码约定下保留 grip 状态。**这不是机器人学上的通用物理制动律**，并且其正确性取决于动作编码、控制频率与当前接触条件。
+
+### 3. Joint policy adaptation
+
+训练不仅要模仿 fallback 轨迹，也要保留原本合理任务：
+
+$$
+\mathcal L_{\mathrm{joint}}
+=
+\mathbb E_{(o,A)\sim D_p}
+[\ell(\pi_\theta(o),\bar A)]
++
+\lambda\,\mathbb E_{(o,A)\sim D_r}
+[\ell(\pi_\theta(o),A)].
+$$
+
+**说明：**这是便于理解的两数据源联合监督示意，不等于原论文所有实现细节或其精确 loss normalization。重要物理意义是：在禁止状态下有明确可控替代动作，同时防止模型把所有任务都“安全地拒绝”。
+
+## Key Figure / Table 阅读指引
+
+未独立核实 Figure 复制许可，因此公开站点**仅链接原作者图表**，不复制、裁剪、改色或从记忆重绘定量曲线。
+
+**[Fig. 1 — Safe stopping](https://arxiv.org/html/2611.26239v1)**：观察“没完成任务”不等于“没有危险物理动作”的对比。
+
+**[Fig. 2 — Mid-execution examples](https://arxiv.org/html/2611.26239v1)**：重点看从禁止状态接手之后，某些基线继续执行或发生物体掉落。识别接管时刻与安全动作的区分。
+
+**[Fig. 3 — SAFI training](https://arxiv.org/html/2611.26239v1)**：从不同状态生成 fallback，并与 retained-task 训练样本共同进入训练。
+
+**[Table 1 — Main results](https://arxiv.org/html/2611.26239v1)**：切勿将 target success 和 physical incident 混成一个量。作者报告的指定 LIBERO 聚合结果，原策略 target success 约 99.7%、incident 12.1%，SAFI target success 1.3%、incident 0.0%（记录为零），但没有形式安全证书。
+
+**[Table 2 — Ablations](https://arxiv.org/html/2611.26239v1)**：移除 fallback 监督时禁止任务依然执行；移除 retained-task 监督则可能损失有益任务性能。理解为什么需要两种示范。
+
+**[Fig. 4–5 — Utility / physical response](https://arxiv.org/html/2611.26239v1)**：检查正常任务成功率和接管后夹爪/物体位移的变化。不要从小样本事件率推断任意情境的安全上限。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+SAFI 在作者指定 OpenVLA-OFT / LIBERO、BadLIBERO 实验中明显抑制禁止任务的中途继续完成，并减少被评估的掉落和控制饱和等事故，保留相当一部分正常操作能力。作者没有声称任何真实机器人行为都得到形式化安全证明。
+
+### AI interpretation
+
+它提供了一种**策略内化的安全动作知识**：不必每次通过外部 Agent 判断，也不只是生成拒绝语句。对 VLA-Arena 安全评测而言，应该增加从真实执行轨迹选取 takeover states 的协议，以及危险中断后的物理状态检查。
+
+### Caveats and open questions
+
+- Hold 是条件适用的 fallback。对高温、尖锐或即将碰撞的对象，原地保持可能仍不安全。
+- 策略在视觉误识别、domain shift、对抗干扰或人类进入工作空间时的表现尚不能从指定模拟成功率外推。
+- 禁止任务完成率、物体事故、动作饱和和保留任务表现是不同维度，不应合并成一个单项安全得分。
+- 这项训练方法可与外部 Task/Action/Commit safety gate、Simplex backup 或 certified recoverability 相补充，但本文没有检验所有组合。
+
+## Historical Reading Chain
+
+**FIRST — [Ross et al. 2011, DAgger: reduction of imitation learning to no-regret online learning](https://arxiv.org/abs/1011.0686)**：理解为什么只看专家初始状态不够，为什么需要覆盖政策可能访问的中间状态。
+
+[OpenVLA 2024](https://arxiv.org/abs/2406.09246)：理解视觉语言动作架构和基模型迁移学习语境。
+
+[LIBERO 2023](https://arxiv.org/abs/2306.03310)：对照机器人技能学习及多任务测试的常用基准。
+
+[SafeAgentBench 2024](https://arxiv.org/abs/2412.13178)：建立任务危险、计划安全和评测覆盖的对照框架。
+
+## Reading Checklist
+
+- [ ] 能解释初始状态拒绝与中途接管为何是两个不同测评
+- [ ] 能说明为什么“目标未完成”仍可能造成物理事故
+- [ ] 推导或实现固定 arm / grip hold 的动作 target 编码
+- [ ] 在 Table 1 中明确列出 target success、incidents 与 retained utility
+- [ ] 看过 Table 2，解释两种训练数据分别解决什么问题
+- [ ] 阅读 DAgger FIRST，并写出分布漂移与接管状态采样之间的联系
+- [ ] 提出一项 hold 不适用、需要主动撤退的反例场景
+
+## Sources and attribution
+
+Original research: Zheyuan Liu et al., [Teaching Vision-Language-Action Models to Stop Safely](https://arxiv.org/abs/2611.26239), first public 2026-11-19; consulted [HTML v1](https://arxiv.org/html/2611.26239v1) and parts of appendix. No original paper figures or screenshots copied into this guide; concept diagram above is marked AI-generated explanatory diagram. Numerical results attributed to the authors and their reported evaluation, not independently reproduced.
