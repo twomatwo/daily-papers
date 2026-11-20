@@ -68,9 +68,9 @@ import ReadingPath from '../../../components/ReadingPath.astro';
 
 ### 1. Recovery tube 与 contraction metric
 
-设 \(F_{\mathrm{new}}\) 表示未知或激进的实际闭环向量场，\(F_{\mathrm{rec}}\) 是可认证的恢复模式，\(x_r(t)\) 为保守安全参考轨迹。
+设 $F_{\mathrm{new}}$ 表示未知或激进的实际闭环向量场，$F_{\mathrm{rec}}$ 是可认证的恢复模式，$x_r(t)$ 为保守安全参考轨迹。
 
-作者引入状态相关 Riemannian metric \(M(x,t)\)，定义与参考轨迹的几何距离 \(d_M\) 和 recovery energy：
+作者引入状态相关 Riemannian metric $M(x,t)$，定义与参考轨迹的几何距离 $d_M$ 和 recovery energy：
 
 $$
 V_M(x,t)=\frac12 d_M^2\bigl(x,x_r(t),t\bigr).
@@ -96,7 +96,7 @@ M A_{\mathrm{rec}}
 \quad \gamma>0.
 $$
 
-其中 \(A_{\mathrm{rec}}=\partial F_{\mathrm{rec}}/\partial x\)。
+其中 $A_{\mathrm{rec}}=\partial F_{\mathrm{rec}}/\partial x$。
 
 **物理直觉：**恢复模式中的相邻轨迹在该几何度量下持续靠近；足够强的 contraction rate 帮助吸收有界模型误差/外扰。
 
@@ -107,11 +107,11 @@ d_M(t)\lesssim e^{-\gamma(t-\tau)}d_M(\tau)
 +\frac{\bar d}{\gamma}\bigl(1-e^{-\gamma(t-\tau)}\bigr).
 $$
 
-残差或外扰的界必须满足 tube 的鲁棒性余量；当额外 reference residual \(\bar r\) 存在时，渐近误差界相应扩大到约 \((\bar d+\bar r)/\gamma\)。**这里的符号/省略条件只是阅读辅助，请以论文定理的确切假设和范数约定为准。**
+残差或外扰的界必须满足 tube 的鲁棒性余量；当额外 reference residual $\bar r$ 存在时，渐近误差界相应扩大到约 $(\bar d+\bar r)/\gamma$。**这里的符号/省略条件只是阅读辅助，请以论文定理的确切假设和范数约定为准。**
 
 ### 3. 安全不是「必须最优」，而是「必须可行」
 
-在线监测预测轨迹，寻找仍位于 certified tube 内、而且满足 state/input constraints 的切换时间 \(\tau\)。
+在线监测预测轨迹，寻找仍位于 certified tube 内、而且满足 state/input constraints 的切换时间 $\tau$。
 
 作者利用 **contraction insertion gradient** 来刻画短时间插入 recovery mode 对未来能量的一级影响，并构建切换时刻优化。
 
@@ -138,7 +138,7 @@ $$
 
 **[Fig. 4 — certificate tube vs viability](https://arxiv.org/html/2611.23589v1)**：在特定二维可控示例中，作者比较扩大后的 certified set 与确切 viability kernel；注意小维度理论证明不能直接推至高维通用具身任务。
 
-**[Fig. 5 — rainy IndyNXT deployment](https://arxiv.org/html/2611.23589v1)**：作者报告在同一次 corner planning horizon 中，预测 \(1.68\) 秒时将违反阈值，但调度器在 \(0.75\) 秒进入恢复，提前约 \(0.93\) 秒。八次获认证切换的 post-recovery 横向误差总和均小于 \(0.09\)，pre-switch 范围约 \(0.25\)–\(0.80\)。**这些是特定赛车测试下的作者结果，不是可跨平台照搬的安全余量**。
+**[Fig. 5 — rainy IndyNXT deployment](https://arxiv.org/html/2611.23589v1)**：作者报告在同一次 corner planning horizon 中，预测 $1.68$ 秒时将违反阈值，但调度器在 $0.75$ 秒进入恢复，提前约 $0.93$ 秒。八次获认证切换的 post-recovery 横向误差总和均小于 $0.09$，pre-switch 范围约 $0.25$–$0.80$。**这些是特定赛车测试下的作者结果，不是可跨平台照搬的安全余量**。
 
 ## Authors report vs AI interpretation
 
@@ -171,9 +171,9 @@ $$
 
 ## Reading Checklist
 
-- [ ] 能清楚说出 \(F_{\rm new}\)、\(F_{\rm rec}\)、\(x_r\) 的角色。
+- [ ] 能清楚说出 $F_{\rm new}$、$F_{\rm rec}$、$x_r$ 的角色。
 - [ ] 解释 tube 和 Riemannian metric 在安全证明中的作用。
-- [ ] 理解 \(\dot M+A^TM+MA\preceq-2\gamma M\) 的物理意义。
+- [ ] 理解 $\dot M+A^TM+MA\preceq-2\gamma M$ 的物理意义。
 - [ ] 分清「切换时机优化」与「可行性的安全保证」。
 - [ ] 在 Fig.2 解释为什么过滤高性能控制器可能降低速度/性能。
 - [ ] 在 Fig.5 区分预测越界时刻、触发时刻和实际恢复轨迹。
