@@ -1,0 +1,169 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Chern Numbers from Symmetry-Enforced Zeros and Dispersion Shifts"
+authors: "Yoonseok Hwang, Henry Davenport, Frank Schindler"
+date: "2026-11-22"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.25028"
+notionUrl: "https://app.notion.com/p/41f7dd5567ec81c7b8b8cd3bf686682b"
+summary: "An overlap with a chosen reference state turns Chern topology into countable wave-function zeros; local potential shifts can expose them spectroscopically."
+readingTime: "30–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report.** 在带拓扑研究中，不必永远依赖直接测量 Berry curvature：选择参考态 \(\lvert w(\mathbf{k})\rangle\)，计算它与目标 Bloch 态 \(\lvert u(\mathbf{k})\rangle\) 的重叠。重叠函数的零点携带整数涡旋数；对于本文定义的参考态，其总和给出目标能带 Chern 数的负值。旋转对称性还限制高对称动量处的零点与涡旋数。进一步，通过小幅度局域势扰动测量**能带色散改变**，可以获得重叠模方，从而识别零点和零点的阶数。这是一项**理论构造与模型验证**，不是已经在真实材料中实现的光谱测量。
+
+**AI interpretation.** 本文将抽象的「带拓扑」部分转译为可选择、可干预、可观测的谱学信息，很适合作为量子几何和 Chern band 测量的逆问题教材。
+
+**Caveat.** 色散改变本身不含重叠相位，不能一般地只凭某个零点的存在就宣称知道完整 Chern 数；需要参考态、对称性、可能零点的覆盖和扰动区间等额外信息。论文还明确处理了参考态自身为零的特殊情况。
+
+**核查范围：**已阅读 [arXiv v1 HTML](https://arxiv.org/html/2611.25028v1) 主文、重要等式、Lieb 格点 Fig. 1 与对应文字、部分 Supplement 章节。未独立重算 Berry 曲率或模拟谱学；原始图片未复制。
+
+<ReadingPath
+  quick={[
+    "看 Abstract：为什么重叠零点可以表示非零 Chern topology？",
+    "看 Eq. (4)：Chern 数与零点涡旋数的总和",
+    "看 Fig. 1(d,e)：零点与被微扰后的色散改变"
+  ]}
+  standard={[
+    "读 overlap 和 gauge-invariant one-form 的定义，理解何时可以用 Stokes 定理",
+    "推导旋转高对称动量上的 angular-momentum mismatch 与 vorticity mod m",
+    "看 Fig. 1：两个都在 M 点为零的 reference，为什么涡旋数可以不同",
+    "读弱局域势的 Hellmann–Feynman 推导，辨别零点位置与零点阶数",
+    "比较 Fig. 1(e) 理论可观测量与真正的实验操作要求"
+  ]}
+  deep={[
+    "FIRST：TKNN (1982) 与 RMP Berry phase 综述",
+    "从重叠相位的绕转推导总涡旋数等于负 Chern 数",
+    "推导 C4 对称下 vorticity 与 rotation eigenvalues 的模四关系",
+    "复现 Lieb 模型最低带 C=-1、M 点零点 vorticity +1",
+    "核查参考态自身零点、非归一化 reference、quantum metric 下界等补充推导",
+    "设计用于 moiré 或光子晶格的局域势与谱学读数测量方案，区分预测与已验证实验"
+  ]}
+/>
+
+## Big Picture：从 Berry curvature 到可测色散差异
+
+**常规图景**：Bloch 态形成不可全局平滑定规的纤维丛；积分 Berry 曲率给出整数 Chern 数。
+
+**本篇图景**：取一个空间上可以控制的参考态；目标 Bloch 态与它的重叠在动量空间不能处处非零。零点附近的相位绕转是可数的整数。若施加由同一个参考态投影而成的局域势，谱学上可以看到这些「重叠薄弱处」的能量反应变小。
+
+**AI-generated explanatory diagram（仅定性文字机制图，非论文 Figure）：**
+
+> 选定参考态 / compact localized state
+> ↓
+> 与目标 Bloch band 取重叠：寻找零点
+> ↓
+> 旋转本征值限制局部 vorticity
+> ↓
+> 零点绕数总和限制 Chern number
+> ↓
+> 施加匹配 reference 的局域扰动
+> ↓
+> 光谱比较 before / after：测量 \(\delta E(\mathbf{k})\)
+
+这张示意不表示直接观察到 Chern 数，也不重绘任何原始曲线。
+
+## 核心机制与公式
+
+### 1. Overlap 与 vorticity sum rule
+
+定义
+
+\[
+\zeta_w(\mathbf{k})=\langle w(\mathbf{k})|u(\mathbf{k})\rangle.
+\]
+
+对于论文规定的光滑参考态，重叠函数的全部孤立零点 \(\mathbf{k}_s\) 有局部整数绕数 \(\nu_s\)，其总和是
+
+\[
+\sum_s \nu_s=-\mathcal C_u.
+\]
+
+**重要区别：**如果采用另外一个本身具有非零 Chern 数的、归一化的参考态 \(v\)，则对应的是 \(\mathcal C_v-\mathcal C_u\)。不要把两种参考态的公式混用；论文对不归一化、可能自身消失的 reference 另做推导。
+
+### 2. 旋转对称性给出局部绕数模整数
+
+对于 \(C_m\) 固定的高对称点 \(\mathbf{k}_*\)，定义能带与参考态的角动量标签 \(l_u^{(m)}\)、\(l_w^{(m)}\)。对称性要求
+
+\[
+\nu(\mathbf{k}_*)=l_w^{(m)}-l_u^{(m)}\pmod m.
+\]
+
+因此两种角动量不匹配的参考/目标态，在该对称点通常必须有 overlap zero；即使发生零点，零点的**整数涡旋数**也需要更完整的局部波函数信息，而非仅由模 \(m\) 结果确定。
+
+### 3. 局域扰动与能带响应
+
+取一个同参考态对应的局域势投影：
+
+\[
+H_\eta(\mathbf{k})=H(\mathbf{k})+\eta |w(\mathbf{k})\rangle\langle w(\mathbf{k})|.
+\]
+
+利用 Hellmann–Feynman 定理，在弱扰动区间可得到
+
+\[
+\delta E_u(\mathbf{k})
+=\eta|\zeta_w(\mathbf{k})|^2+O(\eta^2).
+\]
+
+一个重要而略微反直觉的点：在 overlap 恰好为零的动量，新增算符湮灭该未扰动本征态，因此相应本征态的**本征值不变**可以在更广的 \(\eta\) 范围精确成立；但沿动量空间靠近该点时的整体色散拟合仍需要考虑带重排、简并和高阶修正。
+
+局部零点若以动量偏移的 \(p\) 阶消失，则弱扰动色散变化的主导幂为 \(q^{2p}\)。**这个幂首先测量的是零点阶数 \(p\)，不自动确定 vorticity 的符号**；结合对称性约束才能收紧候选整数绕数。
+
+## Key Figure / Model 阅读指引
+
+版权：本篇 arXiv 记录标为 **arXiv perpetual non-exclusive license**，未取得将原 Figure 复制至本站的明确许可，故只外链 [作者的原始 HTML 与 Fig. 1](https://arxiv.org/html/2611.25028v1)。
+
+**Fig. 1(a,b) — Lieb lattice / compact localized states：**看三轨道的位置与 C4 作用；为什么选择第一轨道局域态作为 reference 会使微扰等价于一个可直观描述的 onsite potential。
+
+**Fig. 1(c,d) — Band / overlap zeros：**最低带的 Chern 数为 -1，中间平带为 0。两个参考态的 overlap 都可以在 M 点为零，但一个零点携带 \(\nu=1\)，另一个由 reference 本身消失造成、\(\nu=0\)。**零点数量绝不等于 Chern 数**。
+
+**Fig. 1(e) — Dispersion shift：**对作者参数 \(\eta=0.2\)，沿 M 到 X 方向比较原始与加势后的带色散；M 附近二次小量与一阶 overlap zero 相符。这里是理论模型图，不是实测能带。
+
+**Supplement：**重点查 S2（vorticity 和参考态的例外）、S3（旋转指标）、S4（不同模型）与 S6（quantum metric）。如果只看 Fig. 1，很容易忽略非归一化参考态这一技术要点。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+作者给出 overlap-zero 的全局涡旋数求和规则、晶体旋转本征值给定的局部模数限制，并证明匹配局域势的微弱扰动可通过能量位移的模平方读出零点结构。Lieb 格点、Qi–Wu–Zhang 等模型被用于检验公式和可能的参考态选择。
+
+### AI interpretation
+
+这是把「直接测 wavefunction phase」改写成「受控修改 Hamiltonian 后做两次谱测量」的拓扑测量设计思想。对量子材料而言，实验上是否能独立控制所需轨道势及同时保持干净能带，将决定这种方法的可落地性。
+
+### Caveats / Open questions
+
+- 测得 \(|\zeta|^2\) 不是测得 \(\arg\zeta\)。单一零点的谱形状一般不能唯一决定绕数符号。
+- Chern 数求和依赖完整考虑所有零点；旋转对称性典型地首先确定 \(\mathcal C\bmod n\)，不是任意大整数 Chern 数的完整值。
+- 需要能隔离目标能带、选择恰当 reference，以及实现匹配的局域势扰动。
+- 本研究没有在特定实际 moiré 样品中完成控制实验；Lieb 模型不是实验复现。
+- 对参考态本身消失、非孤立零点和 quantum metric 的处理需要阅读 Supplement，不能将最简公式用于所有情形。
+
+## Historical Reading Chain
+
+**FIRST — [TKNN (1982): Quantized Hall conductance](https://doi.org/10.1103/PhysRevLett.49.405)**。先认识 Chern 数为何是量子 Hall 的物理整数，才能明白本文零点求和在测量什么。
+
+[Haldane (1988): Quantum Hall without Landau levels](https://doi.org/10.1103/PhysRevLett.61.2015)。理解没有净外磁场的晶格 Chern 带。
+
+[Xiao, Chang & Niu (2010): Berry phase effects on electronic properties](https://doi.org/10.1103/RevModPhys.82.1959)。补齐 Berry connection、gauge 变换和轨道响应的数学语言。
+
+[Fang et al. (2012): rotation symmetry and topological invariants](https://doi.org/10.1103/PhysRevB.86.115112)。本文「高对称点角动量 mismatch 约束 Chern 数」的直接理论背景。
+
+## Reading Checklist
+
+- [ ] 用一句话解释 Bloch 重叠零点为何与拓扑有关
+- [ ] 推导 \(\sum_s\nu_s=-\mathcal C_u\) 的 Stokes 思路
+- [ ] 在 Fig. 1 解释两个 M 点零点为何有不同绕数
+- [ ] 解释局域势微扰下 \(\delta E\propto |\zeta|^2\)
+- [ ] 区分零点阶数、vorticity 符号和 Chern mod 旋转阶数
+- [ ] 阅读 FIRST TKNN 及 S2、S3 Supplement 例外
+- [ ] 写出至少一个现实实验中无法实现理想参考态势的障碍
+
+## Sources and attribution
+
+Original research: Yoonseok Hwang, Henry Davenport & Frank Schindler, [arXiv:2611.25028v1](https://arxiv.org/abs/2611.25028), first public 18 Nov 2026. Main text, Fig. 1 captions and selected supplement verified in [author HTML](https://arxiv.org/html/2611.25028v1); unverified figures and supplementary derivations are not represented as replicated results. No paper figures, screenshots or numerical curves copied. The flow is a labeled **AI-generated explanatory diagram** (text, qualitative only). The interpretation and proposed experiments are independent AI commentary; model calculations are attributed to the authors.
