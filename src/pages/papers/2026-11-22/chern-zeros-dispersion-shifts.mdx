@@ -14,7 +14,7 @@ import ReadingPath from '../../../components/ReadingPath.astro';
 
 ## 30 秒摘要
 
-**Authors report.** 在带拓扑研究中，不必永远依赖直接测量 Berry curvature：选择参考态 \(\lvert w(\mathbf{k})\rangle\)，计算它与目标 Bloch 态 \(\lvert u(\mathbf{k})\rangle\) 的重叠。重叠函数的零点携带整数涡旋数；对于本文定义的参考态，其总和给出目标能带 Chern 数的负值。旋转对称性还限制高对称动量处的零点与涡旋数。进一步，通过小幅度局域势扰动测量**能带色散改变**，可以获得重叠模方，从而识别零点和零点的阶数。这是一项**理论构造与模型验证**，不是已经在真实材料中实现的光谱测量。
+**Authors report.** 在带拓扑研究中，不必永远依赖直接测量 Berry curvature：选择参考态 $\lvert w(\mathbf{k})\rangle$，计算它与目标 Bloch 态 $\lvert u(\mathbf{k})\rangle$ 的重叠。重叠函数的零点携带整数涡旋数；对于本文定义的参考态，其总和给出目标能带 Chern 数的负值。旋转对称性还限制高对称动量处的零点与涡旋数。进一步，通过小幅度局域势扰动测量**能带色散改变**，可以获得重叠模方，从而识别零点和零点的阶数。这是一项**理论构造与模型验证**，不是已经在真实材料中实现的光谱测量。
 
 **AI interpretation.** 本文将抽象的「带拓扑」部分转译为可选择、可干预、可观测的谱学信息，很适合作为量子几何和 Chern band 测量的逆问题教材。
 
@@ -63,7 +63,7 @@ import ReadingPath from '../../../components/ReadingPath.astro';
 > ↓
 > 施加匹配 reference 的局域扰动
 > ↓
-> 光谱比较 before / after：测量 \(\delta E(\mathbf{k})\)
+> 光谱比较 before / after：测量 $\delta E(\mathbf{k})$
 
 这张示意不表示直接观察到 Chern 数，也不重绘任何原始曲线。
 
@@ -73,46 +73,46 @@ import ReadingPath from '../../../components/ReadingPath.astro';
 
 定义
 
-\[
+$$
 \zeta_w(\mathbf{k})=\langle w(\mathbf{k})|u(\mathbf{k})\rangle.
-\]
+$$
 
-对于论文规定的光滑参考态，重叠函数的全部孤立零点 \(\mathbf{k}_s\) 有局部整数绕数 \(\nu_s\)，其总和是
+对于论文规定的光滑参考态，重叠函数的全部孤立零点 $\mathbf{k}_s$ 有局部整数绕数 $\nu_s$，其总和是
 
-\[
+$$
 \sum_s \nu_s=-\mathcal C_u.
-\]
+$$
 
-**重要区别：**如果采用另外一个本身具有非零 Chern 数的、归一化的参考态 \(v\)，则对应的是 \(\mathcal C_v-\mathcal C_u\)。不要把两种参考态的公式混用；论文对不归一化、可能自身消失的 reference 另做推导。
+**重要区别：**如果采用另外一个本身具有非零 Chern 数的、归一化的参考态 $v$，则对应的是 $\mathcal C_v-\mathcal C_u$。不要把两种参考态的公式混用；论文对不归一化、可能自身消失的 reference 另做推导。
 
 ### 2. 旋转对称性给出局部绕数模整数
 
-对于 \(C_m\) 固定的高对称点 \(\mathbf{k}_*\)，定义能带与参考态的角动量标签 \(l_u^{(m)}\)、\(l_w^{(m)}\)。对称性要求
+对于 $C_m$ 固定的高对称点 $\mathbf{k}_*$，定义能带与参考态的角动量标签 $l_u^{(m)}$、$l_w^{(m)}$。对称性要求
 
-\[
+$$
 \nu(\mathbf{k}_*)=l_w^{(m)}-l_u^{(m)}\pmod m.
-\]
+$$
 
-因此两种角动量不匹配的参考/目标态，在该对称点通常必须有 overlap zero；即使发生零点，零点的**整数涡旋数**也需要更完整的局部波函数信息，而非仅由模 \(m\) 结果确定。
+因此两种角动量不匹配的参考/目标态，在该对称点通常必须有 overlap zero；即使发生零点，零点的**整数涡旋数**也需要更完整的局部波函数信息，而非仅由模 $m$ 结果确定。
 
 ### 3. 局域扰动与能带响应
 
 取一个同参考态对应的局域势投影：
 
-\[
+$$
 H_\eta(\mathbf{k})=H(\mathbf{k})+\eta |w(\mathbf{k})\rangle\langle w(\mathbf{k})|.
-\]
+$$
 
 利用 Hellmann–Feynman 定理，在弱扰动区间可得到
 
-\[
+$$
 \delta E_u(\mathbf{k})
 =\eta|\zeta_w(\mathbf{k})|^2+O(\eta^2).
-\]
+$$
 
-一个重要而略微反直觉的点：在 overlap 恰好为零的动量，新增算符湮灭该未扰动本征态，因此相应本征态的**本征值不变**可以在更广的 \(\eta\) 范围精确成立；但沿动量空间靠近该点时的整体色散拟合仍需要考虑带重排、简并和高阶修正。
+一个重要而略微反直觉的点：在 overlap 恰好为零的动量，新增算符湮灭该未扰动本征态，因此相应本征态的**本征值不变**可以在更广的 $\eta$ 范围精确成立；但沿动量空间靠近该点时的整体色散拟合仍需要考虑带重排、简并和高阶修正。
 
-局部零点若以动量偏移的 \(p\) 阶消失，则弱扰动色散变化的主导幂为 \(q^{2p}\)。**这个幂首先测量的是零点阶数 \(p\)，不自动确定 vorticity 的符号**；结合对称性约束才能收紧候选整数绕数。
+局部零点若以动量偏移的 $p$ 阶消失，则弱扰动色散变化的主导幂为 $q^{2p}$。**这个幂首先测量的是零点阶数 $p$，不自动确定 vorticity 的符号**；结合对称性约束才能收紧候选整数绕数。
 
 ## Key Figure / Model 阅读指引
 
@@ -120,9 +120,9 @@ H_\eta(\mathbf{k})=H(\mathbf{k})+\eta |w(\mathbf{k})\rangle\langle w(\mathbf{k})
 
 **Fig. 1(a,b) — Lieb lattice / compact localized states：**看三轨道的位置与 C4 作用；为什么选择第一轨道局域态作为 reference 会使微扰等价于一个可直观描述的 onsite potential。
 
-**Fig. 1(c,d) — Band / overlap zeros：**最低带的 Chern 数为 -1，中间平带为 0。两个参考态的 overlap 都可以在 M 点为零，但一个零点携带 \(\nu=1\)，另一个由 reference 本身消失造成、\(\nu=0\)。**零点数量绝不等于 Chern 数**。
+**Fig. 1(c,d) — Band / overlap zeros：**最低带的 Chern 数为 -1，中间平带为 0。两个参考态的 overlap 都可以在 M 点为零，但一个零点携带 $\nu=1$，另一个由 reference 本身消失造成、$\nu=0$。**零点数量绝不等于 Chern 数**。
 
-**Fig. 1(e) — Dispersion shift：**对作者参数 \(\eta=0.2\)，沿 M 到 X 方向比较原始与加势后的带色散；M 附近二次小量与一阶 overlap zero 相符。这里是理论模型图，不是实测能带。
+**Fig. 1(e) — Dispersion shift：**对作者参数 $\eta=0.2$，沿 M 到 X 方向比较原始与加势后的带色散；M 附近二次小量与一阶 overlap zero 相符。这里是理论模型图，不是实测能带。
 
 **Supplement：**重点查 S2（vorticity 和参考态的例外）、S3（旋转指标）、S4（不同模型）与 S6（quantum metric）。如果只看 Fig. 1，很容易忽略非归一化参考态这一技术要点。
 
@@ -138,8 +138,8 @@ H_\eta(\mathbf{k})=H(\mathbf{k})+\eta |w(\mathbf{k})\rangle\langle w(\mathbf{k})
 
 ### Caveats / Open questions
 
-- 测得 \(|\zeta|^2\) 不是测得 \(\arg\zeta\)。单一零点的谱形状一般不能唯一决定绕数符号。
-- Chern 数求和依赖完整考虑所有零点；旋转对称性典型地首先确定 \(\mathcal C\bmod n\)，不是任意大整数 Chern 数的完整值。
+- 测得 $|\zeta|^2$ 不是测得 $\arg\zeta$。单一零点的谱形状一般不能唯一决定绕数符号。
+- Chern 数求和依赖完整考虑所有零点；旋转对称性典型地首先确定 $\mathcal C\bmod n$，不是任意大整数 Chern 数的完整值。
 - 需要能隔离目标能带、选择恰当 reference，以及实现匹配的局域势扰动。
 - 本研究没有在特定实际 moiré 样品中完成控制实验；Lieb 模型不是实验复现。
 - 对参考态本身消失、非孤立零点和 quantum metric 的处理需要阅读 Supplement，不能将最简公式用于所有情形。
@@ -157,9 +157,9 @@ H_\eta(\mathbf{k})=H(\mathbf{k})+\eta |w(\mathbf{k})\rangle\langle w(\mathbf{k})
 ## Reading Checklist
 
 - [ ] 用一句话解释 Bloch 重叠零点为何与拓扑有关
-- [ ] 推导 \(\sum_s\nu_s=-\mathcal C_u\) 的 Stokes 思路
+- [ ] 推导 $\sum_s\nu_s=-\mathcal C_u$ 的 Stokes 思路
 - [ ] 在 Fig. 1 解释两个 M 点零点为何有不同绕数
-- [ ] 解释局域势微扰下 \(\delta E\propto |\zeta|^2\)
+- [ ] 解释局域势微扰下 $\delta E\propto |\zeta|^2$
 - [ ] 区分零点阶数、vorticity 符号和 Chern mod 旋转阶数
 - [ ] 阅读 FIRST TKNN 及 S2、S3 Supplement 例外
 - [ ] 写出至少一个现实实验中无法实现理想参考态势的障碍
