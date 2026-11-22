@@ -1,0 +1,169 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Cross-Question Reliable Reinforcement Learning"
+authors: "Hector G. Rodriguez, Marcus Rohrbach"
+date: "2026-11-23"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.25292"
+notionUrl: "https://app.notion.com/p/41f7dd5567ec818286efe2399fbc4d52"
+summary: "CARE optimizes selective prediction by rewarding model confidence relative to cross-question risk thresholds, lifting low-risk coverage without a separate classifier."
+readingTime: "30–50 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report.** CARE 把训练置信度的目标，从「每一道问题的置信度是否等于正确标签」，改为「在多个问题的置信度排序中，能否在错误率约束下保留尽可能多的自动回答」。在作者指定的 Math ID 评测中，5% selective risk 约束下的 coverage 从 RLCR 的 0.8% 升至 CARE 的 42.4%；HotpotQA OOD 从 12.3% 升至 23.6%。
+
+**AI interpretation.** 这更像是训练模型何时应该答、何时应该 abstain 或 escalate，而不是直接增加所有问题的解题准确率；适合评价带有「人工接管」选项的科研 Agent 和安全控制代理。
+
+**Caveat.** 作者报告的是特定 benchmark 和经验阈值的 risk–coverage，不是未来所有输入均满足 5% error 的形式化保证。跨数据集、不同模型规模下收益存在变化。
+
+**阅读核查范围：**阅读 [arXiv:2611.25292v1 HTML](https://arxiv.org/html/2611.25292v1) 的 Sections 3–5、Fig. 1–4、Tables 1–5 与选定 Appendix；未复现训练或测试。公开仓库没有复制原始图片。
+
+<ReadingPath
+  quick={[
+    "先读 Abstract 与 Fig. 1：什么是 cross-question reward？",
+    "Fig. 2：为什么同一个置信度，在不同 risk tolerance 下奖惩可能不同",
+    "Table 1–2：C@5 是 selective coverage，不是 accuracy"
+  ]}
+  standard={[
+    "Section 3.1：根据 confidence threshold 定义 coverage 和 selective error",
+    "推导 C@r 的受约束阈值，以及公式 (3) 的奖励符号",
+    "Section 3.2：为什么要求置信度分布细粒度、避免只输出 0.8/0.9",
+    "Fig. 3 与 Table 1–2：ID/OOD 表现、AURC 和 accuracy 的不同",
+    "Table 4–5：拆分 coverage/diversity/Brier 的贡献，理解 on-policy set-size 权衡"
+  ]}
+  deep={[
+    "FIRST：Geifman & El-Yaniv (2017) 选择性分类/拒答",
+    "从经验风险定义推导 empirical C@r 最优化",
+    "推导 CARE threshold-relative reward 的符号和幂次作用",
+    "检查同一置信度如何对不同风险 r 接收不同训练信号",
+    "读 Table 5：32/384/2304/5000 等规模的奖励集为何不单调更好",
+    "研究从经验 C@r 到真正有置信界风险保证还需要哪些统计步骤"
+  ]}
+/>
+
+## Big Picture：从答对一题，到知道哪些题可以自动答
+
+普通 pointwise confidence training 对每个 completion 独立奖励，比如输出 0.8 且答案正确时给高分；这并不直接训练多个答案之间的相对危险排序。实际应用中更需要决定一个阈值，高于它的答案自动交付，低于它的交给人类或更强模型。
+
+**AI-generated explanatory diagram（定性示意，非原 Figure）：**
+
+> 多道问题各自生成 answer + verbalized confidence
+>
+> ↓ 跨题合并成一个 confidence/correctness 集合
+>
+> 按置信度排序
+>
+> ↓ 针对多个允许风险 r，寻找经验安全阈值 tau
+>
+> 将正确答案推到阈值上方、错误答案推到下方
+>
+> ↓ 置信度多样性奖励：避免只报粗粒度小数
+>
+> 训练后用阈值选择回答或 abstain
+>
+> ↓ 在 ID/OOD 测试上重新测量 risk–coverage
+
+这张图不暗示模型实际知道未来每道题的 correctness；训练/离线评估可用标签，部署时仍需估计风险。
+
+## 核心机制与公式
+
+### 1. C@r 不是准确率
+
+对 N 条回答，令 c_i 为模型报告的 confidence，y_i 为 0/1 correctness，tau 为接收阈值。定义：
+
+~~~latex
+C(\tau)=\frac{1}{N}\sum_{i=1}^N \mathbf{1}[c_i\geq\tau]
+~~~
+
+~~~latex
+R(\tau)=\frac{\sum_i(1-y_i)\mathbf{1}[c_i\geq\tau]}{\sum_i\mathbf{1}[c_i\geq\tau]}
+~~~
+
+忽略空接收集需单独约定的情况。选择性 coverage：
+
+~~~latex
+\mathrm{C@}r=\max_{\tau:R(\tau)\leq r} C(\tau)
+~~~
+
+一个模型可以 accuracy 不变，但如果它更会将错误样本排在低置信度区间，仍能大幅提高 C@5。**42.4% 指可以接收的题目比例，并非整个问题集的正确率。**
+
+### 2. CARE 的跨题阈值奖惩
+
+作者用当前生成的集合计算 tau-star(r)，对每个 completion 的标签 y 与 confidence c 给予奖励：
+
+~~~latex
+\mathcal{R}^{\mathrm{C@}r}
+=(2y-1)\operatorname{sign}(c-\tau^\star(r))
+|c-\tau^\star(r)|^p.
+~~~
+
+正确答案更希望 confidence 在可接受阈值之上；错误答案更希望在其下。若同一个 confidence 值在一个更严/更松的风险容忍度中相对阈值不同，就可能得到不同符号的奖励。多风险阈值同时训练能帮助从粗粒度排序转向可调 risk–coverage。
+
+### 3. Diversity 与 on-policy 的折衷
+
+单靠 threshold reward，语言模型容易把 confidence 缩在几个简单小数。作者加入 coarse-bin entropy 和 value-level uniqueness 等项，鼓励更细分的 confidence ranking。
+
+但阈值估计本身依赖一个样本池。Table 5 显示每个 GRPO group 的 32 个 completion 不足以稳定低风险阈值；跨题 per-worker 约 384 个样本效果更佳，而滚动缓冲区 5000/10000 因为混入旧策略的离策略样本，表现不再单调改善。
+
+## Key Figure / Table 阅读指引
+
+论文 [原始 HTML 与所有 Figure](https://arxiv.org/html/2611.25292v1) 使用 arXiv perpetual non-exclusive license，本公开仓库**不复制原 Figure**。
+
+**Fig. 1 — 方法与主要结果：**左侧是独立 confidence reward vs cross-question reward；右侧是两个训练数据 regime 下 C@5 对照。不要把 coverage 误读成 accuracy。
+
+**Fig. 2 — 四步 threshold selection：**每题多条答案、合并置信度、计算可容忍风险下阈值、根据答案正确与否和离阈值距离赋予奖励。想清楚标签的作用，以及训练需要组内其他题的信息。
+
+**Fig. 3 — Risk–coverage curves：**观察阈值从严到宽变化时 coverage 如何增加，和 AURC 的差别。比较 Math ID 与 HotpotQA OOD，切勿忽略基准分布变化。
+
+**Fig. 4 — Confidence histograms：**基线倾向高置信/少数简单小数，CARE 的分布更细；这对低风险阈值下的排序有实际意义，但不是严格概率校准证明。
+
+**Table 4 — Reward ablation：**拿掉 cross-question coverage reward 的下降最明显；entropy/uniqueness 有额外贡献。注意其他项也能影响 accuracy，不应宣称单一 reward 解释全部收益。
+
+**Table 5 — Group size/age：**pool size 与 on-policy 程度同时变化，不能单独把性能差异归因为「数据越多越差」。
+
+## Authors report / AI interpretation / Caveats
+
+### Authors report
+
+CARE 通过按风险容忍度选择的跨题阈值奖励和 score diversity，显著改善了特定 Math ID、HotpotQA OOD 中低错误率下的 selective coverage；同时通常保持接近对照的 accuracy。reward pool 的大小与策略新旧程度影响效果。
+
+### AI interpretation
+
+这意味着一个 Agent 的「效用」可以是受约束的自动化覆盖率，而不是二元回答成功率。若允许 defer 人工或更强模型，可将选择性预测接入 coding/robotics/safety 工作流。但部署中的真实风险评估需要额外统计监测和监督机制。
+
+### Caveats / Open questions
+
+- 所有 C@r 均是该论文评测样本上的**经验风险**；不能无条件保证分布外未来错误率。
+- 同样的置信度学习不必改善 raw problem-solving accuracy。
+- 依赖可判定答案正确性/GRPO training rollout；真实开放式研究不一定有即时可靠 verifier。
+- 按组计算的 reward 依赖 batch composition；在线及离线样本混合可能改变策略梯度。
+- 未在真实安全关键机器人平台或自主科学 Agent 中验证部署效果。
+- 不复制图、不复现实验，结论边界以原文限定为准。
+
+## Historical Reading Chain
+
+**FIRST — [Geifman & El-Yaniv (2017): Selective Classification for Deep Neural Networks](https://arxiv.org/abs/1705.08500)**。先理解 selective risk、coverage、abstention 与 threshold 在统计决策中的含义。
+
+[Guo et al. (2017): On Calibration of Modern Neural Networks](https://arxiv.org/abs/1706.04599)。区分置信度 calibration 的数值正确性，与拒答任务所需的排序质量。
+
+[Ouyang et al. (2022): InstructGPT](https://arxiv.org/abs/2203.02155)。补齐大模型后训练、奖励信号与泛化之间的背景。
+
+[Shao et al. (2024): DeepSeekMath / GRPO](https://arxiv.org/abs/2402.03300)。理解通过 group-relative policy optimization 训练多条 completion 的技术背景。
+
+## Reading Checklist
+
+- [ ] 用自己的话解释 C@5 是覆盖率而非总体准确率
+- [ ] 从 (confidence, correctness) 样本推导 C(tau)、R(tau)、C@r
+- [ ] 手算一个正确/错误 completion 在给定 tau-star 下的 reward
+- [ ] 解释不同 risk tolerance 为何可对同一 confidence 产生不同奖励
+- [ ] 通过 Fig. 4 理解置信度粗粒度化如何破坏低风险排序
+- [ ] 使用 Table 4 和 Table 5 区分 reward 设计与 rollout pool 的影响
+- [ ] 阅读 FIRST Selective Classification 并提出部署时验证风险的独立方案
+
+## Sources and attribution
+
+Original: Hector G. Rodriguez & Marcus Rohrbach, [arXiv:2611.25292v1](https://arxiv.org/abs/2611.25292), first public 2026-11-18. Consulted [authors' full HTML](https://arxiv.org/html/2611.25292v1) Sections 3–5, Fig. 1–4, Tables 1–5 and selected Appendix, without independently retraining. The arXiv posting has a perpetual non-exclusive license, so figures are linked but **not reproduced**. The flow above is clearly marked **AI-generated explanatory diagram**, concepts only, not a reproduction of quantitative plots.
