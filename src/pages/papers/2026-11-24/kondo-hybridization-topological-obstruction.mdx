@@ -1,0 +1,85 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Topologically Obstructed Kondo Hybridization: A Route to Kondo Semimetals"
+authors: "Yue Liu, Junze Deng, Haoyu Hu"
+date: "2026-11-24"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.26686"
+notionUrl: "https://app.notion.com/p/4217dd5567ec81118749ebc12550d32f"
+summary: "Fermi-surface topology can force Kondo hybridization to vanish at nodes even within a screened Kondo phase."
+readingTime: "20–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：** 三维导带费米面携带非零自旋分辨 Chern 数时，Kondo 杂化必须在部分动量消失。自洽模型显示筛选后的 Kondo 相仍可有节点。**AI interpretation：** 不能把局部杂化为零等同整个 Kondo 效应消失。
+
+阅读范围：v1 主文 Eq. 2–8、Fig. 1–3 图注及微观模型说明；未复现计算。
+
+<ReadingPath quick={["Fig. 1：完整杂化与节点的区别","Eq. 8 和 Fig. 3：拓扑约束与数值模型"]} standard={["Eq. 2–3：平均场杂化谱","Fig. 2 与 Eq. 4–8：Berry 通量和绕数","Fig. 3：自洽模型及节点"]} deep={["推导规范不变相位梯度","阅读 S1–S2，检查平均场假设和扰动","比较拓扑受阻与 Kondo breakdown"]} />
+
+## Big Picture
+
+**AI-generated explanatory diagram（概念示意，非原图）**
+
+~~~text
+导带费米面携带 Berry 通量
+        ↓
+杂化相位无法全局无奇点
+        ↓
+杂化幅值必须在某些动量为零
+        ↓
+Kondo 相内保留节点
+~~~
+
+传统 Kondo 晶格中，局域 f 自由度与巡游 c 电子形成重准粒子；若杂化处处非零，原先能带交叉被打开。本文问的是这种开隙是否受到波函数拓扑限制。
+
+## 核心机制
+
+对于具有文中相应自旋或 PT 对称性的平均场模型，杂化矩阵的共同奇异值记为 Λ。能量本征值为：
+
+~~~latex
+E_± = (ε_k + λ_f)/2 ± sqrt(((ε_k - λ_f)/2)^2 + Λ_k^2)
+~~~
+
+在有效费米面 ε_k = λ_f，直接能隙是 2Λ。对于自旋守恒情形，定义杂化复数 Δ 和 Berry connection A。规范不变量为相位梯度减 A；沿费米面上的小闭环积分并应用 Stokes 定理，得到文中 Eq. 8：
+
+~~~latex
+sum_i g_(i,σ) = C_(n,σ)
+~~~
+
+所以非零 Chern 数要求至少一个杂化节点。零净绕数不排除偶然出现的节点。对称性受阻是另一条路线，需另查相应表示与假设。
+
+## Key figures
+
+- [Fig. 1 与原文](https://arxiv.org/html/2611.26686v1)：比较无 Kondo、全杂化与节点杂化的谱；不是三个实测材料。
+- [Fig. 2 与原文](https://arxiv.org/html/2611.26686v1)：闭合费米面上的小环路、Berry 通量，以及高对称线/面的表示差异。
+- [Fig. 3 与原文](https://arxiv.org/html/2611.26686v1)：沿 Γ–Z 的 c/f 色标和杂化节点；面板 b 的颜色为以 t 归一化的杂化 gap，对数色标下限 0.001。作者说明节点在指定小空间群破缺扰动下移动而非消失。
+
+## Authors report
+
+在掺杂三维 Dirac 半金属的 toy model 中，自洽低温 Kondo 相出现 c/f 带交叉；导带费米面上的杂化除一个节点外非零（Fig. 3 展示的费米面）。
+
+## AI interpretation and caveats
+
+局域磁矩已经参与 Kondo screening，却仍可能有动量选择性的杂化零点。可以考虑用动量分辨谱学与输运交叉检验，而不只根据电阻变化判断 Kondo breakdown。该想法属于研究延伸。论文是理论平均场工作，不是莫尔材料实验；三维费米面 Chern 数论证不能原样套用到二维费米线。节点接近费米能并不保证真实材料在所有填充下都是理想半金属。
+
+## Historical Reading Chain
+
+- **FIRST** [Dzero et al., Topological Kondo Insulators (2010)](https://doi.org/10.1103/PhysRevLett.104.106408)：理解杂化产生拓扑能带。
+- [Coleman, New approach to the mixed-valence problem (1984)](https://doi.org/10.1103/PhysRevB.29.3035)：辅助粒子平均场基础。
+- [Armitage et al., Weyl and Dirac semimetals (2018)](https://doi.org/10.1103/RevModPhys.90.015001)：Berry 通量及费米面拓扑。
+
+## Reading Checklist
+
+- [ ] 推导二能级杂化能谱。
+- [ ] 验证 Eq. 5 的规范不变性与 Eq. 8 的绕数。
+- [ ] 区分整个 Kondo 相与局部动量节点。
+- [ ] 检查 Fig. 3 的色标和模型参数。
+- [ ] 阅读至少一篇历史前作。
+
+## Sources and attribution
+
+[原论文 v1 HTML](https://arxiv.org/html/2611.26686v1)；作者 Yue Liu, Junze Deng, Haoyu Hu。所有 Figure 仅提供原文链接；没有复制或加工图片。概念图为 AI-generated explanatory diagram。
