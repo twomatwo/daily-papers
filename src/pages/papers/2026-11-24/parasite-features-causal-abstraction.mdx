@@ -1,0 +1,77 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Parasite Features: Causal Abstraction Through Spurious Pathways"
+authors: "Denis Sutter, Qing Yao, Sasha Boguraev, Julian Minder, Antonio Di Maio, Thomas Hofmann, Kyle Mahowald, Tiago Pimentel"
+date: "2026-11-24"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.26711"
+notionUrl: "https://app.notion.com/p/4217dd5567ec816f92f2ffd6e92ae07b"
+summary: "Causal interventions can succeed by connecting unrelated discriminative and steering directions rather than revealing natural computation."
+readingTime: "20–45 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+**Authors report：** 即便只允许线性对齐，也可能把输入分类信息与无关的输出控制方向拼接成表现良好的因果抽象。**AI interpretation：** 干预有效不必然意味着发现了模型自然推理的机制。
+
+阅读范围：v1 Sections 2–8、Theorem 1、Fig. 2–3 图注与加法消融；未复现。
+
+<ReadingPath quick={["Fig. 2：干预效果为何不是充分证据","Fig. 3：区分判别方向与操控方向"]} standard={["Sections 2–5：因果抽象与 Theorem 1","Sections 6–7：两种任务和对齐方法","Fig. 3：消融及 faithful 对照"]} deep={["推导线性对齐存在条件","阅读附录 B/C：一般线性与旋转限制","设计必要性、反事实与 OOD 对照"]} />
+
+## Big Picture
+
+**AI-generated explanatory diagram（定性概念，不是论文 Figure）**
+
+~~~text
+输入特征 f ──→ 判别方向 d
+                   ↓ 学习到的对齐
+输出行为 g ←── 操控方向 s
+~~~
+
+真实模型的自然计算未必沿着这条连接。对齐算法可能制造一条外部干预通道，而不是识别原来就在使用的内部机制。
+
+## 核心机制
+
+在 residual stream h 中，设单位方向 d 能区分二元输入特征；存在正 margin，使得正类投影大于 margin，负类小于负 margin。另一方向 s 可以推动模型输出特定标签。两者可以正交。
+
+简化教学表达（非论文逐字公式）：
+
+~~~latex
+h' = h + α s
+~~~
+
+如果学习到的 alignment map 把源样本的分类差异映射为沿 s 的干预，即使自然推理不使用该分类信息来控制输出，干预仍可能符合高层算法的预测。Theorem 1 给出满足三项几何条件时可逆线性对齐的存在性证明；旋转情形需要更强条件。不能据此断言所有对齐都不可信。
+
+## Key Figures
+
+- [Fig. 2 与原文](https://arxiv.org/html/2611.26711v1)：Pythia-1B 的 Parasitic Agreement 使用 odds，Llama3.1-8B 的 Carry-One 使用干预准确率。旋转+线性对齐在多层表现强，两个指标不能直接比较。
+- [Fig. 3 与原文](https://arxiv.org/html/2611.26711v1)：比较两个寄生例与真实主谓数一致性。看输入样本分隔方向和输出区域分隔方向是否重合；前两个任务中两条方向近似正交。
+- Section 7.1：移除 Carry-One 学到的二维子空间，检验自然加法，而不是重复测干预成功率。
+
+## Authors report
+
+Llama3.1-8B 的双位数加法准确率为 99.1%；移除该二维子空间后 98.8%；随机二维子空间对照为 99.12% ± 0.13（10 次）。作者认为结果支持该子空间不是自然加法必要机制，但也指出自修复可能造成较小的消融影响。
+
+## AI interpretation and caveats
+
+机制假说需要独立检验：比较自然计算中的信息传播、干预充分性、消融必要性及分布外反事实。将此用于模型安全研究时，应避免仅因一个方向能引发拒答就认为它是安全判断的真实机制。本文的人工构造任务不能估计所有模型或所有现实任务中的 parasite feature 发生率；对其他解释方法的推广属于假设。
+
+## Historical Reading Chain
+
+- **FIRST** [Geiger et al., Finding Alignments Between Interpretable Causal Variables and Distributed Neural Representations (2024)](https://proceedings.mlr.press/v236/geiger24a.html)：理解 distributed alignment search。
+- [Elhage et al., Toy Models of Superposition (2022)](https://transformer-circuits.pub/2022/toy_model/index.html)：表征空间几何与特征共享。
+- [Sharkey et al., Open Problems in Mechanistic Interpretability (2025)](https://arxiv.org/abs/2501.16496)：机制解释的证据标准。
+
+## Reading Checklist
+
+- [ ] 分开定义 discriminative direction 和 steering direction。
+- [ ] 理解 Theorem 1 的存在性与条件。
+- [ ] 对照 Fig. 2 的干预效果与 Fig. 3 的几何。
+- [ ] 解释消融为何不能排除补偿机制。
+- [ ] 设计一个能区分自然机制和外部操控的对照。
+
+## Sources and attribution
+
+[原论文 v1 HTML](https://arxiv.org/html/2611.26711v1)；作者 Denis Sutter 等。所有 Figure 仅链接原文，不复制原图或重绘定量数据。概念图为 AI-generated explanatory diagram。
