@@ -1,0 +1,82 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Measuring and Teaching Language Model Agents to Act on Delayed Consequences"
+authors: "Shardul Bansal, Seth Schilbe, Jarrod Barnes"
+date: "2026-11-25"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.28158"
+notionUrl: "https://app.notion.com/p/4227dd5567ec81da97a0f18c958ff363"
+summary: "识别延迟后果不等于持续采取正确行动；共享状态 replay 可训练行为一致性。"
+readingTime: "20–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+SMB Bench 将长期经营建模为 90 日状态连续的采购环境。作者用可重放的历史状态训练 LLM，改善保护客户的行为一致性，但利润改善仍不确定。
+
+阅读范围：v1 Sections 2–6、Eq. 2–3 与相关图注；未复现。
+
+<ReadingPath quick={["Fig. 1：延迟因果与状态重放","Fig. 5：行为与收益的区别"]} standard={["Sections 2–4：基准、指标","Fig. 4 与 Eq. 2–3：共享状态训练","Fig. 5–6：封存测试与协调失败"]} deep={["Appendix A：代理奖励与轨迹 SFT 失败","Table 8：逐季度结果","检查提示、训练和测试分割"]} />
+
+## Big Picture
+
+**AI-generated explanatory diagram（概念示意，非原图）**
+
+~~~text
+今天的采购/缺货 → 改变后续观测及客户需求
+                         ↓
+归档状态 + 相同外生随机序列 → 4 个策略续跑
+                         ↓
+比较有效轨迹和参考利润 → 训练
+                         ↓
+封存企业完整季度测试 → 行为与经济结果分离
+~~~
+
+## 核心机制
+
+文中 Eq. 2 将从同一状态出发的续跑按是否有效且超过参考利润记为二元奖励，再以 MaxRL 归一化：
+
+~~~latex
+R_i = 1[valid(tau_i) and G(s_d,tau_i) > G_ref(s_d)]
+A_i = (R_i - mean(R))/(mean(R)+epsilon)
+~~~
+
+历史共享且随机数匹配使比较消除分支前收益差。四个续跑中只有一个胜出时，该样本优势约 +3，其余约 -1；全胜或全败无信号。Eq. 3 使用 CISPO 的截断、停止梯度重要性权重。
+
+## Key figures
+
+- [Fig. 1](https://arxiv.org/html/2611.28158v1)：匹配环境初始观测、缺货隐变量、供应冲击与重放。
+- [Fig. 4](https://arxiv.org/html/2611.28158v1)：共享第60日状态；轨迹 SFT 的 24 次续跑中 17 次失败。
+- [Fig. 5](https://arxiv.org/html/2611.28158v1)：固定评测提示下，承诺执行改善但利润差有较大不确定性。
+- [Fig. 6](https://arxiv.org/html/2611.28158v1)：采购时间、供应商与现金协调仍会失败。
+
+## Authors report
+
+16 个模型仅 3 个超过固定采购规则。封存企业 12 个季度中，期初全保护由 10/12 到 12/12，保护撤销平均 5.8 到 1.0，亏损超 1 万美元的季度由 3 到 1。估计利润差 +1489 美元（标准误 1133）。
+
+## AI interpretation and caveats
+
+记忆写下正确诊断并不保证策略实际执行。对科研/机器人 Agent，可用匹配状态和环境反馈检验行为改变；但此工作不是实体机器人安全保证，也不证明跨企业普遍收益。只有一个封存企业，样本较小，训练和评测提示不同（两种被比较政策评测提示相同），且二元收益可能忽略改善幅度。
+
+<details><summary>自测：四条轨迹全失败时为何没有学习信号？</summary>
+每条奖励均为零，中心化优势也为零。需要改变起始状态、采样策略或奖励设计来提供区分性反馈。
+</details>
+
+## Historical Reading Chain
+
+- FIRST: [Ross & Bagnell (2014)](https://arxiv.org/abs/1406.5979) — 交互式策略学习与状态分布。
+- [Reflexion (2023)](https://arxiv.org/abs/2303.11366) — 语言经验反思。
+- [τ-bench (2024)](https://arxiv.org/abs/2406.12045) — 状态化工具交互评估。
+
+## Reading Checklist
+
+- [ ] 区分诊断、行为承诺与收益。
+- [ ] 推导 Eq. 2 四分支优势。
+- [ ] 核对封存测试、提示与样本量。
+- [ ] 阅读一种交互学习前作。
+
+## Sources and attribution
+
+[原文 v1](https://arxiv.org/html/2611.28158v1)；[摘要](https://arxiv.org/abs/2611.28158)。原 Figure 只链接，不复制。流程为 AI-generated explanatory diagram。
