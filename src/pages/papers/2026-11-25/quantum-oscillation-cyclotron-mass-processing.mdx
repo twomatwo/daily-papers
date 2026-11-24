@@ -1,0 +1,81 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "From raw magnetoresistance to reliable cyclotron masses: A practical guide to processing quantum oscillation data"
+authors: "Josh Leeman, Sudipta Chatterjee, Max Hirschberger, Leslie M. Schoop"
+date: "2026-11-25"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.28044"
+notionUrl: "https://app.notion.com/p/4227dd5567ec81e8bc00ff318d58ad11"
+summary: "有限磁场窗口和信号处理会显著偏置 LK 拟合的回旋质量。"
+readingTime: "20–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+
+## 30 秒摘要
+
+作者利用模拟信号与 RTe3 的 SdH 数据，说明场窗、背景扣除和 Fourier 窗函数均能改变提取的质量；较窄场窗降低单轨道质量偏差，却可能使邻近频率无法分辨。
+
+阅读范围：v1 主文关键方程、Sections II–IV 与相关图注；未复现。提交日期 10月27日，11月24日新列表。
+
+<ReadingPath quick={["Fig. 1 与 3：从原始磁阻到质量","Fig. 5：频率分辨率与泄漏"]} standard={["Eq. 5–7：LK 和有效场","Fig. 3、5、6：场窗、窗函数与质量偏差","Fig. 10：诊断流程"]} deep={["Eq. 15 与 Dingle damping 的加权","Section IV：真实 RTe3 数据和相邻频率","附录：背景扣除与谱峰宽度"]} />
+
+## Big Picture
+
+**AI-generated explanatory diagram（概念示意，非原图）**
+
+~~~text
+R(B,T) → 背景扣除 → 均匀 1/B 网格
+                  ↓
+        选场窗、窗函数 → FFT
+                  ↓
+        峰幅随 T 的变化 → LK 拟合
+                  ↓
+        参数敏感性与误差评估
+~~~
+
+## 核心机制
+
+~~~latex
+R_T = X/sinh(X)
+X = 2 pi^2 k_B T m*/(hbar e B)
+B_eff = 2/(1/B_min + 1/B_max)
+m_fit/B_eff ≈ m_true/B_eff_weighted
+~~~
+
+低场因热阻尼和 Dingle 阻尼贡献较弱，实际权重倾向高场，导致以简单调和平均场拟合时质量偏低。矩形窗频谱旁瓣较强；Hann 窗减少泄漏却拓宽中心峰。零填充只改善采样间距，不增加独立分辨率。
+
+## Key figures
+
+- [Fig. 3](https://arxiv.org/html/2611.28044v1)：单频模拟真值 0.33 m_e；3–9 T、7–14 T 拟合分别 0.203、0.273 m_e。比较三列信号、FFT 和 LK 拟合。
+- [Fig. 5](https://arxiv.org/html/2611.28044v1)：矩形窗与 Hann 的信号及归一化谱；不要把归一化峰高当成真实绝对幅度。
+- [Fig. 6](https://arxiv.org/html/2611.28044v1)：改变最低场时质量随之变化，区分低场信号缺失与 Dingle 权重。
+
+## Authors report
+
+作者报告指定模拟的质量低估 38% 和 17%，实验案例也显示背景与场窗引起明显变化。
+
+## AI interpretation and caveats
+
+这不是所有实验都应乘以固定校正因子的结论。近邻频率、噪声、场依赖质量、背景及多带效应都可能改变偏差。应报告参数扫描和置信区间，不能把处理引入的变化直接当作电子关联增强。
+
+<details><summary>自测：为什么不能无限缩窄场窗？</summary>
+有限逆场范围决定真实频率分辨率；缩短窗口可能将两支不同质量的振荡合成一个峰，使 LK 单分量假设失效。
+</details>
+
+## Historical Reading Chain
+
+- FIRST: [Audouard & Fortin (2018)](https://arxiv.org/abs/1805.01737) — Fourier 振幅和有限窗的直接前作。
+- [Shoenberg, Magnetic Oscillations in Metals](https://doi.org/10.1017/CBO9780511897870) — LK 与量子振荡基础。
+- [Mercure (2010)](https://arxiv.org/abs/1001.3980) — 量子临界区的振荡与场窗问题。
+
+## Reading Checklist
+
+- [ ] 检查逆场网格、频率分辨率和背景。
+- [ ] 重复不同场窗及 taper 的质量拟合。
+- [ ] 检查噪声底、温度取点和邻峰。
+- [ ] 阅读直接前作。
+
+## Sources and attribution
+
+[原文 v1](https://arxiv.org/html/2611.28044v1)；[摘要与元数据](https://arxiv.org/abs/2611.28044)。原 Figure 只链接，不复制；概念图为 AI-generated explanatory diagram。
