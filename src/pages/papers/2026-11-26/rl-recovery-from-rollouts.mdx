@@ -1,0 +1,91 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Reinforcement Learning Can Be Recovered From Its Own Rollouts"
+authors: "Jiayi Sheng, Jingwen Gu, Guanning Zeng, Zhaoyi Zhou, Stefano Viel, Qianqian Wang, Fahim Tajwar, Andrea Zanette"
+date: "2026-11-26"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.33102"
+notionUrl: "https://app.notion.com/p/4237dd5567ec819994f2e0062e535932"
+summary: "归档 RL 轨迹的采样分布保留了可由 SFT 恢复的能力；直接重放 RL 梯度却可能失稳。"
+readingTime: "20–35 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+## 30 秒摘要
+
+将在线 RL 每一步生成的响应全部保留，从同一基模型按原顺序做 SFT，不区分正确与错误，便可恢复作者测试中的在线 RL 学习曲线。直接用原 RL loss 重放相同数据反而可能崩溃。这表明发现更好的采样分布与学习该分布是不同的任务。
+
+阅读范围：arXiv v1 Sections 2–4、Eq. 4、11–18、Fig. 3–11 与 Table 2；未复现。
+
+<ReadingPath quick={["Fig. 3：RL replay 为什么崩溃", "Fig. 4–5：SFT 恢复学习曲线"]} standard={["Section 3.1–3.3：off-policy drift 与 KL", "Table 2、Fig. 6–9：终点与顺序", "Fig. 10–11：多专家组合"]} deep={["推导 score baseline 消去条件", "检查 token-level importance sampling 与假设", "Appendix A/B/D：数据量、其他算法与预算"]} />
+
+## Big picture
+
+**AI-generated explanatory diagram — 概念流程，非原图。**
+
+~~~text
+Online RL: π0 → 采样 D0 → reward → π1 → 采样 D1 → ... → πT
+                     ↓                        ↓
+                  archive D0              archive D1
+                     ↓                        ↓
+Replay SFT:  q0 → maximum likelihood → q1 → maximum likelihood → ...
+                     ↑
+               不读取 reward
+~~~
+
+## 核心机制与公式
+
+每个归档 batch D_t 由当时的教师策略 π_t 采样。直接重放带 baseline 的 policy gradient 时，学生 q_t 不一定仍等于 π_t。原本为零的期望 score 项会变得非零；偏差可随多次更新累积。截断 token importance sampling 在该论文实验中未根治崩溃。
+
+SFT 的总体目标则是：
+
+~~~text
+q_(t+1) = argmin_q E_x KL(π_t(.|x) || q(.|x))
+~~~
+
+在模型类可表示教师且优化达到全局最优的理想情形，每一步学生跟随采样教师，而不依赖当前学生恰好等于教师。最后一步 SFT 对应 π_(T−1)，不是严格等于 π_T。
+
+若仅关心终点，可对后期几批轨迹拟合教师分布的混合；数据有限时可能过拟合。重要的是后期样本本身已包含先前 RL 奖励优化的影响。
+
+## 关键 Figure 与结果
+
+原图请见[论文 HTML](https://arxiv.org/html/2611.33102v1)：
+
+- Fig. 3：对照 pass@1 与教师到学生的 per-token KL，观察重放失稳。
+- Fig. 4–5：时间顺序 SFT 与在线 MaxRL 的 pass@1/pass@16 曲线及最终 pass@k 比较。
+- Fig. 6–7：最后一步样本与子样本的恢复能力，不能据此认为任意少量数据均足够。
+- Fig. 8–9：相同数据的时间顺序、打乱与逆序对照。
+- Fig. 10–11：数学和 Knights-and-Knaves 两个专家的 rollout 数据空间组合，与权重合并比较。
+
+## Authors report
+
+Table 2 中 Qwen3-1.7B 的 MATH-500 endpoint error：全档案 SFT 0.004，最后一步 SFT 0.007，未训练基模型 0.079。该误差是指定 pass@k 的平均绝对差，不是准确率。最后一步含 4096 条 rollout，训练可重复使用这些样本。SmolLM2-360M 的 GSM8K 实验需要更多后期批次。
+
+## AI interpretation / caveats
+
+- 原始在线 RL 仍需实际生成并改进 rollout；恢复阶段不使用 reward 不代表 RL 奖励无价值。
+- 匹配 pass@k 不等于逐 token 分布或模型权重完全一致；也不意味着安全或偏好属性被同等恢复。
+- 结果取决于教师轨迹覆盖、学生容量及优化。归档包含大量数据，存储、隐私和可复现预算需要评估。
+- 可以将保存 rollout 作为训练过程的可重用科研资产，并研究不同阶段数据对能力与安全属性的贡献。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  {year:"2026", title:"FIRST — Tajwar et al., Maximum Likelihood Reinforcement Learning", why:"理解在线 MaxRL 的原始训练目标", url:"https://arxiv.org/abs/2602.02710"},
+  {year:"2015", title:"Hinton et al., Distilling the Knowledge in a Neural Network", why:"学生匹配教师分布的基本思想", url:"https://arxiv.org/abs/1503.02531"},
+  {year:"2024", title:"DeepSeekMath", why:"理解 GRPO 的训练背景", url:"https://arxiv.org/abs/2402.03300"}
+]} />
+
+## Reading checklist
+
+- [ ] 推导为何 on-policy score expectation 为零。
+- [ ] 解释 SFT 的 forward KL 与 offline RL replay 区别。
+- [ ] 区分 trajectory recovery、endpoint recovery 与权重恢复。
+- [ ] 阅读顺序干预和最后一步数据量实验。
+- [ ] 判断哪些原始 RL 成本仍不可避免。
+
+## Sources and attribution
+
+[Sheng et al., arXiv:2611.33102v1](https://arxiv.org/html/2611.33102v1)，arXiv perpetual non-exclusive license。仅链接原论文，不复制 Figure。机制示意为 AI-generated explanatory diagram；没有重绘定量曲线。
