@@ -1,0 +1,86 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Moiré-Induced Interlayer Electron-Phonon Coupling in Graphene/hBN Superlattices"
+authors: "Dasol Kim, Zhengguang Lu, Tonghang Han, Guorui Chen et al."
+date: "2026-11-26"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.31896"
+notionUrl: "https://app.notion.com/p/4237dd5567ec81798bf1d75e5bf477b2"
+summary: "莫尔势让相邻 hBN 的面外光学声子与石墨烯电子连续谱耦合，并借用光学振子强度。"
+readingTime: "20–30 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+## 30 秒摘要
+
+在面内偏振红外光下，hBN 的 ZO 声子通常不显著吸收。作者利用 FTIR photocurrent 在 ABC 三层石墨烯/hBN 中观察到约 102 meV 的非对称共振，并通过位移场调节线宽来验证其电子起源。莫尔势的动态调制使跨原始动量的电子空穴跃迁成为重要的耦合通道。
+
+阅读范围：arXiv v1 主文、Fig. 1–4 图注与 Eq. 1；补充材料未独立核查，未复现实验。
+
+<ReadingPath quick={["Fig. 1：对照样品与 Fano 峰", "Fig. 2：光学跃迁和 EPC 的不同选择规则"]} standard={["Eq. 1：线形、线宽和能量", "Fig. 2–3：微观矩阵元与位移场", "Fig. 4：tBLG 对照及局限"]} deep={["推导动态莫尔势的矩阵元", "检查补充材料的 η 与 D–Δ 标定", "考虑光电流与真正吸收率的转换"]} />
+
+## Big picture
+
+**AI-generated explanatory diagram — 定性机制图，非论文原图。**
+
+~~~text
+hBN ZO 面外振动
+      ↓
+界面重叠随振动改变 → 动态莫尔势 δV
+      ↓
+跨 G 的电子-空穴跃迁 ← 静态莫尔势混合动量
+      ↓
+声子获得面内光学偶极 + 电子连续谱干涉
+      ↓
+Fano 线形 / 线宽 / 能量移动
+~~~
+
+## 关键 Figure
+
+- [Fig. 1](https://arxiv.org/html/2611.31896v1#S0.F1)：ABC-TLG/hBN 与无莫尔对照；观察约 102 meV 特征及位移场扫描，注意曲线纵向平移及背景扣除。
+- [Fig. 2](https://arxiv.org/html/2611.31896v1#S0.F2)：I1/I4 光学振子强度高，I2/I3 的 EPC 更强；两种矩阵元不应混为一谈。
+- [Fig. 3](https://arxiv.org/html/2611.31896v1#S0.F3)：比较计算和拟合的线宽、能量；模型使用可调莫尔势梯度 η，裸线宽 0.12 meV、裸能量 101.93 meV。
+- [Fig. 4](https://arxiv.org/html/2611.31896v1#S0.F4)：1.8° tBLG/hBN 同样可见特征，拟合线宽约 1.8 meV；微观模型仍不完整。
+
+若锚点未跳转，直接使用[完整 HTML](https://arxiv.org/html/2611.31896v1)按图号查找。
+
+## 核心机制与公式
+
+令 x = (E − EΩ)/γ。Eq. 1 的 Fano 线形可写成：
+
+~~~text
+ΔA / Ae = (q + x)^2 / (1 + x^2) − 1
+~~~
+
+q 决定非对称性；γ 为拟合线宽参数，不应不加区分地当作 FWHM。教学推导：q = 0 时 x = 0 对应凹陷；q 的绝对值较大时中心呈凸峰。谱强度不是耦合常数的简单平方，因为干涉和振子强度也参与。
+
+静态莫尔势包含六个倒格矢谐波；面外振动调制其幅度。EPC 矩阵元为电子空穴态之间的动态势矩阵元。通常光子动量很小，因此原始动量不同的跃迁光学强度较弱；但动态莫尔势携带 G，能使这些跃迁主导声子自能。近共振通道主导展宽，远离共振的通道也可贡献有效偶极。
+
+## Authors report
+
+ABC-TLG/hBN 莫尔周期约 14.5 nm；无莫尔对照没有相应峰，D 改变电子谱而非周期。作者用 tight-binding 与电声矩阵元模型解释 Fig. 2–3。MLG/hBN 与 tBLG/hBN 的观测支持该现象不局限于 ABC 三层。
+
+## AI interpretation / caveats
+
+这为动态界面势提供了直接光谱证据，但不意味着已经证明 hBN 声子是莫尔超导的配对胶水。光电流线形涉及吸收与器件响应；微观参数有拟合依赖。tBLG 的石墨烯/石墨烯与石墨烯/hBN 双重莫尔势和弛豫尚未被统一定量描述。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  {year:"2012", title:"FIRST — Cappelluti et al., Charged-phonon theory and Fano effect", why:"石墨烯声子如何借用电子振子强度", url:"https://doi.org/10.1103/PhysRevB.86.115439"},
+  {year:"1961", title:"Fano, Effects of Configuration Interaction", why:"离散态和连续谱干涉的基本线形", url:"https://doi.org/10.1103/PhysRev.124.1866"},
+  {year:"2012", title:"Li et al., Structure-dependent Fano resonances", why:"少层石墨烯的堆垛依赖光谱实验", url:"https://doi.org/10.1103/PhysRevLett.108.156801"}
+]} />
+
+## Reading checklist
+
+- [ ] 能解释无莫尔对照为何重要。
+- [ ] 能区分光学振子强度与 EPC 矩阵元。
+- [ ] 能解释位移场控制为什么有助于排除单纯 zone folding。
+- [ ] 能区分光谱证据与超导配对证据。
+
+## Sources and attribution
+
+[Kim et al., arXiv:2611.31896v1](https://arxiv.org/html/2611.31896v1)，原文标注 CC BY 4.0。本页仅链接原图，未复制任何 Figure。上方机制图为 AI-generated explanatory diagram，不含论文定量数据重绘。
