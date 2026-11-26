@@ -1,0 +1,98 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Pairing from anti-Hund's coupling under infinite Hubbard repulsion"
+authors: "Donggyu Kim, Ya-Hui Zhang"
+date: "2026-11-27"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.33286"
+notionUrl: "https://app.notion.com/p/4247dd5567ec811e99c2cf005e374e74"
+summary: "无限 Hubbard 排斥下，anti-Hund 单态背景中的掺杂载流子仍可通过键上的协同运动形成强配对。"
+readingTime: "20–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+## 30 秒摘要
+
+作者研究三角晶格四味电子模型，将 Hubbard U 取到无穷大，在接近每格两个电子的 anti-Hund 单态绝缘背景下掺杂空穴。两个掺杂载流子不能占据同一格点，却能通过近邻键上的 pivot hopping 获得配对动能。强耦合有效模型和有限宽度 DMRG 支持这一机制；并非实验发现，也不是二维热力学极限超导证明。
+
+阅读范围：arXiv v1 主文、Fig. 1–3、Appendix A 相关推导，未独立复现。
+
+<ReadingPath quick={["Fig. 1：单态背景、掺杂与 pivot hopping", "Fig. 2：配对能隙与关联"]} standard={["Eq. 1 与投影局域 Hilbert 空间", "有效两载流子模型及强耦合限制", "Fig. 2–3：DMRG、结合能与质量"]} deep={["Appendix A：二阶微扰过程", "区分两体束缚、准一维配对与二维相干", "检查有限宽度与 J/t 的适用范围"]} />
+
+## Big picture
+
+**AI-generated explanatory diagram — 定性机制，不是原论文 Figure。**
+
+~~~text
+n=2：每格 intervalley spin singlet
+                    |
+                  掺杂
+                    v
+n=1 singlons + n=2 singlet background
+                    |
+          hard-core constraint
+                    |
+        +-----------+-----------+
+        |                       |
+   近邻排斥 V_NN           键间 pivot hopping
+        |                       |
+        +-----------+-----------+
+                    v
+        extended s-wave bond pairing
+~~~
+
+## 核心机制与公式
+
+U 无穷大并非禁止所有双占据：在 n=2−x 的投影空间，局域保留一电子与二电子态。anti-Hund J_A>0 的 intervalley 自旋交换使双占据单态的能量为 −3J_A/4，三重态为 +J_A/4。x=0 时 hopping 被冻结。掺杂后单占据态可在背景中移动；两个掺杂空穴同格会对应被排除的空态。
+
+~~~text
+H = -t Σ(projected c†_i c_j + h.c.)
+    + J_A Σ_i S_iK · S_iK'
+
+V_NN = (17/6) t²/J_A
+g_w  = -(17/12) t²/J_A
+~~~
+
+上述系数来自强耦合有效模型中相应的自旋单态、谷对称通道。pivot 指共享一个端点的近邻配对键之间的转动式跃迁，而非一个 onsite Cooper pair。该动能机制可以克服正的近邻排斥；在有效两体模型中作者给出临界 J_c = 34|t|/3。大 J_A 的微扰系数不能直接外推至 J_A 与 |t| 同量级。
+
+## 关键 Figure
+
+请打开[原论文 HTML](https://arxiv.org/html/2611.33286v1)。
+
+- Fig. 1：对照未掺杂单态与掺杂 singlon，追踪共享端点的两个键如何通过 pivot hopping 连接。注意这不是 onsite attraction。
+- Fig. 2：检查 DMRG 单粒子能隙随 J_A/|t| 的变化与配对关联；有限宽度和有限 bond dimension 是解释限制。
+- Fig. 3：比较两载流子结合能、有效质量及小费米面图景。小口袋计数是作者提出的关联金属理解，不是本文实验测量。
+
+## Authors report
+
+作者研究 t<0 的三角晶格。在 x=1/4 的圆柱 DMRG 中，定义单粒子 gap 为 E(N+1)+E(N−1)−2E(N)，在 J_A 约 1.4|t| 附近达到约 0.6|t| 的峰值。作者对较强耦合也报告了配对相关行为。强耦合展开与数值证据是互补的，不构成全部参数区的严格证明。
+
+## AI interpretation / caveats
+
+- 这提供了强局域排斥背景下的非局域动能配对机制，不要求有效负 U。
+- 两体 bound state、有限宽度配对关联和二维长程超导是三个不同的命题。
+- 作者关于小费米面与大费米面之间变化的讨论包含推测；不能据此声称已经精确定位相变。
+- 对多味莫尔材料的启发是将局域交换、投影约束与有效 pair hopping 一起考虑；真实材料参数需要额外验证。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  {year:"2020", title:"FIRST — Zhang & Mao, Phys. Rev. B 101, 035122", why:"理解莫尔多味强关联模型与局域约束", url:"https://doi.org/10.1103/PhysRevB.101.035122"},
+  {year:"2024", title:"Yang, Oh & Zhang, Phys. Rev. B 110, 104517", why:"本文直接相关的配对与强关联背景，见参考文献 28", url:"https://doi.org/10.1103/PhysRevB.110.104517"},
+  {year:"1992", title:"White, Density matrix formulation for quantum renormalization groups", why:"理解 DMRG 方法及有限宽度证据", url:"https://doi.org/10.1103/PhysRevLett.69.2863"}
+]} />
+
+## Reading checklist
+
+- [ ] 解释为何 U 无穷大仍保留 n=2 单态。
+- [ ] 区分 singlon 与普通空格点。
+- [ ] 画出共享端点的 pivot hopping。
+- [ ] 推导 V_NN 和 g_w 的比例，检查微扰范围。
+- [ ] 区分单粒子 gap、结合能和超流刚度。
+- [ ] 检查 DMRG 有限宽度与二维极限。
+
+## Sources and attribution
+
+[Kim & Zhang, arXiv:2611.33286v1](https://arxiv.org/html/2611.33286v1)。未复制或改编论文图片；原 Figure 由论文链接提供。机制流程为 AI-generated explanatory diagram，不含定量数据重绘。
