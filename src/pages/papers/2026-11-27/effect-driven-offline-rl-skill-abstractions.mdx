@@ -1,0 +1,98 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Effect-Driven Skill Abstractions for Offline Reinforcement Learning"
+authors: "Burcu Kilic, David Drexel, Emre Ugur, Justus Piater"
+date: "2026-11-27"
+track: "B · AI for Science"
+paperUrl: "https://arxiv.org/abs/2611.33229"
+notionUrl: "https://app.notion.com/p/4247dd5567ec8126b2c8e71f2a6e9bb6"
+summary: "以任务相关的未来状态效果，而不是动作序列重建，作为离散技能抽象的学习目标。"
+readingTime: "20–35 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+## 30 秒摘要
+
+不同低层动作可以产生类似任务效果。本文将离线 action chunk 压缩为离散技能 code，训练时要求 code 和起始状态能够预测未来任务相关特征，再用闭环控制器执行该技能，高层离线 RL 学习技能选择。作者报告在 OGBench 多种模拟任务上的改进，但长程失败仍存在。
+
+阅读范围：arXiv v1 主文、Eq. 3 及阶段 II/III、Fig. 1–2、Tables 1–2 与讨论；未复现。
+
+<ReadingPath quick={["Fig. 1：三阶段架构", "Table 2：总体结果与失败例子"]} standard={["Eq. 3：未来特征预测与 FSQ", "Fig. 2：预测效果和实际执行", "Table 1：目标函数消融"]} deep={["推导技能瓶颈为何保留任务相关信息", "检查 offline coverage、闭环执行与长程任务", "构造安全相关目标特征及独立验证方案"]} />
+
+## Big picture
+
+**AI-generated explanatory diagram — 概念机制，非原 Figure。**
+
+~~~text
+Offline trajectory:  s_t, [a_t ... a_(t+L-1)], s_(t+L)
+                              |
+                     encoder + quantization
+                              v
+                       discrete skill k
+                       /              \
+     s_t + k -> future feature      current s + k
+                  prediction                |
+                  training             controller
+                                            |
+                                       primitive action
+
+High-level policy (s, goal) -> skill k -> L closed-loop steps
+~~~
+
+传统动作重建要求技能保留足够信息以还原原 action chunk。本文则让技能优先表示该动作块在起始状态下产生的任务相关效果。动作细节由低层控制器结合即时观测处理。
+
+## 核心机制与公式
+
+~~~text
+k = phi(a_t : a_(t+L-1))
+L_pred = ||x_(t+L) - psi(k, s_t)||²
+
+L_ctrl = ||a_t - pi_A(k, s_t)||²
+High-level policy: pi_Z(k | s, goal)
+~~~
+
+x 是任务相关的状态特征，不必是完整状态；导航时可使用位置。离散瓶颈采用 finite scalar quantization (FSQ)。第二阶段控制器每一步读取当前状态，同一 k 持续 L 步，不是完全开环回放。第三阶段在技能动作空间使用离线目标条件 RL。
+
+## 关键 Figure 与 Table
+
+请打开[原论文 HTML](https://arxiv.org/html/2611.33229v1)。
+
+- Fig. 1：对比 effect prediction、低层动作执行和高层技能决策三阶段；注意每阶段的输入和训练目标。
+- Fig. 2：观察相同 code 从不同起始状态所预测和实际达到的未来位置，理解技能效果依赖状态。
+- Table 1：antmaze-medium 的目标特征预测 72±2，完整状态预测 27±3，单步 10±1，动作重建 21±13（5 seeds）；不要把单一任务结论推广至全部任务。
+- Table 2：比较四种离线 RL 方法与原始动作基线。特别检查 giant-stitch 等仍然失败的任务。
+
+## Authors report
+
+30 个任务与四种方法构成的 120 项比较中，作者报告 97 项显著改善、3 项显著下降、20 项不可区分。在某些 giant navigate 设置上原始方法几乎无成功而技能方法可以获得非零甚至较高成功率。困难 giant stitch 并未被解决。
+
+## AI interpretation / caveats
+
+- 效果预测目标使技能成为一种近似任务相关状态转移表示，并不等于学到了精确的可组合因果模型。
+- 选择 x 本身是一种 inductive bias；忽略的特征可能恰好影响风险，例如障碍物距离、接触力或物体稳定性。
+- 任务成功率不是物理安全率；本文并没有验证独立动作安全审核。
+- 低层闭环执行缓解了 open-loop 偏差，但预测误差、离线数据覆盖不足以及长程误差积累仍存在。
+- 一个潜在研究是将安全关键状态作为辅助 effect target，联合训练概率风险预测，再以独立仿真或实机实验检验校准和误拒率。
+
+## Historical Reading Chain
+
+<Timeline items={[
+  {year:"2024", title:"FIRST — OGBench", why:"理解目标条件离线 RL 评测及任务分布", url:"https://arxiv.org/abs/2410.20092"},
+  {year:"2021", title:"Implicit Q-Learning", why:"理解离线价值学习与数据支持约束", url:"https://arxiv.org/abs/2110.06169"},
+  {year:"2023", title:"Finite Scalar Quantization", why:"理解离散技能 bottleneck", url:"https://arxiv.org/abs/2309.15505"}
+]} />
+
+## Reading checklist
+
+- [ ] 解释预测完整状态与任务相关特征的区别。
+- [ ] 区分训练时 action chunk 输入与部署时 skill code。
+- [ ] 解释闭环控制器的作用。
+- [ ] 阅读 Table 1 的消融和 giant stitch 失败案例。
+- [ ] 检查任务相关特征是否会遗漏安全变量。
+- [ ] 区分任务效果预测与安全保证。
+
+## Sources and attribution
+
+[Kilic et al., arXiv:2611.33229v1](https://arxiv.org/html/2611.33229v1)。原始 Figure 仅链接，不复制、不修改。机制流程为 AI-generated explanatory diagram；表格数字为正文引用，未重绘定量曲线。
