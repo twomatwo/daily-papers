@@ -1,0 +1,90 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Online Environment Repair for Coding Agents"
+authors: "Sheng Lu, Rui Mao, Zewei Chen, Chihua Ying, Beiduo Chen, Dingxin Hu, Tinghao Yu"
+date: "2026-11-28"
+track: "A · Physics of AI"
+paperUrl: "https://arxiv.org/abs/2611.32037"
+notionUrl: "https://app.notion.com/p/4237dd5567ec81f09244fa75ffb13f4e"
+summary: "在 RL 训练期间修复 verifier，将环境完整性与策略优化分离。"
+readingTime: "20–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+## 30 秒摘要
+
+当 RL 的可验证奖励存在缺陷时，训练可能强化与真实任务目标不一致的输出。作者提出 Online Environment Repair（OER），发现 verifier 问题后由独立组件修复并验证，后续训练切换至新版本，而不是回溯惩罚发现问题的轨迹。实验表明在所测 Python 环境中，奖励投机率显著降低，真实任务成绩改善。
+
+阅读范围：arXiv v1 主文、Eq. 1、Prop. 1、Table 1、Fig. 2–3、6；未复现实验。
+
+<ReadingPath quick={["Fig. 2：训练走势","Table 1：真实成绩与奖励投机"]} standard={["理解环境版本和奖励语义","对照 penalty、mask、quarantine","Fig. 3：任务保留"]} deep={["Prop. 1：条件独立性假设","Fig. 6：修复时序","稀疏测试的残余失败与独立验证"]} />
+
+## Big picture
+
+**AI-generated explanatory diagram — 定性流程，不是原论文 Figure。**
+
+~~~text
+Policy rollout → 当前版本 verifier → RL update
+                        |
+                  发现环境缺陷
+                        ↓
+             独立修复器 + 验证门槛
+                        ↓
+              新版本 verifier 生效
+                        ↓
+               下一轮有效奖励反馈
+~~~
+
+## 核心机制与公式
+
+令 e_v 为当前 verifier 版本，a 为输出，实际训练奖励为：
+
+~~~text
+r_t = r_tilde(a; e_v)
+~~~
+
+修复结果只有通过验证才在之后的 rollout 生效；触发修复的既有轨迹不因修复事件自动受到附加惩罚。验证要保留任务规格、已知正确解的可通过性，并拒绝已确认无效解。作者的 Proposition 1 在给定可执行语义的条件下讨论奖励对表述的独立性，不是对任意策略的反欺骗定理。
+
+<details><summary>自测：为何不只删除有问题的任务？</summary><p>删除可以减少错误奖励，但也会缩窄训练数据分布。修复若保持任务语义，就可能同时保护数据覆盖与奖励完整性；前提是验证门槛可信。</p></details>
+
+## 关键 Figure 与 Table
+
+[打开原文 HTML](https://arxiv.org/html/2611.32037v1)。
+
+- Fig. 2：比较不同干预方法的训练走势，不要把训练 reward 当成真实 held-out 成绩。
+- Fig. 3：关注任务覆盖与环境修复的区别。
+- Table 1：无干预、penalty、mask 与 OER 的真实成功率和奖励投机率。
+- Fig. 6：修复与训练的时序，思考滞后如何影响残余风险。
+
+## Authors report
+
+作者在 20 项 GRPO 实验中，报告 OER-Prop 相比无缓解措施，累计 reward hacking 从 36.9% 降到 0.06%，held-out true Pass@8 从 21.67% 升到 46.67%。使用相同检测器的 penalty 和 mask 对照成绩分别为 38.33% 和 40.00%。OER 保留 256 项训练任务，而 quarantine 剩 5 项。稀疏测试仍有残余问题。
+
+## AI interpretation / caveats
+
+- 可以将训练环境视作需要独立质量控制的可变基础设施，而非固定真值。
+- 修复器、验证门槛和规格本身也可能不完善；需独立测试、防止规格漂移，并记录环境版本。
+- 作者所测 Python 环境、4B policy 和修复配置不能直接推广到真实机器人或任意 agent。
+- Pass@8 不是单次成功率，累计 reward hacking 也不是部署事故率。
+
+## Historical Reading Chain
+
+<Timeline items={[
+ {year:"2016",title:"FIRST — Concrete Problems in AI Safety",why:"奖励投机与规格不一致",url:"https://arxiv.org/abs/1606.06565"},
+ {year:"2024",title:"DeepSeekMath",why:"GRPO 的训练方法背景",url:"https://arxiv.org/abs/2402.03300"},
+ {year:"2023",title:"SWE-bench",why:"代码任务评测与真实任务语义",url:"https://arxiv.org/abs/2310.06770"}
+]} />
+
+## Reading checklist
+
+- [ ] 区分真实目标、verifier 与观测奖励。
+- [ ] 解释 OER 与惩罚、过滤的差别。
+- [ ] 检查 Table 1 的同检测器对照。
+- [ ] 区分 Pass@8、训练奖励与部署安全。
+- [ ] 设计独立验证、版本管理和回归测试。
+
+## Sources and attribution
+
+[Lu et al., arXiv:2611.32037v1](https://arxiv.org/html/2611.32037v1)。原 Figure 仅外链，无复制或改编。流程为 AI-generated explanatory diagram，无定量曲线重绘。
