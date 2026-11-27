@@ -1,0 +1,93 @@
+---
+layout: ../../../layouts/PaperLayout.astro
+title: "Spontaneous Time-Reversal-Symmetry-Breaking State in Proximity-Induced Superconductivity"
+authors: "Jonathan Schirmer, Wei Pan, Javad Shabani, Enrico Rossi"
+date: "2026-11-28"
+track: "C · Condensed Matter / Quantum"
+paperUrl: "https://arxiv.org/abs/2611.33288"
+notionUrl: "https://app.notion.com/p/4247dd5567ec8138a72ff43e13ed326d"
+summary: "同相邻近配对与排斥性带间散射竞争，可产生自发时间反演破缺。"
+readingTime: "20–40 min"
+---
+
+import ReadingPath from '../../../components/ReadingPath.astro';
+import Timeline from '../../../components/Timeline.astro';
+
+## 30 秒摘要
+
+普通 s 波母体倾向在两个子带中诱导同相配对；排斥性带间 Cooper pair scattering 则倾向反相。两种约束相互竞争，在一定参数区内产生既非同相也非反相的复数能隙，形成两个时间反演关联的解。作者用两带自洽平均场与能量比较建立这一理论机制；不是新材料实验。
+
+阅读范围：arXiv v1 主文 Eq. 1–12、Fig. 1–5；未复现。
+
+<ReadingPath quick={["Fig. 1：两类相位约束","Fig. 2：TRSB 参数区域"]} standard={["Eq. 5–7：非实解的自洽条件","Fig. 3：不对称及重入","Fig. 4：能量稳定性"]} deep={["Eq. 12：相量三角形与边界","相对相位集体模式","Fig. 5：Josephson 实验判据及空间对称性"]} />
+
+## Big picture
+
+**AI-generated explanatory diagram — 定性概念图，不是原论文 Figure。**
+
+~~~text
+普通 s 波母体 → 同相诱导能隙
+                       ↓
+排斥性带间散射 → 反相偏好
+                       ↓
+                相位约束受挫
+                       ↓
+          非共线复数能隙 ±φ12
+                       ↓
+          自发破坏时间反演对称性
+~~~
+
+## 核心机制与公式
+
+取母体相位为零，诱导 gap 取实值。g_j = U N_j(0)，在零温常数 DOS 近似下配对响应 χ_j 约为 ln(2ω_c/|Δ_j|)。总能隙由以下线性形式的非线性自洽条件确定：
+
+~~~text
+Δ1 + g2 χ2 Δ2 = Δ1_ind
+Δ2 + g1 χ1 Δ1 = Δ2_ind
+
+非零虚部要求 g1 χ1 g2 χ2 = 1
+实部相容条件 g1 χ1 = Δ2_ind / Δ1_ind
+~~~
+
+由于 χ 依赖总 gap 大小，这不是普通常系数线性方程。令 a = |Δ1|，b = g2 χ2 |Δ2|，c = |Δ1_ind|。非退化三角形条件为 |a−b| 小于 c 且 c 小于 a+b。相量构成闭合三角形时有镜像的两个解，分别对应正负相对相位。三角形退化时相位重新共线。
+
+<details><summary>自测：为什么常规母体不排除 TRSB？</summary><p>母体提供的是同相外部诱导项，不是对子带总能隙相位的绝对限制。带间排斥与该项竞争，可以使自洽最低能态拥有非共线相位。</p></details>
+
+## 关键 Figure
+
+[打开原论文 HTML 与 Figure](https://arxiv.org/html/2611.33288v1)。
+
+- Fig. 1：区分诱导配对与带间排斥的相位偏好。
+- Fig. 2–3：在对称及不对称两带参数下比较 TRSB 区域；Fig. 3 展示固定诱导能隙下的重入现象。
+- Fig. 4：比较不同自洽解的能量；在作者考察范围内非共线解稳定，边界连续。
+- Fig. 5：阅读 Josephson 几何的建议；不是新实测图。
+
+## Authors report
+
+作者给出非实自洽解的存在条件，并对典型参数比较能量。相对相位集体模式在相应连续相变边界软化。现有 Al/Cd3As2 邻近器件是研究动机，而不是本文的新实验。
+
+## AI interpretation / caveats
+
+- 可将相位受挫视为有效三角形几何，而不必先假设非常规母体。
+- TRSB 不等于拓扑超导或 Majorana 证据。零场二极管效应还需要相关空间对称性破缺。
+- 计算为均匀两带平均场、零温及常数 DOS 近似；材料的空间结构、涨落与界面需另外核查。
+
+## Historical Reading Chain
+
+<Timeline items={[
+ {year:"2010",title:"FIRST — Stanev & Tešanović",why:"多带排斥与相位受挫的直接理论背景",url:"https://arxiv.org/abs/0912.5214"},
+ {year:"1966",title:"Leggett — Number-phase fluctuations in two-band superconductors",why:"相对相位集体模式",url:"https://doi.org/10.1143/PTP.36.901"},
+ {year:"1957",title:"Bardeen, Cooper & Schrieffer",why:"常规配对的基线",url:"https://doi.org/10.1103/PhysRev.108.1175"}
+]} />
+
+## Reading checklist
+
+- [ ] 区分诱导与总能隙。
+- [ ] 从虚部自洽条件推导行列式为零。
+- [ ] 画出两个镜像相量三角形。
+- [ ] 用 Fig. 4 区分解的存在性与稳定性。
+- [ ] 说明 TRSB 与拓扑、二极管效应的不同证据要求。
+
+## Sources and attribution
+
+[Schirmer et al., arXiv:2611.33288v1](https://arxiv.org/html/2611.33288v1)。所有原 Figure 仅外链，未复制或改编。机制流程为 AI-generated explanatory diagram，无定量曲线重绘。
